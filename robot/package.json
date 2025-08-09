@@ -2,10 +2,10 @@
   "name": "balefastrender",
   "version": "1.0.0",
   "description": "ربات بله مدرسه تلاوت با پنل مدیر",
-  "main": "gateway.js",
+  "main": "gateway_bale.js",
   "scripts": {
-    "start": "node gateway.js",
-    "dev": "nodemon gateway.js",
+    "start": "node gateway_bale.js",
+    "dev": "nodemon gateway_bale.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
