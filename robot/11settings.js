@@ -222,13 +222,17 @@ class SettingsModule {
     const satisfactionStatus = this.settings.enable_satisfaction_survey ? '✅ فعال' : '❌ غیرفعال';
     const reportsStatus = getReportsEnabled() ? '✅ فعال' : '❌ غیرفعال';
     
+    // وضعیت ثبت‌نام (فعلاً پیش‌فرض فعال)
+    const registrationStatus = '✅ فعال'; // TODO: باید از تنظیمات خوانده شود
+    
     const keyboard = [
       [{ text: `📅 تمرین (${practiceDaysCount} روز)`, callback_data: 'practice_days_settings' }],
       [{ text: `📊 ارزیابی (${evaluationDaysCount} روز)`, callback_data: 'evaluation_days_settings' }],
       [{ text: `👥 حضور و غیاب (${attendanceDaysCount} روز)`, callback_data: 'attendance_days_settings' }],
       [{ text: `🎯 روزهای تمرین و ارزیابی`, callback_data: 'practice_evaluation_days_settings' }],
       [{ text: `📝 نظرسنجی: ${satisfactionStatus}`, callback_data: 'toggle_satisfaction_survey' }],
-             [{ text: `📋 گروه گزارش: ${reportsStatus}`, callback_data: 'toggle_bot_reports' }]
+      [{ text: `📋 گروه گزارش: ${reportsStatus}`, callback_data: 'toggle_bot_reports' }],
+      [{ text: `📝 ثبت‌نام: ${registrationStatus}`, callback_data: 'toggle_registration' }]
     ];
     
     console.log('🔧 [SETTINGS] Keyboard generated:', JSON.stringify(keyboard, null, 2));
@@ -369,6 +373,8 @@ class SettingsModule {
         return this.handleToggleSatisfactionSurvey(chatId, messageId, callbackQueryId);
       } else if (data === 'toggle_bot_reports') {
         return this.handleToggleBotReports(chatId, messageId, callbackQueryId);
+      } else if (data === 'toggle_registration') {
+        return this.handleToggleRegistration(chatId, messageId, callbackQueryId);
       } else if (data === 'settings_back') {
         return this.handleSettingsBack(chatId, messageId, callbackQueryId);
       } else {
@@ -957,6 +963,16 @@ class SettingsModule {
     const replyMarkup = this.getMainSettingsKeyboard();
     await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
     await answerCallbackQuery(callbackQueryId, `📝 نظرسنجی ${status} شد!`);
+  }
+  
+  async handleToggleRegistration(chatId, messageId, callbackQueryId) {
+    // فعلاً پیام ساده - بعداً باید با سیستم تنظیمات یکپارچه شود
+    const text = `⚙️ *پنل تنظیمات مدیر*
+انتخاب کنید:`;
+    
+    const replyMarkup = this.getMainSettingsKeyboard();
+    await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
+    await answerCallbackQuery(callbackQueryId, '📝 ثبت‌نام تغییر کرد! (قابلیت در حال توسعه)');
   }
   
   async handleToggleBotReports(chatId, messageId, callbackQueryId) {

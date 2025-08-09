@@ -308,17 +308,32 @@ export default function Admin(){
               >
                 {isManualRefreshing ? '⏳' : '🔄'}
               </button>
-              <button 
-                onClick={toggleReports} 
-                disabled={toggling}
-                className={`px-4 py-2 rounded-lg text-white ${
-                  reportsEnabled 
-                    ? 'bg-emerald-600 hover:bg-emerald-700' 
-                    : 'bg-red-600 hover:bg-red-700'
-                } disabled:opacity-50`}
-              >
-                {toggling ? 'در حال تغییر...' : (reportsEnabled ? 'غیرفعال کردن گزارش‌ها' : 'فعال کردن گزارش‌ها')}
-              </button>
+              {/* سه دکمه تنظیمات */}
+              <div className="flex gap-2">
+                <button 
+                  onClick={toggleReports} 
+                  disabled={toggling}
+                  className={`px-3 py-2 rounded-lg text-white text-sm ${
+                    reportsEnabled 
+                      ? 'bg-emerald-600 hover:bg-emerald-700' 
+                      : 'bg-red-600 hover:bg-red-700'
+                  } disabled:opacity-50`}
+                >
+                  گزارش {reportsEnabled ? '✅' : '❌'}
+                </button>
+                <button 
+                  className="px-3 py-2 rounded-lg text-white text-sm bg-blue-600 hover:bg-blue-700"
+                  onClick={() => showNotification('نظرسنجی تغییر کرد! (در حال توسعه)', 'info')}
+                >
+                  نظرسنجی ✅
+                </button>
+                <button 
+                  className="px-3 py-2 rounded-lg text-white text-sm bg-purple-600 hover:bg-purple-700"
+                  onClick={() => showNotification('تمرین تغییر کرد! (در حال توسعه)', 'info')}
+                >
+                  تمرین ✅
+                </button>
+              </div>
             </div>
           </div>
           <div className="space-y-2">

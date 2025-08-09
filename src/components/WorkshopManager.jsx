@@ -7,6 +7,7 @@ export default function WorkshopManager() {
     id: '',
     title: '',
     coach: '',
+    phone: '',
     price: '',
     baleLink: ''
   });
@@ -41,7 +42,7 @@ export default function WorkshopManager() {
   }
 
   function cancelEdit() {
-    setForm({ id: '', title: '', coach: '', price: '', baleLink: '' });
+    setForm({ id: '', title: '', coach: '', phone: '', price: '', baleLink: '' });
     setEditing(false);
   }
 
@@ -101,6 +102,16 @@ export default function WorkshopManager() {
               onChange={onChange}
               className="border rounded-lg px-3 py-2 border-slate-300"
               placeholder="نام مربی"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm text-slate-600">تلفن مربی (اختیاری)</span>
+            <input 
+              name="phone" 
+              value={form.phone} 
+              onChange={onChange}
+              className="border rounded-lg px-3 py-2 border-slate-300 ltr"
+              placeholder="09123456789"
             />
           </label>
           <label className="flex flex-col gap-1">

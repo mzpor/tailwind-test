@@ -92,6 +92,7 @@ class KargahModule {
   getWorkshopEditKeyboard(workshopId) {
     const keyboard = [
       [{ text: '✏️ ویرایش نام مربی', callback_data: `kargah_edit_instructor_${workshopId}` }],
+      [{ text: '📱 ویرایش تلفن مربی', callback_data: `kargah_edit_phone_${workshopId}` }],
       [{ text: '💰 ویرایش هزینه', callback_data: `kargah_edit_cost_${workshopId}` }],
       [{ text: '🔗 ویرایش لینک', callback_data: `kargah_edit_link_${workshopId}` }],
       [{ text: '🗑️ حذف کارگاه', callback_data: `kargah_delete_${workshopId}` }],
@@ -202,6 +203,9 @@ class KargahModule {
       } else if (data.startsWith('kargah_edit_instructor_')) {
         const workshopId = data.replace('kargah_edit_instructor_', '');
         return this.handleEditInstructor(chatId, messageId, userId, workshopId, callbackQueryId);
+      } else if (data.startsWith('kargah_edit_phone_')) {
+        const workshopId = data.replace('kargah_edit_phone_', '');
+        return this.handleEditPhone(chatId, messageId, userId, workshopId, callbackQueryId);
       } else if (data.startsWith('kargah_edit_cost_')) {
         const workshopId = data.replace('kargah_edit_cost_', '');
         return this.handleEditCost(chatId, messageId, userId, workshopId, callbackQueryId);
@@ -404,6 +408,21 @@ class KargahModule {
     return true;
   }
   
+  async handleEditPhone(chatId, messageId, userId, workshopId, callbackQueryId) {
+    if (!this.workshops[workshopId]) {
+      return false;
+    }
+    
+    this.userStates[userId] = `kargah_edit_phone_${workshopId}`;
+    this.tempData[userId] = { workshop_id: workshopId };
+    
+    const currentPhone = this.workshops[workshopId].instructor_phone || 'وارد نشده';
+    const text = `📱 *ویرایش تلفن مربی*\n\nتلفن فعلی: ${currentPhone}\n\nلطفاً شماره تلفن جدید را وارد کنید:\n\nمثال‌ها:\n• 09123456789\n• 0912 345 6789\n• 0 برای پاک کردن`;
+    const keyboard = [[{ text: '🔙 بازگشت', callback_data: `kargah_view_${workshopId}` }]];
+    await this.editMessageWithInlineKeyboard(chatId, messageId, text, keyboard);
+    return true;
+  }
+  
   async handleEditCost(chatId, messageId, userId, workshopId, callbackQueryId) {
     if (!this.workshops[workshopId]) {
       return false;
@@ -456,6 +475,38 @@ class KargahModule {
           }
           
           const responseText = `✅ نام مربی کارگاه *${workshopId}* با موفقیت تغییر یافت!\n\n👤 *قبل:* ${oldName}\n👤 *بعد:* ${text.trim()}`;
+          const replyMarkup = this.getWorkshopManagementKeyboard();
+          await this.sendMessageWithInlineKeyboard(chatId, responseText, replyMarkup.inline_keyboard);
+        }
+        
+      } else if (userState.startsWith('kargah_edit_phone_')) {
+        const workshopId = userState.replace('kargah_edit_phone_', '');
+        if (this.workshops[workshopId]) {
+          // پردازش شماره تلفن مربی (اختیاری)
+          let instructorPhone = '';
+          if (text && text.trim() !== '0' && text.trim() !== '') {
+            // تمیز کردن شماره تلفن
+            instructorPhone = text.replace(/\s/g, '').replace(/[۰-۹]/g, function(w) {
+              return String.fromCharCode(w.charCodeAt(0) - '۰'.charCodeAt(0) + '0'.charCodeAt(0));
+            });
+            
+            // بررسی اعتبار شماره تلفن (اختیاری)
+            if (!/^09\d{9}$/.test(instructorPhone)) {
+              instructorPhone = ''; // اگر نامعتبر باشد، خالی بگذار
+            }
+          }
+          
+          const oldPhone = this.workshops[workshopId].instructor_phone || 'وارد نشده';
+          this.workshops[workshopId].instructor_phone = instructorPhone;
+          this.saveWorkshops();
+          
+          delete this.userStates[userId];
+          if (userId in this.tempData) {
+            delete this.tempData[userId];
+          }
+          
+          const newPhoneDisplay = instructorPhone ? instructorPhone : 'حذف شد';
+          const responseText = `✅ تلفن مربی کارگاه *${workshopId}* با موفقیت تغییر یافت!\n\n📱 *قبل:* ${oldPhone}\n📱 *بعد:* ${newPhoneDisplay}`;
           const replyMarkup = this.getWorkshopManagementKeyboard();
           await this.sendMessageWithInlineKeyboard(chatId, responseText, replyMarkup.inline_keyboard);
         }
