@@ -8,5 +8,5 @@
     5
   ],
   "enable_satisfaction_survey": true,
-  "enable_bot_reports": false
+  "enable_bot_reports": true
 }

@@ -225,10 +225,10 @@ const SETTINGS_CONFIG = {
   
   // تنظیمات عمومی
   ENABLE_SATISFACTION_SURVEY: true, // نظرسنجی رضایت
-  ENABLE_BOT_REPORTS: true, // گزارش‌گیری
   
   // فایل ذخیره تنظیمات
   SETTINGS_FILE: 'settings_data.json',
+  REPORTS_CONFIG_FILE: 'data/reports_config.json',
   
   // نام‌های روزهای هفته
   DAYS_OF_WEEK: [
@@ -241,6 +241,72 @@ const SETTINGS_CONFIG = {
     { name: 'جمعه', value: 6 }
   ]
 };
+
+// ===== توابع مدیریت تنظیمات گزارش مشترک =====
+const fs = require('fs');
+const path = require('path');
+
+// خواندن وضعیت گزارش از فایل مشترک
+function loadReportsConfig() {
+  try {
+    const configPath = path.join(__dirname, SETTINGS_CONFIG.REPORTS_CONFIG_FILE);
+    if (fs.existsSync(configPath)) {
+      const data = fs.readFileSync(configPath, 'utf8');
+      const config = JSON.parse(data);
+      console.log('✅ [CONFIG] Reports config loaded:', config);
+      return config;
+    } else {
+      // ایجاد فایل پیش‌فرض
+      const defaultConfig = {
+        enabled: true,
+        lastUpdate: new Date().toISOString(),
+        updatedBy: 'system',
+        updatedFrom: 'default'
+      };
+      saveReportsConfig(defaultConfig);
+      return defaultConfig;
+    }
+  } catch (error) {
+    console.error('❌ [CONFIG] Error loading reports config:', error);
+    return { enabled: true, lastUpdate: new Date().toISOString(), updatedBy: 'error', updatedFrom: 'fallback' };
+  }
+}
+
+// ذخیره وضعیت گزارش در فایل مشترک
+function saveReportsConfig(config) {
+  try {
+    const configPath = path.join(__dirname, SETTINGS_CONFIG.REPORTS_CONFIG_FILE);
+    // اطمینان از وجود دایرکتوری
+    const dir = path.dirname(configPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+    console.log('✅ [CONFIG] Reports config saved:', config);
+    return true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error saving reports config:', error);
+    return false;
+  }
+}
+
+// دریافت وضعیت فعلی گزارش‌گیری
+function getReportsEnabled() {
+  const config = loadReportsConfig();
+  return config.enabled;
+}
+
+// تغییر وضعیت گزارش‌گیری
+function setReportsEnabled(enabled, updatedBy = 'unknown', updatedFrom = 'unknown') {
+  const config = {
+    enabled: enabled,
+    lastUpdate: new Date().toISOString(),
+    updatedBy: updatedBy,
+    updatedFrom: updatedFrom
+  };
+  return saveReportsConfig(config);
+}
 
 // نقش‌های کاربران
 const ROLES = {
@@ -311,5 +377,10 @@ module.exports = {
   getGroupName,
   getUserName,
   getAdminNames,
-  getGroupAdminNames
+  getGroupAdminNames,
+  // ===== توابع مدیریت گزارش مشترک =====
+  loadReportsConfig,
+  saveReportsConfig,
+  getReportsEnabled,
+  setReportsEnabled
 };

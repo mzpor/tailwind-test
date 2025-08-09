@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import { gw } from "../lib/gateway";
 
 export default function Register() {
-  const [step, setStep] = useState(1); // 1: اطلاعات شخصی, 2: انتخاب کارگاه
+  const [step, setStep] = useState(1); // 1: اطلاعات شخصی, 2: انتخاب کارگاه, 3: تأیید شماره تلفن
   const [form, setForm] = useState({
     firstName: '',
     nationalId: '',
     phone: '',
     workshopId: ''
   });
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationSent, setVerificationSent] = useState(false);
   const [workshops, setWorkshops] = useState([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -33,21 +35,56 @@ export default function Register() {
     setForm(f => ({ ...f, workshopId }));
   }
 
-  async function submitRegistration() {
+  async function sendVerificationCode() {
     if (!form.workshopId) return;
     
     setLoading(true);
     try {
       const payload = {
         firstName: form.firstName,
+        nationalId: form.nationalId,
         phone: form.phone,
         workshopId: form.workshopId
       };
-      const response = await gw.register(payload);
-      setResult(response);
+      const response = await gw.sendVerification(payload);
+      
+      if (response.ok) {
+        setVerificationSent(true);
+        setStep(3);
+        setResult({ message: `کد تأیید به شماره ${response.phone} ارسال شد` });
+      } else {
+        setResult({ error: response.error || 'خطا در ارسال کد تأیید' });
+      }
     } catch (error) {
-      console.error('خطا در ثبت‌نام:', error);
-      setResult({ error: 'خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.' });
+      console.error('خطا در ارسال کد تأیید:', error);
+      setResult({ error: 'خطا در ارسال کد تأیید. لطفاً دوباره تلاش کنید.' });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitRegistration() {
+    if (!verificationCode || verificationCode.length !== 4) {
+      setResult({ error: 'لطفاً کد تأیید 4 رقمی را وارد کنید' });
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const payload = {
+        phone: form.phone,
+        verificationCode: verificationCode
+      };
+      const response = await gw.verifyAndRegister(payload);
+      
+      if (response.ok) {
+        setResult(response);
+      } else {
+        setResult({ error: response.error || 'کد تأیید نادرست است' });
+      }
+    } catch (error) {
+      console.error('خطا در تأیید کد:', error);
+      setResult({ error: 'خطا در تأیید کد. لطفاً دوباره تلاش کنید.' });
     } finally {
       setLoading(false);
     }
@@ -111,9 +148,13 @@ export default function Register() {
           <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 1 ? 'bg-emerald-600 text-white' : 'bg-slate-200'}`}>
             1
           </div>
-          <div className={`w-20 h-1 ${step >= 2 ? 'bg-emerald-600' : 'bg-slate-200'}`}></div>
+          <div className={`w-16 h-1 ${step >= 2 ? 'bg-emerald-600' : 'bg-slate-200'}`}></div>
           <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 2 ? 'bg-emerald-600 text-white' : 'bg-slate-200'}`}>
             2
+          </div>
+          <div className={`w-16 h-1 ${step >= 3 ? 'bg-emerald-600' : 'bg-slate-200'}`}></div>
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 3 ? 'bg-emerald-600 text-white' : 'bg-slate-200'}`}>
+            3
           </div>
         </div>
 
@@ -202,11 +243,80 @@ export default function Register() {
                 مرحله قبل
               </button>
               <button 
-                onClick={submitRegistration}
+                onClick={sendVerificationCode}
                 disabled={!form.workshopId || loading}
                 className="px-6 py-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'در حال ثبت‌نام...' : 'تأیید ثبت‌نام'}
+                {loading ? 'در حال ارسال...' : 'ارسال کد تأیید'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="bg-white shadow rounded-2xl p-6">
+            <h2 className="text-xl font-bold mb-6 text-center">تأیید شماره تلفن</h2>
+            
+            {result && result.message && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                <p className="text-blue-700">{result.message}</p>
+              </div>
+            )}
+            
+            {result && result.error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+                <p className="text-red-700">{result.error}</p>
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-slate-600 mb-4">
+                  کد تأیید 4 رقمی به شماره <strong>{form.phone}</strong> ارسال شد.
+                </p>
+                <p className="text-sm text-slate-500 mb-4">
+                  لطفاً کد تأیید دریافتی از ربات بله را در کادر زیر وارد کنید:
+                </p>
+              </div>
+              
+              <label className="flex flex-col gap-2 items-center">
+                <span className="text-sm text-slate-600">کد تأیید 4 رقمی</span>
+                <input 
+                  type="text" 
+                  value={verificationCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setVerificationCode(value);
+                  }}
+                  className="border rounded-lg px-4 py-3 border-slate-300 text-center text-2xl font-mono tracking-widest w-32"
+                  placeholder="1234"
+                  maxLength="4"
+                />
+              </label>
+              
+              <div className="text-center text-sm text-slate-500">
+                <p>کد تا 10 دقیقه معتبر است</p>
+                <p>در صورت عدم دریافت کد، به مرحله قبل برگردید و دوباره تلاش کنید</p>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-center gap-3">
+              <button 
+                onClick={() => {
+                  setStep(2);
+                  setVerificationCode('');
+                  setResult(null);
+                }}
+                className="px-4 py-2 bg-slate-600 text-white rounded-lg"
+              >
+                مرحله قبل
+              </button>
+              <button 
+                onClick={submitRegistration}
+                disabled={verificationCode.length !== 4 || loading}
+                className="px-6 py-2 bg-emerald-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'در حال تأیید...' : 'تأیید و ثبت‌نام'}
               </button>
             </div>
           </div>

@@ -25,4 +25,6 @@ export const gw = {
   workshops: () => get('/api/workshops'),
   saveWorkshop: (payload) => post('/api/workshops', payload),
   register: (payload) => post('/api/register', payload),
+  sendVerification: (payload) => post('/api/send-verification', payload),
+  verifyAndRegister: (payload) => post('/api/verify-and-register', payload),
 };

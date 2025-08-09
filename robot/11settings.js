@@ -3,7 +3,13 @@
 
 const fs = require('fs');
 const { sendMessage, sendMessageWithInlineKeyboard, deleteMessage, answerCallbackQuery, editMessage } = require('./4bale');
-const { SETTINGS_CONFIG } = require('./3config');
+const { 
+  SETTINGS_CONFIG, 
+  loadReportsConfig, 
+  saveReportsConfig, 
+  getReportsEnabled, 
+  setReportsEnabled 
+} = require('./3config');
 const { hasPermission } = require('./6mid');
 
 class SettingsModule {
@@ -201,7 +207,7 @@ class SettingsModule {
     console.log(`🔧 [SETTINGS] Attendance days count: ${attendanceDaysCount}`);
     
     const satisfactionStatus = this.settings.enable_satisfaction_survey ? '✅ فعال' : '❌ غیرفعال';
-    const reportsStatus = this.settings.enable_bot_reports ? '✅ فعال' : '❌ غیرفعال';
+    const reportsStatus = getReportsEnabled() ? '✅ فعال' : '❌ غیرفعال';
     
     const keyboard = [
       [{ text: `📅 تمرین (${practiceDaysCount} روز)`, callback_data: 'practice_days_settings' }],
@@ -941,10 +947,17 @@ class SettingsModule {
   }
   
   async handleToggleBotReports(chatId, messageId, callbackQueryId) {
-    this.settings.enable_bot_reports = !this.settings.enable_bot_reports;
-    this.saveSettings();
+    // تغییر وضعیت در فایل مشترک
+    const currentStatus = getReportsEnabled();
+    const newStatus = !currentStatus;
+    const success = setReportsEnabled(newStatus, 'admin', 'bot');
     
-    const status = this.settings.enable_bot_reports ? 'فعال' : 'غیرفعال';
+    if (!success) {
+      await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر تنظیمات');
+      return;
+    }
+    
+    const status = newStatus ? 'فعال' : 'غیرفعال';
     
     // ارسال پیام اعلان به گروه گزارش
     const { REPORT_GROUP_ID } = require('./6mid');
@@ -959,7 +972,8 @@ class SettingsModule {
       
       const reportText = `📋 *گزارش ${status} شد*
 ساعت: ${time}
-تاریخ: ${day} ${month} ${year}`;
+تاریخ: ${day} ${month} ${year}
+🔄 تغییر از: ربات`;
       
       await sendMessage(REPORT_GROUP_ID, reportText);
       console.log(`✅ [SETTINGS] Report status change notification sent to group: ${status}`);
@@ -1021,7 +1035,8 @@ class SettingsModule {
   }
   
   isBotReportsEnabled() {
-    return this.settings.enable_bot_reports !== false;
+    // استفاده از فایل مشترک برای گزارش‌ها
+    return getReportsEnabled();
   }
   
   isPracticeDayActive(day) {
