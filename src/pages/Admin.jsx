@@ -13,6 +13,7 @@ function toCSV(rows){
 export default function Admin(){
   const [reportsEnabled, setReportsEnabled] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   const rows = useMemo(()=>[
     { name:'علی رضایی', phone:'09120000000', status:'paid' },
@@ -24,14 +25,28 @@ export default function Admin(){
     gw.getReportStatus().then(data => setReportsEnabled(data.enabled)).catch(() => {});
   }, []);
 
+  function showNotification(message, type = 'success') {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  }
+
   async function toggleReports() {
     setToggling(true);
     try {
       const newStatus = !reportsEnabled;
-      await gw.toggleReports(newStatus);
+      console.log(`🔄 [ADMIN] Toggling reports to: ${newStatus}`);
+      
+      const result = await gw.toggleReports(newStatus);
+      console.log('✅ [ADMIN] Toggle response:', result);
+      
       setReportsEnabled(newStatus);
+      showNotification(
+        `✅ گزارش‌ها ${newStatus ? 'فعال' : 'غیرفعال'} شدند و پیام به گروه بله ارسال شد!`, 
+        'success'
+      );
     } catch (error) {
-      console.error('خطا در تغییر وضعیت گزارش‌ها:', error);
+      console.error('❌ [ADMIN] خطا در تغییر وضعیت گزارش‌ها:', error);
+      showNotification('❌ خطا در تغییر وضعیت گزارش‌ها', 'error');
     } finally {
       setToggling(false);
     }
@@ -48,6 +63,15 @@ export default function Admin(){
 
   return (
     <div className="min-h-screen p-6 bg-slate-50" dir="rtl">
+      {/* اعلان */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${
+          notification.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+      
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* گزارش‌ها */}

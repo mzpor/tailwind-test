@@ -1,5 +1,5 @@
 const BASE = import.meta.env.VITE_GATEWAY_BASE || "http://localhost:3000";
-const SHARED = import.meta.env.VITE_SHARED_KEY || "";
+const SHARED = import.meta.env.VITE_SHARED_KEY || "dev-123";
 
 async function get(url){
   const r = await fetch(BASE+url,{ headers:{ 'X-Shared-Key': SHARED }});

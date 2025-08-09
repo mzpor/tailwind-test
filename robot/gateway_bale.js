@@ -4,24 +4,28 @@ const axios = require('axios');
 const fs = require('fs').promises;
 const cors = require('cors');
 
-// تنظیمات
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const ADMIN_ID = Number(process.env.ADMIN_ID);
-const REPORT_GROUP_ID = Number(process.env.REPORT_GROUP_ID);
+// Import config from 3config.js
+const { BOT_TOKEN, REPORT_GROUP_ID, ADMIN_IDS } = require('./3config');
+
+// تنظیمات  
+const ADMIN_ID = 1114227010; // مدیر مشخص شده توسط کاربر
 const PORT = Number(process.env.PORT) || 3000;
 const BASE_URL = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
 
 // راه‌اندازی Express
 const app = express();
-app.use(cors({ origin: 'http://localhost:5173', methods: ['GET','POST'] }));
+app.use(cors({ 
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], 
+  methods: ['GET','POST'],
+  credentials: true 
+}));
 app.use(express.json());
 app.use(express.static('public'));
 
-// Middleware امنیتی برای API endpoints
+// Middleware لاگ کردن درخواست‌ها (برای تست)
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api') && req.path !== '/api/health') {
-    const k = req.get('X-Shared-Key');
-    if (k !== process.env.SHARED_KEY) return res.status(401).json({ ok: false, error: 'unauthorized' });
+  if (req.path.startsWith('/api')) {
+    console.log(`📡 [API] ${req.method} ${req.path}`);
   }
   next();
 });
@@ -282,16 +286,21 @@ async function notifyReportsStatusChanged(enabled) {
 
 ${status} شدند
 
-⏰ زمان: ${new Date().toLocaleString('fa-IR')}`;
+⏰ زمان: ${new Date().toLocaleString('fa-IR')}
+🔗 تغییر از: React Admin Panel`;
 
   try {
+    console.log(`📊 [GATEWAY] Notifying report status change: ${enabled}`);
+    
     // ارسال به گروه گزارش
     await sendBaleMessage(REPORT_GROUP_ID, message);
+    console.log(`✅ [GATEWAY] Report message sent to group: ${REPORT_GROUP_ID}`);
     
     // ارسال به مدیر
-    await sendBaleMessage(ADMIN_ID, `📊 وضعیت گزارش‌ها ${status} شد!\n\n⏰ زمان: ${new Date().toLocaleString('fa-IR')}`);
+    await sendBaleMessage(ADMIN_ID, `📊 وضعیت گزارش‌ها ${status} شد!\n\n⏰ زمان: ${new Date().toLocaleString('fa-IR')}\n🔗 تغییر از: React Admin Panel`);
+    console.log(`✅ [GATEWAY] Report message sent to admin: ${ADMIN_ID}`);
   } catch (error) {
-    console.error('خطا در ارسال پیام:', error);
+    console.error('❌ [GATEWAY] خطا در ارسال پیام:', error);
   }
 }
 

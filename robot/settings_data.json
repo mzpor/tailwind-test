@@ -1,15 +1,12 @@
 {
   "practice_days": [
     0,
-    2
+    4
   ],
-  "evaluation_days": [
-    1,
-    3
-  ],
+  "evaluation_days": [],
   "attendance_days": [
     5
   ],
   "enable_satisfaction_survey": true,
-  "enable_bot_reports": true
+  "enable_bot_reports": false
 }

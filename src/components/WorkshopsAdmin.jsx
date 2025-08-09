@@ -6,7 +6,15 @@ export default function WorkshopsAdmin(){
   const [form, setForm] = useState({ id:"", title:"", coach:"", price:0, baleLink:"" });
   const [msg, setMsg] = useState("");
 
-  async function load(){ try{ setList(await gw.workshops()); }catch{} }
+  async function load(){ 
+    try{ 
+      const data = await gw.workshops(); 
+      setList(Array.isArray(data) ? data : []); 
+    }catch(error){ 
+      console.error('خطا در لود کارگاه‌ها:', error);
+      setList([]);
+    } 
+  }
   useEffect(()=>{ load(); },[]);
   function onChange(e){ const {name,value} = e.target; setForm(f=>({...f,[name]: name==='price'? Number(value||0) : value})); }
   function edit(w){ setForm(w); }
@@ -44,7 +52,7 @@ export default function WorkshopsAdmin(){
 
       <div className="border-t pt-3">
         <div className="grid gap-2">
-          {list.map(w=>(
+          {Array.isArray(list) && list.length > 0 ? list.map(w=>(
             <div key={w.id} className="flex items-center justify-between border rounded-lg p-3">
               <div className="space-y-0.5">
                 <div className="font-medium">{w.title}</div>
@@ -55,7 +63,11 @@ export default function WorkshopsAdmin(){
                 <button className="px-3 py-1 rounded bg-amber-100" onClick={()=>edit(w)}>ویرایش</button>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="text-center py-4 text-slate-500">
+              هیچ کارگاهی یافت نشد
+            </div>
+          )}
         </div>
       </div>
     </div>
