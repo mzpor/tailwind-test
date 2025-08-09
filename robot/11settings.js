@@ -210,7 +210,7 @@ class SettingsModule {
     return { inline_keyboard: keyboard };
   }
   
-  getMainSettingsKeyboard() {
+  async getMainSettingsKeyboard() {
     console.log('🔧 [SETTINGS] getMainSettingsKeyboard STARTED');
     const practiceDaysCount = this.settings.practice_days.length;
     const evaluationDaysCount = this.settings.evaluation_days.length;
@@ -222,8 +222,17 @@ class SettingsModule {
     const satisfactionStatus = this.settings.enable_satisfaction_survey ? '✅ فعال' : '❌ غیرفعال';
     const reportsStatus = getReportsEnabled() ? '✅ فعال' : '❌ غیرفعال';
     
-    // وضعیت ثبت‌نام (فعلاً پیش‌فرض فعال)
-    const registrationStatus = '✅ فعال'; // TODO: باید از تنظیمات خوانده شود
+    // دریافت وضعیت ثبت‌نام از فایل site-status.json
+    let registrationStatus = '✅ فعال'; // پیش‌فرض
+    try {
+      const { readJson } = require('./server/utils/jsonStore');
+      const siteStatus = await readJson('data/site-status.json', {
+        registration: { enabled: true }
+      });
+      registrationStatus = siteStatus.registration.enabled ? '✅ فعال' : '❌ غیرفعال';
+    } catch (error) {
+      console.log('⚠️ [SETTINGS] Could not read registration status, using default');
+    }
     
     const keyboard = [
       [{ text: `📅 تمرین (${practiceDaysCount} روز)`, callback_data: 'practice_days_settings' }],
@@ -244,7 +253,7 @@ class SettingsModule {
     return { inline_keyboard: keyboard };
   }
   
-  handleSettingsCommand(chatId, userId) {
+  async handleSettingsCommand(chatId, userId) {
     console.log('⚙️ [SETTINGS] handleSettingsCommand STARTED');
     console.log(`⚙️ [SETTINGS] ChatId: ${chatId}, UserId: ${userId}`);
     
@@ -257,7 +266,7 @@ class SettingsModule {
     const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;
     
-    const replyMarkup = this.getMainSettingsKeyboard();
+    const replyMarkup = await this.getMainSettingsKeyboard();
     console.log('⚙️ [SETTINGS] About to call sendMessageWithInlineKeyboard...');
     console.log('⚙️ [SETTINGS] SENDING SETTINGS MENU WITH PRACTICE+EVALUATION BUTTON!');
     const result = sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
@@ -420,7 +429,7 @@ class SettingsModule {
     const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;
     
-    const replyMarkup = this.getMainSettingsKeyboard();
+    const replyMarkup = await this.getMainSettingsKeyboard();
     
     try {
       await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
@@ -936,43 +945,67 @@ class SettingsModule {
     
     const status = this.settings.enable_satisfaction_survey ? 'فعال' : 'غیرفعال';
     
-    // ارسال پیام اعلان به گروه گزارش
-    const { REPORT_GROUP_ID } = require('./6mid');
-    const moment = require('moment-jalaali');
-    
-    try {
-      const now = moment();
-      const time = now.format('HH:mm:ss');
-      const day = now.format('jD');
-      const month = now.format('jMMMM').replace(/^ا/, '');
-      const year = now.format('jYYYY');
-      
-      const reportText = `📝 *نظرسنجی ${status} شد*
-ساعت: ${time}
-تاریخ: ${day} ${month} ${year}`;
-      
-      await sendMessage(REPORT_GROUP_ID, reportText);
-      console.log(`✅ [SETTINGS] Satisfaction survey status change notification sent to group: ${status}`);
-    } catch (error) {
-      console.error('❌ [SETTINGS] Error sending satisfaction survey notification:', error.message);
-    }
+    // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
+    console.log(`✅ [SETTINGS] Satisfaction survey status changed to: ${status}`);
     
     const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;
     
-    const replyMarkup = this.getMainSettingsKeyboard();
+    const replyMarkup = await this.getMainSettingsKeyboard();
     await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
     await answerCallbackQuery(callbackQueryId, `📝 نظرسنجی ${status} شد!`);
   }
   
   async handleToggleRegistration(chatId, messageId, callbackQueryId) {
-    // فعلاً پیام ساده - بعداً باید با سیستم تنظیمات یکپارچه شود
-    const text = `⚙️ *پنل تنظیمات مدیر*
+    try {
+      // دریافت وضعیت فعلی ثبت‌نام
+      const { readJson, writeJson } = require('./server/utils/jsonStore');
+      const siteStatus = await readJson('data/site-status.json', {
+        registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' },
+        survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' }
+      });
+      
+      // تغییر وضعیت
+      const newStatus = !siteStatus.registration.enabled;
+      siteStatus.registration.enabled = newStatus;
+      siteStatus.registration.lastUpdate = Date.now();
+      siteStatus.registration.updatedFrom = 'ربات';
+      
+      // ذخیره تغییرات
+      await writeJson('data/site-status.json', siteStatus);
+      
+      const status = newStatus ? 'فعال' : 'غیرفعال';
+      
+      // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
+      console.log(`✅ [SETTINGS] Registration status changed to: ${status}`);
+      
+      // ارسال event برای SSE clients و داشبورد (اگر gateway فعال باشد)
+      try {
+        const gateway = require('./gateway_bale');
+        if (gateway && gateway.reportEvents) {
+          gateway.reportEvents.emit('registration-change', siteStatus.registration);
+          console.log('📡 [SETTINGS] SSE event emitted for registration change');
+        }
+        if (gateway && gateway.sendSettingsDashboard) {
+          await gateway.sendSettingsDashboard();
+          console.log('📊 [SETTINGS] Settings dashboard sent');
+        }
+      } catch (error) {
+        console.log('⚠️ [SETTINGS] Could not emit SSE event or send dashboard (gateway might be offline)');
+      }
+      
+      // آپدیت منوی تنظیمات
+      const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;
-    
-    const replyMarkup = this.getMainSettingsKeyboard();
-    await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
-    await answerCallbackQuery(callbackQueryId, '📝 ثبت‌نام تغییر کرد! (قابلیت در حال توسعه)');
+      
+      const replyMarkup = await this.getMainSettingsKeyboard();
+      await editMessage(chatId, messageId, text, replyMarkup.inline_keyboard);
+      await answerCallbackQuery(callbackQueryId, `📝 ثبت‌نام ${status} شد!`);
+      
+    } catch (error) {
+      console.error('❌ [SETTINGS] Error toggling registration:', error);
+      await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر وضعیت ثبت‌نام');
+    }
   }
   
   async handleToggleBotReports(chatId, messageId, callbackQueryId) {
@@ -988,40 +1021,10 @@ class SettingsModule {
     
     const status = newStatus ? 'فعال' : 'غیرفعال';
     
-    // ارسال پیام اعلان به گروه گزارش
-    const { REPORT_GROUP_ID } = require('./6mid');
-    const moment = require('moment-jalaali');
+    // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
+    console.log(`✅ [SETTINGS] Report status changed to: ${status}`);
     
-    try {
-      const now = moment();
-      const time = now.format('HH:mm:ss');
-      const day = now.format('jD');
-      const month = now.format('jMMMM').replace(/^ا/, '');
-      const year = now.format('jYYYY');
-      
-      const reportText = `📋 *گزارش‌ها ${status} شدند*
-
-⏰ ${time} - ${day} ${month} ${year}
-🤖 تغییر از: تنظیمات ربات`;
-      
-      await sendMessage(REPORT_GROUP_ID, reportText);
-      console.log(`✅ [SETTINGS] Report status change notification sent to group: ${status}`);
-      
-      // ارسال داشبورد تنظیمات
-      try {
-        const gateway = require('./gateway_bale');
-        if (gateway.sendSettingsDashboard) {
-          await gateway.sendSettingsDashboard();
-          console.log('📊 [SETTINGS] Settings dashboard sent');
-        }
-      } catch (error) {
-        console.log('⚠️ [SETTINGS] Could not send settings dashboard:', error.message);
-      }
-    } catch (error) {
-      console.error('❌ [SETTINGS] Error sending report status notification:', error.message);
-    }
-    
-             // ارسال event برای SSE clients
+             // ارسال event برای SSE clients و داشبورد
          if (reportEvents) {
            try {
              const config = loadReportsConfig();
@@ -1038,6 +1041,17 @@ class SettingsModule {
            }
          }
          
+         // ارسال داشبورد تنظیمات
+         try {
+           const gateway = require('./gateway_bale');
+           if (gateway && gateway.sendSettingsDashboard) {
+             await gateway.sendSettingsDashboard();
+             console.log('📊 [SETTINGS] Settings dashboard sent');
+           }
+         } catch (error) {
+           console.log('⚠️ [SETTINGS] Could not send settings dashboard (gateway might be offline)');
+         }
+         
          // آپدیت وضعیت ربات و ارسال داشبورد
          if (updateSystemStatus) {
            try {
@@ -1051,7 +1065,7 @@ class SettingsModule {
     const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;
     
-    const replyMarkup = this.getMainSettingsKeyboard();
+    const replyMarkup = await this.getMainSettingsKeyboard();
     await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
     await answerCallbackQuery(callbackQueryId, `📋 گروه گزارش ${status} شد!`);
   }
@@ -1069,7 +1083,7 @@ class SettingsModule {
     const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;
     
-    const replyMarkup = this.getMainSettingsKeyboard();
+    const replyMarkup = await this.getMainSettingsKeyboard();
     await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
     await answerCallbackQuery(callbackQueryId, '🔄 تنظیمات بازنشانی شد!');
   }

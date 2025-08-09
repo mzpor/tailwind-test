@@ -776,24 +776,12 @@ async function notifyBotSettingsChanged(settings) {
   }
 }
 
-// اطلاع‌رسانی تغییر وضعیت گزارش‌ها
+// اطلاع‌رسانی تغییر وضعیت گزارش‌ها (فقط لاگ)
 async function notifyReportsStatusChanged(enabled) {
   const status = enabled ? '✅ فعال' : '❌ غیرفعال';
-  const groupMessage = `📊 *گزارش‌ها ${status} شدند*
   
-⏰ ${new Date().toLocaleString('fa-IR')}
-🔗 تغییر از: پنل مدیر سایت`;
-
-  try {
-    console.log(`📊 [GATEWAY] Notifying report status change: ${enabled}`);
-    
-    // فقط به گروه گزارش ارسال کن (نه به مدیر در ربات)
-    await sendBaleMessage(REPORT_GROUP_ID, groupMessage);
-    console.log(`✅ [GATEWAY] Report message sent to group: ${REPORT_GROUP_ID}`);
-    
-  } catch (error) {
-    console.error('❌ [GATEWAY] خطا در ارسال پیام:', error);
-  }
+  // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
+  console.log(`📊 [GATEWAY] Report status changed to: ${status} from website`);
 }
 
 // Export reportEvents و sendSystemStatusDashboard برای استفاده در سایر ماژول‌ها
@@ -920,21 +908,50 @@ async function sendSettingsDashboard() {
   try {
     const config = loadReportsConfig();
     
+    // دریافت وضعیت ثبت‌نام و نظرسنجی
+    let registrationEnabled = true;
+    let surveyEnabled = true;
+    let registrationUpdatedFrom = 'سیستم';
+    let surveyUpdatedFrom = 'سیستم';
+    
+    try {
+      const siteStatus = await readJson('data/site-status.json', {});
+      if (siteStatus.registration) {
+        registrationEnabled = siteStatus.registration.enabled;
+        registrationUpdatedFrom = siteStatus.registration.updatedFrom || 'سیستم';
+      }
+      if (siteStatus.survey) {
+        surveyEnabled = siteStatus.survey.enabled;
+        surveyUpdatedFrom = siteStatus.survey.updatedFrom || 'سیستم';
+      }
+    } catch (error) {
+      console.log('⚠️ [DASHBOARD] Could not read site status, using defaults');
+    }
+    
     // آیکون‌های تنظیمات
     const reportsIcon = config.enabled ? '🟢' : '🔴';
-    const registrationIcon = '🟢'; // فعلاً فرض کنیم همیشه فعال است
-    const pollIcon = '🟢'; // فعلاً فرض کنیم همیشه فعال است
+    const registrationIcon = registrationEnabled ? '🟢' : '🔴';
+    const surveyIcon = surveyEnabled ? '🟢' : '🔴';
+    
+    // فرمت زمان فارسی بهتر
+    const moment = require('moment-jalaali');
+    const now = moment();
+    const currentTime = now.format('HH:mm:ss - jD jMMMM jYYYY').replace(/^ا/, '');
+    
+    let lastChangeTime = 'نامشخص';
+    if (config.lastUpdate) {
+      const lastChange = moment(config.lastUpdate);
+      lastChangeTime = lastChange.format('HH:mm:ss - jD jMMMM jYYYY').replace(/^ا/, '');
+    }
     
     const settingsMessage = `⚙️ *داشبورد تنظیمات سیستم*
 
-${reportsIcon} **گزارش‌ها**: ${config.enabled ? 'فعال' : 'غیرفعال'}
-${registrationIcon} **ثبت‌نام**: فعال
-${pollIcon} **نظرسنجی**: فعال
+${reportsIcon} **گزارش‌ها**: ${config.enabled ? 'فعال' : 'غیرفعال'} (از طرف: ${config.updatedFrom || 'سیستم'})
+${registrationIcon} **ثبت‌نام**: ${registrationEnabled ? 'فعال' : 'غیرفعال'} (از طرف: ${registrationUpdatedFrom})
+${surveyIcon} **نظرسنجی**: ${surveyEnabled ? 'فعال' : 'غیرفعال'} (از طرف: ${surveyUpdatedFrom})
 
-📊 آخرین تغییر گزارش: ${config.lastUpdate ? new Date(config.lastUpdate).toLocaleString('fa-IR') : 'نامشخص'}
-👤 آخرین تغییر توسط: ${config.updatedBy || 'سیستم'}
-
-⏰ آخرین بروزرسانی: ${new Date().toLocaleString('fa-IR')}`;
+📊 آخرین تغییر: ${lastChangeTime}
+⏰ زمان فعلی: ${currentTime}`;
 
     await sendBaleMessage(REPORT_GROUP_ID, settingsMessage);
     console.log('✅ [SETTINGS] Settings dashboard sent');
@@ -1072,17 +1089,8 @@ app.post('/api/toggle-registration', async (req, res) => {
     // ارسال رویداد SSE
     reportEvents.emit('registration-change', siteStatus.registration);
     
-    // اطلاع‌رسانی به گروه گزارش
-    const msg = `🔄 وضعیت ثبت‌نام تغییر کرد:
-${enabled ? '✅ فعال' : '❌ غیرفعال'}
-📅 زمان: ${new Date().toLocaleString('fa-IR')}
-🔗 تغییر از: سایت`;
-
-    try {
-      await sendBaleMessage(REPORT_GROUP_ID, msg);
-    } catch (e) {
-      console.error('خطا در ارسال پیام:', e);
-    }
+    // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
+    console.log(`🔄 Registration status changed to: ${enabled ? 'فعال' : 'غیرفعال'} from website`);
     
     res.json({ success: true, enabled });
   } catch (error) {
@@ -1122,17 +1130,8 @@ app.post('/api/toggle-survey', async (req, res) => {
     // ارسال رویداد SSE
     reportEvents.emit('survey-change', siteStatus.survey);
     
-    // اطلاع‌رسانی به گروه گزارش
-    const msg = `🔄 وضعیت نظرسنجی تغییر کرد:
-${enabled ? '✅ فعال' : '❌ غیرفعال'}
-📅 زمان: ${new Date().toLocaleString('fa-IR')}
-🔗 تغییر از: سایت`;
-
-    try {
-      await sendBaleMessage(REPORT_GROUP_ID, msg);
-    } catch (e) {
-      console.error('خطا در ارسال پیام:', e);
-    }
+    // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
+    console.log(`🔄 Survey status changed to: ${enabled ? 'فعال' : 'غیرفعال'} from website`);
     
     res.json({ success: true, enabled });
   } catch (error) {
