@@ -106,7 +106,6 @@ const { readJson, writeJson } = require('./server/utils/jsonStore');
 
 // فایل تنظیمات
 const SETTINGS_FILE = './data/settings.json';
-const REPORTS_FILE = './data/reports.json';
 const WS_FILE = './data/workshops.json';
 const RG_FILE = './data/registrations.json';
 const VERIFICATION_FILE = './data/verification_codes.json';
@@ -487,6 +486,7 @@ app.get('/api/workshops', async (req, res) => {
       id,
       title: workshop.description || `کارگاه ${workshop.instructor_name}`,
       coach: workshop.instructor_name,
+      phone: workshop.instructor_phone,
       price: workshop.cost,
       baleLink: workshop.link,
       ...workshop
@@ -514,6 +514,7 @@ app.post('/api/workshops', async (req, res) => {
     // تبدیل فرمت سایت به فرمت ربات
     const workshopData = {
       instructor_name: body.coach || body.instructor_name,
+      instructor_phone: body.phone || body.instructor_phone,
       cost: body.price || body.cost,
       link: body.baleLink || body.link,
       description: body.title || body.description,
@@ -530,6 +531,7 @@ app.post('/api/workshops', async (req, res) => {
       id: workshopId,
       title: workshopData.description,
       coach: workshopData.instructor_name,
+      phone: workshopData.instructor_phone,
       price: workshopData.cost,
       baleLink: workshopData.link,
       ...workshopData
@@ -1038,6 +1040,142 @@ function gracefulShutdown() {
     })();
   }
 }
+
+// API برای دریافت وضعیت ثبت‌نام
+app.get('/api/registration-status', async (req, res) => {
+  try {
+    const siteStatus = await readJson('data/site-status.json', {
+      registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' }
+    });
+    res.json(siteStatus.registration);
+  } catch (error) {
+    console.error('خطا در دریافت وضعیت ثبت‌نام:', error);
+    res.status(500).json({ error: 'خطا در دریافت وضعیت ثبت‌نام' });
+  }
+});
+
+// API برای تغییر وضعیت ثبت‌نام
+app.post('/api/toggle-registration', async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    const siteStatus = await readJson('data/site-status.json', {
+      registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' },
+      survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' }
+    });
+    
+    siteStatus.registration.enabled = enabled;
+    siteStatus.registration.lastUpdate = Date.now();
+    siteStatus.registration.updatedFrom = 'سایت';
+    
+    await writeJson('data/site-status.json', siteStatus);
+    
+    // ارسال رویداد SSE
+    reportEvents.emit('registration-change', siteStatus.registration);
+    
+    // اطلاع‌رسانی به گروه گزارش
+    const msg = `🔄 وضعیت ثبت‌نام تغییر کرد:
+${enabled ? '✅ فعال' : '❌ غیرفعال'}
+📅 زمان: ${new Date().toLocaleString('fa-IR')}
+🔗 تغییر از: سایت`;
+
+    try {
+      await sendBaleMessage(REPORT_GROUP_ID, msg);
+    } catch (e) {
+      console.error('خطا در ارسال پیام:', e);
+    }
+    
+    res.json({ success: true, enabled });
+  } catch (error) {
+    console.error('خطا در تغییر وضعیت ثبت‌نام:', error);
+    res.status(500).json({ error: 'خطا در تغییر وضعیت ثبت‌نام' });
+  }
+});
+
+// API برای دریافت وضعیت نظرسنجی
+app.get('/api/survey-status', async (req, res) => {
+  try {
+    const siteStatus = await readJson('data/site-status.json', {
+      survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' }
+    });
+    res.json(siteStatus.survey);
+  } catch (error) {
+    console.error('خطا در دریافت وضعیت نظرسنجی:', error);
+    res.status(500).json({ error: 'خطا در دریافت وضعیت نظرسنجی' });
+  }
+});
+
+// API برای تغییر وضعیت نظرسنجی
+app.post('/api/toggle-survey', async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    const siteStatus = await readJson('data/site-status.json', {
+      registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' },
+      survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' }
+    });
+    
+    siteStatus.survey.enabled = enabled;
+    siteStatus.survey.lastUpdate = Date.now();
+    siteStatus.survey.updatedFrom = 'سایت';
+    
+    await writeJson('data/site-status.json', siteStatus);
+    
+    // ارسال رویداد SSE
+    reportEvents.emit('survey-change', siteStatus.survey);
+    
+    // اطلاع‌رسانی به گروه گزارش
+    const msg = `🔄 وضعیت نظرسنجی تغییر کرد:
+${enabled ? '✅ فعال' : '❌ غیرفعال'}
+📅 زمان: ${new Date().toLocaleString('fa-IR')}
+🔗 تغییر از: سایت`;
+
+    try {
+      await sendBaleMessage(REPORT_GROUP_ID, msg);
+    } catch (e) {
+      console.error('خطا در ارسال پیام:', e);
+    }
+    
+    res.json({ success: true, enabled });
+  } catch (error) {
+    console.error('خطا در تغییر وضعیت نظرسنجی:', error);
+    res.status(500).json({ error: 'خطا در تغییر وضعیت نظرسنجی' });
+  }
+});
+
+// SSE endpoint برای رویدادهای ثبت‌نام و نظرسنجی
+app.get('/api/site-events', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // ارسال heartbeat
+  const heartbeat = setInterval(() => {
+    res.write('data: {"type":"heartbeat"}\n\n');
+  }, 30000);
+
+  // گوش دادن به رویدادهای ثبت‌نام
+  const onRegistrationChange = (data) => {
+    res.write(`data: ${JSON.stringify({type: 'registration', ...data})}\n\n`);
+  };
+
+  // گوش دادن به رویدادهای نظرسنجی
+  const onSurveyChange = (data) => {
+    res.write(`data: ${JSON.stringify({type: 'survey', ...data})}\n\n`);
+  };
+
+  reportEvents.on('registration-change', onRegistrationChange);
+  reportEvents.on('survey-change', onSurveyChange);
+
+  // پاکسازی در هنگام قطع اتصال
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    reportEvents.removeListener('registration-change', onRegistrationChange);
+    reportEvents.removeListener('survey-change', onSurveyChange);
+  });
+});
 
 // راه‌اندازی
 async function start() {

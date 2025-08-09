@@ -66,10 +66,9 @@ async function handleGroupJoin(chat) {
   console.log('🤖 [GROUP] handleGroupJoin called');
   console.log('🤖 [GROUP] Chat object:', JSON.stringify(chat, null, 2));
   
-  // بررسی وضعیت گزارش
-  const settings = new SettingsModule();
-  await settings.loadSettings();
-  if (!settings.settings.enable_bot_reports) {
+  // بررسی وضعیت گزارش از فایل مشترک
+  const { getReportsEnabled } = require('./3config');
+  if (!getReportsEnabled()) {
     console.log('📋 [GROUP] Reports disabled, skipping bot join report');
     return;
   }
@@ -131,10 +130,9 @@ async function getGroupMembers(chatId) {
 async function reportGroupMembers(chatId, chatTitle) {
   console.log(`📊 [GROUP] reportGroupMembers called for chatId: ${chatId}, chatTitle: ${chatTitle}`);
   
-  // بررسی وضعیت گزارش
-  const settings = new SettingsModule();
-  await settings.loadSettings();
-  if (!settings.settings.enable_bot_reports) {
+  // بررسی وضعیت گزارش از فایل مشترک
+  const { getReportsEnabled } = require('./3config');
+  if (!getReportsEnabled()) {
     console.log('📋 [GROUP] Reports disabled, skipping group members report');
     return;
   }
@@ -231,10 +229,9 @@ async function addMember(chatId, chatTitle, userId, userName) {
 // گزارش لیست به‌روزرسانی شده - شامل ادمین‌ها و کاربران
 async function reportUpdatedMembersList(chatId, chatTitle, newMemberName) {
   try {
-    // بررسی وضعیت گزارش
-    const settings = new SettingsModule();
-    await settings.loadSettings();
-    if (!settings.settings.enable_bot_reports) {
+    // بررسی وضعیت گزارش از فایل مشترک
+    const { getReportsEnabled } = require('./3config');
+    if (!getReportsEnabled()) {
       console.log('📋 [GROUP] Reports disabled, skipping updated members list report');
       return;
     }
@@ -289,10 +286,9 @@ async function removeMember(chatId, userId) {
         
         // گزارش حذف عضو
         try {
-          // بررسی وضعیت گزارش
-          const settings = new SettingsModule();
-          await settings.loadSettings();
-          if (settings.settings.enable_bot_reports) {
+          // بررسی وضعیت گزارش از فایل مشترک
+          const { getReportsEnabled } = require('./3config');
+          if (getReportsEnabled()) {
             const text = `👤 ${removedMember.name} از گروه خارج شد
 📛 گروه: ${chatId}
 ⏰ ${new Date().toLocaleString('fa-IR')}`;

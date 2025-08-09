@@ -47,4 +47,9 @@ export const gw = {
   verifyAndRegister: (payload) => post('/api/verify-and-register', payload),
   announceSiteOnline: () => post('/api/announce-site-online', {}),
   announceSiteOffline: () => post('/api/announce-site-offline', {}),
+  // API های جدید برای ثبت‌نام و نظرسنجی
+  getRegistrationStatus: () => get('/api/registration-status'),
+  toggleRegistration: (enabled) => post('/api/toggle-registration', { enabled }),
+  getSurveyStatus: () => get('/api/survey-status'),
+  toggleSurvey: (enabled) => post('/api/toggle-survey', { enabled }),
 };

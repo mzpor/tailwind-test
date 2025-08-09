@@ -168,6 +168,9 @@ export default function WorkshopManager() {
                 <div className="flex-1">
                   <h4 className="font-semibold">{workshop.title}</h4>
                   <p className="text-sm text-slate-600">👨‍🏫 {workshop.coach}</p>
+                  {workshop.phone && (
+                    <p className="text-sm text-slate-600">📱 {workshop.phone}</p>
+                  )}
                   <p className="text-sm text-slate-600">💰 {workshop.price.toLocaleString('fa-IR')} تومان</p>
                   <p className="text-xs text-slate-500 ltr">🔗 {workshop.baleLink}</p>
                 </div>

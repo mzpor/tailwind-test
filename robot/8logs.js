@@ -42,10 +42,9 @@ async function logShutdown() {
 async function logStartup() {
   console.log('🚀 [LOGS] logStartup called');
   
-  // بررسی وضعیت گزارش
-  const settings = new SettingsModule();
-  await settings.loadSettings();
-  if (!settings.settings.enable_bot_reports) {
+  // بررسی وضعیت گزارش از فایل مشترک
+  const { getReportsEnabled } = require('./3config');
+  if (!getReportsEnabled()) {
     console.log('📋 [LOGS] Reports disabled, skipping startup message');
     return;
   }
@@ -86,10 +85,9 @@ async function logError(errorType, details = '') {
   console.log('⚠️ [LOGS] logError called');
   console.log(`⚠️ [LOGS] Error type: ${errorType}, Details: ${details}`);
   
-  // بررسی وضعیت گزارش
-  const settings = new SettingsModule();
-  await settings.loadSettings();
-  if (!settings.settings.enable_bot_reports) {
+  // بررسی وضعیت گزارش از فایل مشترک
+  const { getReportsEnabled } = require('./3config');
+  if (!getReportsEnabled()) {
     console.log('📋 [LOGS] Reports disabled, skipping error message');
     return;
   }
@@ -111,10 +109,9 @@ async function logConnectionStatus(status) {
   console.log('🌐 [LOGS] logConnectionStatus called');
   console.log(`🌐 [LOGS] Status: ${status}`);
   
-  // بررسی وضعیت گزارش
-  const settings = new SettingsModule();
-  await settings.loadSettings();
-  if (!settings.settings.enable_bot_reports) {
+  // بررسی وضعیت گزارش از فایل مشترک
+  const { getReportsEnabled } = require('./3config');
+  if (!getReportsEnabled()) {
     console.log('📋 [LOGS] Reports disabled, skipping connection status message');
     return;
   }

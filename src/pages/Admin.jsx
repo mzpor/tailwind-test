@@ -26,6 +26,8 @@ function toCSV(rows){
 
 export default function Admin(){
   const [reportsEnabled, setReportsEnabled] = useState(true);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [surveyEnabled, setSurveyEnabled] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [notification, setNotification] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('checking'); // checking, connected, manual
@@ -33,6 +35,7 @@ export default function Admin(){
   const [lastTimestamp, setLastTimestamp] = useState(0);
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const eventSourceRef = useRef(null);
+  const siteEventSourceRef = useRef(null);
 
   const rows = useMemo(()=>[
     { name:'علی رضایی', phone:'09120000000', status:'paid' },
@@ -180,9 +183,77 @@ export default function Admin(){
     }
   };
 
+  // بارگذاری وضعیت‌های ثبت‌نام و نظرسنجی
+  const loadSiteStatuses = async () => {
+    try {
+      const [regStatus, surveyStatus] = await Promise.all([
+        gw.getRegistrationStatus(),
+        gw.getSurveyStatus()
+      ]);
+      setRegistrationEnabled(regStatus.enabled);
+      setSurveyEnabled(surveyStatus.enabled);
+    } catch (error) {
+      console.error('خطا در بارگذاری وضعیت‌های سایت:', error);
+    }
+  };
+
+  // شروع SSE برای رویدادهای سایت
+  const startSiteSSE = async () => {
+    if (siteEventSourceRef.current) return;
+    
+    try {
+      const baseUrl = await getBaseUrl();
+      const eventSource = new EventSource(`${baseUrl}/api/site-events`);
+      siteEventSourceRef.current = eventSource;
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'registration') {
+            setRegistrationEnabled(data.enabled);
+            showNotification(
+              `🔄 وضعیت ثبت‌نام از ${data.updatedFrom || 'ربات'} تغییر کرد: ${data.enabled ? '✅ فعال' : '❌ غیرفعال'}`,
+              'info'
+            );
+          } else if (data.type === 'survey') {
+            setSurveyEnabled(data.enabled);
+            showNotification(
+              `🔄 وضعیت نظرسنجی از ${data.updatedFrom || 'ربات'} تغییر کرد: ${data.enabled ? '✅ فعال' : '❌ غیرفعال'}`,
+              'info'
+            );
+          }
+        } catch (error) {
+          console.error('❌ [SITE-SSE] Error parsing message:', error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('❌ [SITE-SSE] Connection error:', error);
+        // اتصال مجدد بعد از 5 ثانیه
+        setTimeout(() => {
+          if (siteEventSourceRef.current?.readyState === EventSource.CLOSED) {
+            startSiteSSE();
+          }
+        }, 5000);
+      };
+    } catch (error) {
+      console.error('❌ خطا در شروع Site SSE:', error);
+    }
+  };
+
+  // توقف Site SSE
+  const stopSiteSSE = () => {
+    if (siteEventSourceRef.current) {
+      siteEventSourceRef.current.close();
+      siteEventSourceRef.current = null;
+    }
+  };
+
   useEffect(() => {
     loadReportStatus(); // بارگذاری اولیه
+    loadSiteStatuses(); // بارگذاری وضعیت‌های سایت
     checkRobotAndConnect(); // تشخیص وضعیت ربات و اتصال مناسب
+    startSiteSSE(); // شروع SSE برای رویدادهای سایت
     
     // اطلاع‌رسانی آنلاین شدن سایت
     announceSiteOnline();
@@ -190,6 +261,7 @@ export default function Admin(){
     // cleanup در هنگام unmount
     return () => {
       stopSSE();
+      stopSiteSSE();
       // اطلاع‌رسانی خاموشی سایت
       announceSiteOffline();
     };
@@ -241,6 +313,50 @@ export default function Admin(){
     } catch (error) {
       console.error('❌ [ADMIN] خطا در تغییر وضعیت گزارش‌ها:', error);
       showNotification('❌ خطا در تغییر وضعیت گزارش‌ها', 'error');
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function toggleRegistration() {
+    setToggling(true);
+    try {
+      const newStatus = !registrationEnabled;
+      console.log(`🔄 [ADMIN] Toggling registration to: ${newStatus}`);
+      
+      const result = await gw.toggleRegistration(newStatus);
+      console.log('✅ [ADMIN] Registration toggle response:', result);
+      
+      setRegistrationEnabled(newStatus);
+      showNotification(
+        `✅ ثبت‌نام ${newStatus ? 'فعال' : 'غیرفعال'} شد و پیام به گروه بله ارسال شد!`, 
+        'success'
+      );
+    } catch (error) {
+      console.error('❌ [ADMIN] خطا در تغییر وضعیت ثبت‌نام:', error);
+      showNotification('❌ خطا در تغییر وضعیت ثبت‌نام', 'error');
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function toggleSurvey() {
+    setToggling(true);
+    try {
+      const newStatus = !surveyEnabled;
+      console.log(`🔄 [ADMIN] Toggling survey to: ${newStatus}`);
+      
+      const result = await gw.toggleSurvey(newStatus);
+      console.log('✅ [ADMIN] Survey toggle response:', result);
+      
+      setSurveyEnabled(newStatus);
+      showNotification(
+        `✅ نظرسنجی ${newStatus ? 'فعال' : 'غیرفعال'} شد و پیام به گروه بله ارسال شد!`, 
+        'success'
+      );
+    } catch (error) {
+      console.error('❌ [ADMIN] خطا در تغییر وضعیت نظرسنجی:', error);
+      showNotification('❌ خطا در تغییر وضعیت نظرسنجی', 'error');
     } finally {
       setToggling(false);
     }
@@ -322,16 +438,26 @@ export default function Admin(){
                   گزارش {reportsEnabled ? '✅' : '❌'}
                 </button>
                 <button 
-                  className="px-3 py-2 rounded-lg text-white text-sm bg-blue-600 hover:bg-blue-700"
-                  onClick={() => showNotification('نظرسنجی تغییر کرد! (در حال توسعه)', 'info')}
+                  onClick={toggleRegistration} 
+                  disabled={toggling}
+                  className={`px-3 py-2 rounded-lg text-white text-sm ${
+                    registrationEnabled 
+                      ? 'bg-blue-600 hover:bg-blue-700' 
+                      : 'bg-red-600 hover:bg-red-700'
+                  } disabled:opacity-50`}
                 >
-                  نظرسنجی ✅
+                  ثبت‌نام {registrationEnabled ? '✅' : '❌'}
                 </button>
                 <button 
-                  className="px-3 py-2 rounded-lg text-white text-sm bg-purple-600 hover:bg-purple-700"
-                  onClick={() => showNotification('تمرین تغییر کرد! (در حال توسعه)', 'info')}
+                  onClick={toggleSurvey} 
+                  disabled={toggling}
+                  className={`px-3 py-2 rounded-lg text-white text-sm ${
+                    surveyEnabled 
+                      ? 'bg-purple-600 hover:bg-purple-700' 
+                      : 'bg-red-600 hover:bg-red-700'
+                  } disabled:opacity-50`}
                 >
-                  تمرین ✅
+                  نظرسنجی {surveyEnabled ? '✅' : '❌'}
                 </button>
               </div>
             </div>
