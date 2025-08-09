@@ -17,6 +17,15 @@ app.use(cors({ origin: 'http://localhost:5173', methods: ['GET','POST'] }));
 app.use(express.json());
 app.use(express.static('public'));
 
+// Middleware امنیتی برای API endpoints
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') && req.path !== '/api/health') {
+    const k = req.get('X-Shared-Key');
+    if (k !== process.env.SHARED_KEY) return res.status(401).json({ ok: false, error: 'unauthorized' });
+  }
+  next();
+});
+
 // فایل تنظیمات
 const SETTINGS_FILE = './data/settings.json';
 const REPORTS_FILE = './data/reports.json';
