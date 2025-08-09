@@ -1,5 +1,19 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import { gw } from "../lib/gateway";
+
+// Import تابع getBaseUrl برای پورت پویا
+async function getBaseUrl() {
+  try {
+    const response = await fetch('/src/lib/gateway-config.json');
+    if (response.ok) {
+      const config = await response.json();
+      return config.gatewayUrl;
+    }
+  } catch (error) {
+    // fallback
+  }
+  return import.meta.env.VITE_GATEWAY_BASE || "http://localhost:3002";
+}
 import SettingsForm from "../components/SettingsForm";
 import WorkshopManager from "../components/WorkshopManager";
 import WorkshopsAdmin from "../components/WorkshopsAdmin";
@@ -14,10 +28,11 @@ export default function Admin(){
   const [reportsEnabled, setReportsEnabled] = useState(true);
   const [toggling, setToggling] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('connected');
+  const [connectionStatus, setConnectionStatus] = useState('checking'); // checking, connected, manual
   const [lastSync, setLastSync] = useState(new Date());
   const [lastTimestamp, setLastTimestamp] = useState(0);
-  const pollingInterval = useRef(null);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const eventSourceRef = useRef(null);
 
   const rows = useMemo(()=>[
     { name:'علی رضایی', phone:'09120000000', status:'paid' },
@@ -25,58 +40,153 @@ export default function Admin(){
     { name:'حسین احمدی', phone:'09123333333', status:'paid' },
   ],[]);
 
-  // بارگذاری اولیه انلاین وضعیت گزارش‌ها
-  const loadReportStatus = async () => {
+  // بارگذاری وضعیت گزارش‌ها (برای آپدیت دستی)
+  const loadReportStatus = async (showLoading = false) => {
+    if (showLoading) setIsManualRefreshing(true);
+    
     try {
       const data = await gw.getReportStatus();
-      const wasEnabled = reportsEnabled;
+      updateReportStatus(data, false);
       
-      // فقط اگر timestamp تغییر کرده باشد، state را آپدیت کن
-      if (data.lastUpdate && data.lastUpdate !== lastTimestamp) {
-        setReportsEnabled(data.enabled);
-        setLastTimestamp(data.lastUpdate);
+      // چک کردن heartbeat ربات (فقط در آپدیت دستی)
+      if (showLoading && data.lastRobotPing) {
+        const lastPing = new Date(data.lastRobotPing);
+        const now = new Date();
+        const diffMinutes = (now - lastPing) / (1000 * 60);
         
-        // اگر وضعیت تغییر کرده باشد و این اولین بار نیست، نوتیفیکیشن نشان بده
-        if (wasEnabled !== data.enabled && lastTimestamp > 0) {
-          showNotification(
-            `🔄 وضعیت گزارش‌ها از ${data.updatedFrom || 'ربات'} تغییر کرد: ${data.enabled ? '✅ فعال' : '❌ غیرفعال'}`,
-            'info'
-          );
+        if (diffMinutes <= 10) {
+          // ربات آنلاین شده! بیا به SSE برو
+          console.log('🎉 [MANUAL] Robot is back online, switching to SSE!');
+          setConnectionStatus('connecting');
+          setTimeout(() => startSSE(), 500);
+          showNotification('🎉 ربات آنلاین شد! اتصال real-time برقرار شد', 'success');
+        } else {
+          showNotification('✅ وضعیت به‌روزرسانی شد', 'success');
         }
+      } else if (showLoading) {
+        showNotification('✅ وضعیت به‌روزرسانی شد', 'success');
       }
-      
-      setLastSync(new Date());
-      setConnectionStatus('connected');
     } catch (error) {
       console.error('خطا در بارگذاری وضعیت گزارش‌ها:', error);
-      setConnectionStatus('disconnected');
+      if (showLoading) {
+        showNotification('❌ خطا در به‌روزرسانی', 'error');
+      }
+    } finally {
+      if (showLoading) setIsManualRefreshing(false);
     }
   };
 
-  // شروع polling برای همگام‌سازی
-  const startPolling = () => {
-    if (pollingInterval.current) return;
+  // آپدیت وضعیت گزارش‌ها
+  const updateReportStatus = (data, showNotif = true) => {
+    const wasEnabled = reportsEnabled;
     
-    pollingInterval.current = setInterval(() => {
-      loadReportStatus();
-    }, 3000); // هر 3 ثانیه چک کن
+    // فقط اگر timestamp تغییر کرده باشد، state را آپدیت کن
+    if (data.lastUpdate && data.lastUpdate !== lastTimestamp) {
+      setReportsEnabled(data.enabled);
+      setLastTimestamp(data.lastUpdate);
+      setLastSync(new Date());
+      
+      // اگر وضعیت تغییر کرده باشد و این اولین بار نیست، نوتیفیکیشن نشان بده
+      if (showNotif && wasEnabled !== data.enabled && lastTimestamp > 0) {
+        showNotification(
+          `🔄 وضعیت گزارش‌ها از ${data.updatedFrom || 'ربات'} تغییر کرد: ${data.enabled ? '✅ فعال' : '❌ غیرفعال'}`,
+          'info'
+        );
+      }
+    }
   };
 
-  // توقف polling
-  const stopPolling = () => {
-    if (pollingInterval.current) {
-      clearInterval(pollingInterval.current);
-      pollingInterval.current = null;
+  // تشخیص وضعیت ربات و شروع اتصال مناسب
+  const checkRobotAndConnect = async () => {
+    console.log('🔍 [CONNECTION] Checking robot status...');
+    setConnectionStatus('checking');
+    
+    try {
+               // تست اتصال به ربات با پورت پویا
+         const baseUrl = await getBaseUrl();
+         const response = await fetch(`${baseUrl}/api/health`);
+      if (response.ok) {
+        console.log('✅ [CONNECTION] Robot is online, starting SSE...');
+        startSSE();
+      } else {
+        throw new Error('Robot not responding');
+      }
+    } catch (error) {
+      console.log('⚠️ [CONNECTION] Robot is offline, switching to manual mode');
+      setConnectionStatus('manual');
+      showNotification('ربات غیرفعال است. برای به‌روزرسانی از دکمه آپدیت استفاده کنید.', 'info');
+    }
+  };
+
+  // شروع SSE اتصال
+  const startSSE = async () => {
+    if (eventSourceRef.current) return;
+    
+    console.log('🔄 [SSE] Starting SSE connection...');
+    setConnectionStatus('connecting');
+    
+           const baseUrl = await getBaseUrl();
+       const eventSource = new EventSource(`${baseUrl}/api/report-events`);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onopen = () => {
+      console.log('✅ [SSE] Connected successfully');
+      setConnectionStatus('connected');
+    };
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📡 [SSE] Received update:', data);
+        updateReportStatus(data, true);
+      } catch (error) {
+        console.error('❌ [SSE] Error parsing message:', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('❌ [SSE] Connection error:', error);
+      
+      // بعد از 2 تلاش ناموفق، به حالت دستی برو
+      const attempts = parseInt(eventSource.dataset?.attempts || '0') + 1;
+      eventSource.dataset = { attempts: attempts.toString() };
+      
+      if (attempts > 2) {
+        console.log('⚠️ [SSE] Max attempts reached, switching to manual mode');
+        stopSSE();
+        setConnectionStatus('manual');
+        showNotification('اتصال به ربات قطع شد. برای به‌روزرسانی از دکمه آپدیت استفاده کنید.', 'info');
+        return;
+      }
+      
+      setConnectionStatus('checking');
+      
+      // اتصال مجدد بعد از 3 ثانیه
+      setTimeout(() => {
+        if (eventSourceRef.current?.readyState === EventSource.CLOSED) {
+          console.log(`🔄 [SSE] Attempting to reconnect... (${attempts}/2)`);
+          startSSE();
+        }
+      }, 3000);
+    };
+  };
+
+  // توقف SSE
+  const stopSSE = () => {
+    if (eventSourceRef.current) {
+      console.log('🔌 [SSE] Closing connection');
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
   };
 
   useEffect(() => {
-    loadReportStatus();
-    startPolling();
+    loadReportStatus(); // بارگذاری اولیه
+    checkRobotAndConnect(); // تشخیص وضعیت ربات و اتصال مناسب
     
     // cleanup در هنگام unmount
     return () => {
-      stopPolling();
+      stopSSE();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -142,21 +252,36 @@ export default function Admin(){
               <h2 className="text-lg font-bold">وضعیت گزارش‌ها</h2>
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'
+                  connectionStatus === 'connected' ? 'bg-emerald-500' : 
+                  connectionStatus === 'checking' || connectionStatus === 'connecting' ? 'bg-yellow-500' : 
+                  connectionStatus === 'manual' ? 'bg-blue-500' : 'bg-red-500'
                 }`}></div>
                 <span className="text-xs text-slate-500">
-                  {connectionStatus === 'connected' ? 'متصل' : 'قطع شده'}
+                  {connectionStatus === 'connected' ? 'متصل (SSE)' : 
+                   connectionStatus === 'connecting' ? 'در حال اتصال...' : 
+                   connectionStatus === 'checking' ? 'بررسی وضعیت...' :
+                   connectionStatus === 'manual' ? 'حالت دستی' : 'قطع شده'}
                 </span>
               </div>
             </div>
             <div className="flex gap-2">
+              {/* دکمه آپدیت دستی */}
               <button 
-                onClick={loadReportStatus}
-                disabled={toggling}
-                className="px-3 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 disabled:opacity-50"
-                title="همگام‌سازی دستی"
+                onClick={() => {
+                  if (connectionStatus === 'manual') {
+                    loadReportStatus(true);
+                  } else {
+                    stopSSE();
+                    checkRobotAndConnect();
+                  }
+                }}
+                disabled={toggling || isManualRefreshing}
+                className={`px-3 py-2 rounded-lg text-slate-700 disabled:opacity-50 ${
+                  connectionStatus === 'manual' ? 'bg-blue-200 hover:bg-blue-300' : 'bg-slate-200 hover:bg-slate-300'
+                }`}
+                title={connectionStatus === 'manual' ? 'آپدیت دستی' : 'بررسی مجدد اتصال'}
               >
-                🔄
+                {isManualRefreshing ? '⏳' : '🔄'}
               </button>
               <button 
                 onClick={toggleReports} 
@@ -175,6 +300,11 @@ export default function Admin(){
             <p className="text-sm text-slate-600">
               گزارش‌ها در حال حاضر {reportsEnabled ? '✅ فعال' : '❌ غیرفعال'} هستند
             </p>
+            {connectionStatus === 'manual' && (
+              <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                💡 ربات غیرفعال است. برای به‌روزرسانی دکمه 🔄 را کلیک کنید
+              </p>
+            )}
             <p className="text-xs text-slate-400">
               آخرین همگام‌سازی: {lastSync.toLocaleTimeString('fa-IR')}
             </p>

@@ -177,6 +177,42 @@ const removeUserFromRole = (role, userId) => {
 
 // تنظیمات گروه‌ها و دسترسی
 const REPORT_GROUP_ID = 5668045453;// گزارش گروه
+
+// تنظیمات مدیر خصوصی برای گزارش‌ها (با شماره تلفن)
+const PRIVATE_ADMIN_PHONE = "09101234567"; // شماره تلفن مدیر برای گزارش‌های خصوصی
+
+// تابع تبدیل شماره تلفن به user ID (اگر در دیتابیس باشد)
+function getAdminIdByPhone(phone) {
+  // نرمال‌سازی شماره تلفن
+  const normalizedPhone = normalizePhoneNumber(phone);
+  
+  // جستجو در کاربران ثبت شده
+  // این بخش باید با دیتابیس کاربران ربط داده شود
+  const phoneToIdMap = {
+    "989101234567": 1114227010, // مثال
+    // سایر شماره‌ها...
+  };
+  
+  return phoneToIdMap[normalizedPhone] || null;
+}
+
+// تابع نرمال‌سازی شماره تلفن
+function normalizePhoneNumber(phone) {
+  // حذف فاصله‌ها و کاراکترهای اضافی
+  let normalized = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // تبدیل 09xxxxxxxx به 989xxxxxxxx
+  if (normalized.startsWith('09')) {
+    normalized = '98' + normalized.substring(1);
+  }
+  
+  // اگر با +98 شروع می‌شود، + را حذف کن
+  if (normalized.startsWith('+98')) {
+    normalized = normalized.substring(1);
+  }
+  
+  return normalized;
+}
 //4594690153    گروه ربات 1
 //5417069312    گروه ربات 2
 
@@ -261,7 +297,9 @@ function loadReportsConfig() {
         enabled: true,
         lastUpdate: new Date().toISOString(),
         updatedBy: 'system',
-        updatedFrom: 'default'
+        updatedFrom: 'default',
+        robotOnline: false,
+        lastRobotPing: null
       };
       saveReportsConfig(defaultConfig);
       return defaultConfig;
@@ -299,13 +337,43 @@ function getReportsEnabled() {
 
 // تغییر وضعیت گزارش‌گیری
 function setReportsEnabled(enabled, updatedBy = 'unknown', updatedFrom = 'unknown') {
-  const config = {
-    enabled: enabled,
-    lastUpdate: new Date().toISOString(),
-    updatedBy: updatedBy,
-    updatedFrom: updatedFrom
-  };
+  const config = loadReportsConfig(); // حفظ سایر فیلدها
+  config.enabled = enabled;
+  config.lastUpdate = new Date().toISOString();
+  config.updatedBy = updatedBy;
+  config.updatedFrom = updatedFrom;
   return saveReportsConfig(config);
+}
+
+// آپدیت heartbeat ربات
+function updateRobotHeartbeat() {
+  try {
+    const config = loadReportsConfig();
+    config.robotOnline = true;
+    config.lastRobotPing = new Date().toISOString();
+    
+    return saveReportsConfig(config);
+  } catch (error) {
+    console.error('❌ [CONFIG] Error updating robot heartbeat:', error);
+    return false;
+  }
+}
+
+// بررسی آنلاین بودن ربات (10 دقیقه timeout)
+function isRobotOnline() {
+  try {
+    const config = loadReportsConfig();
+    if (!config.lastRobotPing) return false;
+    
+    const lastPing = new Date(config.lastRobotPing);
+    const now = new Date();
+    const diffMinutes = (now - lastPing) / (1000 * 60);
+    
+    return diffMinutes <= 10; // ربات تا 10 دقیقه پیش آنلاین بوده
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking robot online status:', error);
+    return false;
+  }
 }
 
 // نقش‌های کاربران
@@ -382,5 +450,11 @@ module.exports = {
   loadReportsConfig,
   saveReportsConfig,
   getReportsEnabled,
-  setReportsEnabled
+  setReportsEnabled,
+  updateRobotHeartbeat,
+  isRobotOnline,
+  // ===== توابع مدیریت شماره تلفن =====
+  PRIVATE_ADMIN_PHONE,
+  getAdminIdByPhone,
+  normalizePhoneNumber
 };

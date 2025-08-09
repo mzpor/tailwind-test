@@ -1,12 +1,30 @@
-const BASE = import.meta.env.VITE_GATEWAY_BASE || "http://localhost:3000";
 const SHARED = import.meta.env.VITE_SHARED_KEY || "dev-123";
 
+// تابع دریافت BASE URL با پشتیبانی از پورت پویا
+async function getBaseUrl() {
+  try {
+    // ابتدا سعی کن از فایل کانفیگ پورت پویا بخوانی
+    const response = await fetch('/src/lib/gateway-config.json');
+    if (response.ok) {
+      const config = await response.json();
+      return config.gatewayUrl;
+    }
+  } catch (error) {
+    // اگر فایل کانفیگ نبود، از env variable یا پیش‌فرض استفاده کن
+  }
+  
+  return import.meta.env.VITE_GATEWAY_BASE || "http://localhost:3002";
+}
+
 async function get(url){
+  const BASE = await getBaseUrl();
   const r = await fetch(BASE+url,{ headers:{ 'X-Shared-Key': SHARED }});
   if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
 }
+
 async function post(url, body){
+  const BASE = await getBaseUrl();
   const r = await fetch(BASE+url,{
     method:'POST',
     headers:{ 'Content-Type':'application/json', 'X-Shared-Key': SHARED },

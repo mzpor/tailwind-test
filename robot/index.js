@@ -14,10 +14,18 @@ console.log('✅ [INDEX] 5polling module loaded');
 const { logShutdown, logStartup } = require('./8logs');
 console.log('✅ [INDEX] 8logs module loaded');
 
+const { updateRobotHeartbeat } = require('./3config');
+console.log('✅ [INDEX] 3config module loaded');
+
 // گزارش فعال شدن بات
 console.log('🚀 [INDEX] Calling logStartup...');
 logStartup().then(() => {
   console.log('🤖 [INDEX] Bot started successfully');
+  
+  // اعلام آنلاین شدن ربات
+  updateRobotHeartbeat();
+  console.log('🟢 [INDEX] Robot status: ONLINE');
+  
   console.log('🚀 [INDEX] Starting polling...');
   startPolling();
   console.log('✅ [INDEX] Polling started');
@@ -28,6 +36,18 @@ logStartup().then(() => {
 
 process.on('SIGINT', async () => {
   console.log('🛑 [INDEX] Received SIGINT, shutting down...');
+  
+  // اعلام آفلاین شدن ربات
+  try {
+    const config = require('./3config').loadReportsConfig();
+    config.robotOnline = false;
+    config.lastRobotPing = new Date().toISOString();
+    require('./3config').saveReportsConfig(config);
+    console.log('🔴 [INDEX] Robot status: OFFLINE');
+  } catch (error) {
+    console.error('❌ [INDEX] Error setting offline status:', error);
+  }
+  
   await logShutdown();
   console.log('✅ [INDEX] Shutdown completed');
   process.exit();

@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "lastUpdate": "2025-08-09T17:30:00.000Z",
+  "updatedBy": "system",
+  "updatedFrom": "default",
+  "robotOnline": false,
+  "lastRobotPing": null,
+  "siteSettings": {
+    "allowSiteControl": true,
+    "siteCanToggleWhenRobotOffline": true,
+    "description": "تنظیمات مستقل سایت - حتی اگر ربات خاموش باشد"
+  }
+}

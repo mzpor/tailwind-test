@@ -12,6 +12,15 @@ const {
 } = require('./3config');
 const { hasPermission } = require('./6mid');
 
+// Import reportEvents برای SSE
+let reportEvents = null;
+try {
+  const gateway = require('./gateway_bale');
+  reportEvents = gateway.reportEvents;
+} catch (error) {
+  console.log('⚠️ [SETTINGS] Could not import reportEvents, SSE disabled');
+}
+
 class SettingsModule {
   constructor() {
     this.settingsFile = SETTINGS_CONFIG.SETTINGS_FILE;
@@ -970,15 +979,32 @@ class SettingsModule {
       const month = now.format('jMMMM').replace(/^ا/, '');
       const year = now.format('jYYYY');
       
-      const reportText = `📋 *گزارش ${status} شد*
-ساعت: ${time}
-تاریخ: ${day} ${month} ${year}
-🔄 تغییر از: ربات`;
+      const reportText = `📋 *گزارش‌ها ${status} شدند*
+
+⏰ ${time} - ${day} ${month} ${year}
+🤖 تغییر از: تنظیمات ربات`;
       
       await sendMessage(REPORT_GROUP_ID, reportText);
       console.log(`✅ [SETTINGS] Report status change notification sent to group: ${status}`);
     } catch (error) {
       console.error('❌ [SETTINGS] Error sending report status notification:', error.message);
+    }
+    
+    // ارسال event برای SSE clients
+    if (reportEvents) {
+      try {
+        const config = loadReportsConfig();
+        reportEvents.emit('reportChanged', {
+          enabled: config.enabled,
+          lastUpdate: config.lastUpdate,
+          updatedBy: config.updatedBy,
+          updatedFrom: config.updatedFrom,
+          timestamp: Date.now()
+        });
+        console.log('📡 [SETTINGS] SSE event emitted for report change');
+      } catch (error) {
+        console.error('❌ [SETTINGS] Error emitting SSE event:', error);
+      }
     }
     
     const text = `⚙️ *پنل تنظیمات مدیر*

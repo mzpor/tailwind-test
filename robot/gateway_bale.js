@@ -3,6 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const fs = require('fs').promises;
 const cors = require('cors');
+const EventEmitter = require('events');
 
 // Import config from 3config.js
 const { 
@@ -12,13 +13,19 @@ const {
   loadReportsConfig,
   saveReportsConfig,
   getReportsEnabled,
-  setReportsEnabled
+  setReportsEnabled,
+  updateRobotHeartbeat,
+  isRobotOnline
 } = require('./3config');
 
 // تنظیمات  
 const ADMIN_ID = 1114227010; // مدیر مشخص شده توسط کاربر
-const PORT = Number(process.env.PORT) || 3000;
+const START_PORT = Number(process.env.PORT) || 3002; // پورت شروع
 const BASE_URL = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
+
+// متغیر برای نگهداری پورت فعلی و سرور
+let currentPort = START_PORT;
+let server = null;
 
 // راه‌اندازی Express
 const app = express();
@@ -29,6 +36,59 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.static('public'));
+
+// Event Emitter برای SSE
+const reportEvents = new EventEmitter();
+
+// ذخیره پورت برای frontend
+function savePortConfig(port) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const config = {
+      gatewayPort: port,
+      gatewayUrl: `http://localhost:${port}`,
+      lastUpdate: new Date().toISOString()
+    };
+    
+    const configPath = path.join(__dirname, '..', 'src', 'lib', 'gateway-config.json');
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    console.log(`✅ [CONFIG] پورت ${port} برای frontend ذخیره شد`);
+  } catch (error) {
+    console.error('❌ [CONFIG] خطا در ذخیره کانفیگ پورت:', error);
+  }
+}
+
+// تابع پیدا کردن پورت آزاد
+function findAvailablePort(startPort) {
+  return new Promise((resolve) => {
+    const net = require('net');
+    
+    function checkPort(port) {
+      const server = net.createServer();
+      
+      server.listen(port, (err) => {
+        if (err) {
+          console.log(`❌ [PORT] پورت ${port} اشغال است، تلاش برای ${port + 1}...`);
+          server.close();
+          checkPort(port + 1);
+        } else {
+          console.log(`✅ [PORT] پورت ${port} آزاد است!`);
+          server.close();
+          resolve(port);
+        }
+      });
+      
+      server.on('error', () => {
+        server.close();
+        checkPort(port + 1);
+      });
+    }
+    
+    checkPort(startPort);
+  });
+}
 
 // Middleware لاگ کردن درخواست‌ها (برای تست)
 app.use((req, res, next) => {
@@ -223,25 +283,114 @@ app.get('/api/report-status', async (req, res) => {
 app.post('/api/toggle-reports', async (req, res) => {
   try {
     const { enabled } = req.body;
+    const config = loadReportsConfig();
+    
+    // بررسی اینکه آیا سایت مجاز است تغییر دهد
+    if (!config.siteSettings?.allowSiteControl) {
+      return res.status(403).json({ error: 'سایت مجاز به تغییر تنظیمات نیست' });
+    }
+    
+    // اگر ربات آفلاین است، بررسی کن که آیا سایت مجاز است تغییر دهد
+    if (!config.robotOnline && !config.siteSettings?.siteCanToggleWhenRobotOffline) {
+      return res.status(403).json({ error: 'در حالت آفلاین ربات، سایت نمی‌تواند تنظیمات را تغییر دهد' });
+    }
     
     // ذخیره در فایل مشترک
     const success = setReportsEnabled(enabled, 'admin', 'website');
     
     if (success) {
-      // اطلاع‌رسانی به ربات
-      await notifyReportsStatusChanged(enabled);
+      // اطلاع‌رسانی به ربات (فقط اگر آنلاین باشد)
+      if (config.robotOnline) {
+        await notifyReportsStatusChanged(enabled);
+      } else {
+        console.log('⚠️ [TOGGLE] ربات آفلاین است - فقط تنظیمات سایت آپدیت شد');
+      }
       
-      res.json({ success: true, message: `گزارش‌ها ${enabled ? 'فعال' : 'غیرفعال'} شدند` });
+      // ارسال event برای SSE clients
+      const updatedConfig = loadReportsConfig();
+      reportEvents.emit('reportChanged', {
+        enabled: updatedConfig.enabled,
+        lastUpdate: updatedConfig.lastUpdate,
+        updatedBy: updatedConfig.updatedBy,
+        updatedFrom: updatedConfig.updatedFrom,
+        robotOnline: updatedConfig.robotOnline,
+        timestamp: Date.now()
+      });
+      
+      res.json({ 
+        success: true, 
+        message: `گزارش‌ها ${enabled ? 'فعال' : 'غیرفعال'} شدند`,
+        robotOnline: updatedConfig.robotOnline,
+        note: updatedConfig.robotOnline ? 'تغییرات به ربات اطلاع داده شد' : 'ربات آفلاین - فقط تنظیمات سایت آپدیت شد'
+      });
     } else {
       res.status(500).json({ error: 'خطا در ذخیره تنظیمات' });
     }
   } catch (error) {
+    console.error('❌ [TOGGLE] خطا در تغییر وضعیت گزارش‌ها:', error);
     res.status(500).json({ error: 'خطا در تغییر وضعیت گزارش‌ها' });
   }
 });
 
 // اندپوینت وضعیت برای تست سریع
 app.get('/api/health', (req,res)=> res.json({ ok:true, ts: Date.now() }));
+
+// SSE endpoint برای همگام‌سازی real-time
+app.get('/api/report-events', (req, res) => {
+  console.log('🔄 [SSE] New client connected for report events');
+  
+  // تنظیمات SSE
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // ارسال وضعیت فعلی به کلاینت جدید
+  const sendCurrentStatus = () => {
+    try {
+      const config = loadReportsConfig();
+      const data = {
+        enabled: config.enabled,
+        lastUpdate: config.lastUpdate,
+        updatedBy: config.updatedBy,
+        updatedFrom: config.updatedFrom,
+        timestamp: Date.now()
+      };
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch (error) {
+      console.error('❌ [SSE] Error sending current status:', error);
+    }
+  };
+
+  // ارسال وضعیت فعلی
+  sendCurrentStatus();
+
+  // listener برای تغییرات جدید
+  const onReportChange = (data) => {
+    console.log('📡 [SSE] Broadcasting report change:', data);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  reportEvents.on('reportChanged', onReportChange);
+
+  // cleanup وقتی کلاینت قطع می‌شود
+  req.on('close', () => {
+    console.log('❌ [SSE] Client disconnected');
+    reportEvents.removeListener('reportChanged', onReportChange);
+  });
+
+  // heartbeat هر 30 ثانیه
+  const heartbeat = setInterval(() => {
+    res.write(`: heartbeat\n\n`);
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+  });
+});
 
 // API برای کارگاه‌ها
 app.get('/api/workshops', async (req, res) => {
@@ -542,44 +691,117 @@ async function notifyBotSettingsChanged(settings) {
 // اطلاع‌رسانی تغییر وضعیت گزارش‌ها
 async function notifyReportsStatusChanged(enabled) {
   const status = enabled ? '✅ فعال' : '❌ غیرفعال';
-  const message = `📊 **وضعیت گزارش‌ها تغییر کرد!**
-
-${status} شدند
-
-⏰ زمان: ${new Date().toLocaleString('fa-IR')}
-🔗 تغییر از: React Admin Panel`;
+  const groupMessage = `📊 *گزارش‌ها ${status} شدند*
+  
+⏰ ${new Date().toLocaleString('fa-IR')}
+🔗 تغییر از: پنل مدیر سایت`;
 
   try {
     console.log(`📊 [GATEWAY] Notifying report status change: ${enabled}`);
     
-    // ارسال به گروه گزارش
-    await sendBaleMessage(REPORT_GROUP_ID, message);
+    // فقط به گروه گزارش ارسال کن (نه به مدیر در ربات)
+    await sendBaleMessage(REPORT_GROUP_ID, groupMessage);
     console.log(`✅ [GATEWAY] Report message sent to group: ${REPORT_GROUP_ID}`);
     
-    // ارسال به مدیر
-    await sendBaleMessage(ADMIN_ID, `📊 وضعیت گزارش‌ها ${status} شد!\n\n⏰ زمان: ${new Date().toLocaleString('fa-IR')}\n🔗 تغییر از: React Admin Panel`);
-    console.log(`✅ [GATEWAY] Report message sent to admin: ${ADMIN_ID}`);
   } catch (error) {
     console.error('❌ [GATEWAY] خطا در ارسال پیام:', error);
+  }
+}
+
+// Export reportEvents برای استفاده در سایر ماژول‌ها
+module.exports = { reportEvents };
+
+// اعلام روشن شدن ربات
+function announceRobotOnline() {
+  updateRobotHeartbeat();
+  console.log('🟢 [ROBOT] Robot is now ONLINE');
+}
+
+// اطلاع‌رسانی آنلاین شدن سایت
+async function announceSiteOnline(port) {
+  try {
+    const message = `🌐 *پنل مدیریت آنلاین شد*
+
+🔗 آدرس: http://localhost:${port}
+⏰ ${new Date().toLocaleString('fa-IR')}
+🎯 آماده دریافت درخواست‌ها`;
+
+    await sendBaleMessage(REPORT_GROUP_ID, message);
+    console.log(`✅ [SITE] Site online notification sent to group: ${REPORT_GROUP_ID}`);
+  } catch (error) {
+    console.error('❌ [SITE] Error sending site online notification:', error);
+  }
+}
+
+// اعلام خاموش شدن ربات
+function announceRobotOffline() {
+  try {
+    const config = loadReportsConfig();
+    config.robotOnline = false;
+    config.lastRobotPing = new Date().toISOString();
+    saveReportsConfig(config);
+    console.log('🔴 [ROBOT] Robot is now OFFLINE');
+  } catch (error) {
+    console.error('❌ [ROBOT] Error announcing offline:', error);
+  }
+}
+
+// بستن graceful سرور
+function gracefulShutdown() {
+  console.log('🔴 [SHUTDOWN] شروع خاموشی graceful...');
+  
+  if (server) {
+    server.close(() => {
+      console.log(`🔌 [SHUTDOWN] سرور پورت ${currentPort} بسته شد`);
+      announceRobotOffline();
+      process.exit(0);
+    });
+    
+    // اگر بعد از 10 ثانیه بسته نشد، force exit
+    setTimeout(() => {
+      console.log('⚠️ [SHUTDOWN] Force shutdown بعد از timeout');
+      announceRobotOffline();
+      process.exit(1);
+    }, 10000);
+  } else {
+    announceRobotOffline();
+    process.exit(0);
   }
 }
 
 // راه‌اندازی
 async function start() {
   try {
-    // راه‌اندازی سرور وب
-    app.listen(PORT, () => {
-      console.log(`🌐 Server on :${PORT}`);
+    // پیدا کردن پورت آزاد
+    console.log(`🔍 [PORT] جستجوی پورت آزاد از ${START_PORT}...`);
+    currentPort = await findAvailablePort(START_PORT);
+    
+    // راه‌اندازی سرور وب با پورت پویا
+    server = app.listen(currentPort, () => {
+      console.log(`🌐 [SERVER] سرور روی پورت ${currentPort} راه‌اندازی شد`);
+      console.log(`🔗 [SERVER] آدرس: http://localhost:${currentPort}`);
+      
+      // ذخیره پورت در فایل برای frontend
+      savePortConfig(currentPort);
+      
+      // اطلاع‌رسانی آنلاین شدن سایت به گروه گزارش
+      announceSiteOnline(currentPort);
     });
     
-    // تست اتصال به بله
-    console.log('🔍 تست اتصال به بله...');
-    const testResult = await sendBaleMessage(ADMIN_ID, '🚀 سیستم پنل مدیر راه‌اندازی شد!');
+    // اعلام آنلاین شدن ربات
+    announceRobotOnline();
     
-    if (testResult) {
-      console.log('✅ اتصال به بله موفق');
-      await sendBaleMessage(REPORT_GROUP_ID, '🚀 سیستم پنل مدیر راه‌اندازی شد!\n\n🔗 پنل مدیر: http://localhost:3000');
-    } else {
+    // تست اتصال به بله (بدون ارسال پیام)
+    console.log('🔍 تست اتصال به بله...');
+    try {
+      // تست ساده بدون ارسال پیام
+      const response = await axios.get(`${BASE_URL}/getMe`);
+      if (response.data && response.data.ok) {
+        console.log('✅ اتصال به بله موفق - ربات آماده کار است');
+      } else {
+        console.log('⚠️ اتصال به بله ناموفق - فقط سرور وب فعال است');
+      }
+    } catch (error) {
       console.log('⚠️ اتصال به بله ناموفق - فقط سرور وب فعال است');
     }
     
@@ -587,5 +809,27 @@ async function start() {
     console.error('خطا در راه‌اندازی:', error);
   }
 }
+
+// مدیریت خاموشی
+process.on('SIGINT', () => {
+  console.log('\n🔴 [SHUTDOWN] Received SIGINT (Ctrl+C)...');
+  gracefulShutdown();
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n🔴 [SHUTDOWN] Received SIGTERM...');
+  gracefulShutdown();
+});
+
+// مدیریت خطاهای غیرمنتظره
+process.on('uncaughtException', (error) => {
+  console.error('❌ [ERROR] Uncaught Exception:', error);
+  gracefulShutdown();
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ [ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown();
+});
 
 start();
