@@ -25,7 +25,7 @@ export default function Admin(){
     { name:'حسین احمدی', phone:'09123333333', status:'paid' },
   ],[]);
 
-  // بارگذاری اولیه وضعیت گزارش‌ها
+  // بارگذاری اولیه انلاین وضعیت گزارش‌ها
   const loadReportStatus = async () => {
     try {
       const data = await gw.getReportStatus();
