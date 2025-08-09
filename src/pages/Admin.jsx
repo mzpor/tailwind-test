@@ -184,11 +184,24 @@ export default function Admin(){
     loadReportStatus(); // بارگذاری اولیه
     checkRobotAndConnect(); // تشخیص وضعیت ربات و اتصال مناسب
     
+    // اطلاع‌رسانی آنلاین شدن سایت
+    announceSiteOnline();
+    
     // cleanup در هنگام unmount
     return () => {
       stopSSE();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // تابع اطلاع‌رسانی آنلاین شدن سایت
+  const announceSiteOnline = async () => {
+    try {
+      await gw.announceSiteOnline();
+      console.log('✅ [SITE] Site online notification sent');
+    } catch (error) {
+      console.log('⚠️ [SITE] Could not send site online notification:', error);
+    }
+  };
 
   function showNotification(message, type = 'success') {
     setNotification({ message, type });

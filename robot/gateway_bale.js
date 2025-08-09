@@ -285,13 +285,13 @@ app.post('/api/toggle-reports', async (req, res) => {
     const { enabled } = req.body;
     const config = loadReportsConfig();
     
-    // بررسی اینکه آیا سایت مجاز است تغییر دهد
-    if (!config.siteSettings?.allowSiteControl) {
+    // بررسی اینکه آیا سایت مجاز است تغییر دهد (پیش‌فرض: مجاز)
+    if (config.siteSettings?.allowSiteControl === false) {
       return res.status(403).json({ error: 'سایت مجاز به تغییر تنظیمات نیست' });
     }
     
-    // اگر ربات آفلاین است، بررسی کن که آیا سایت مجاز است تغییر دهد
-    if (!config.robotOnline && !config.siteSettings?.siteCanToggleWhenRobotOffline) {
+    // اگر ربات آفلاین است، بررسی کن که آیا سایت مجاز است تغییر دهد (پیش‌فرض: مجاز)
+    if (!config.robotOnline && config.siteSettings?.siteCanToggleWhenRobotOffline === false) {
       return res.status(403).json({ error: 'در حالت آفلاین ربات، سایت نمی‌تواند تنظیمات را تغییر دهد' });
     }
     
@@ -334,6 +334,24 @@ app.post('/api/toggle-reports', async (req, res) => {
 
 // اندپوینت وضعیت برای تست سریع
 app.get('/api/health', (req,res)=> res.json({ ok:true, ts: Date.now() }));
+
+// اندپوینت اطلاع‌رسانی آنلاین شدن سایت
+app.post('/api/announce-site-online', async (req, res) => {
+  try {
+    const message = `🌐 *سایت مدیریت آنلاین شد*
+
+🔗 آدرس: http://localhost:5173/admin
+⏰ ${new Date().toLocaleString('fa-IR')}
+👨‍💼 آماده مدیریت پنل`;
+
+    await sendBaleMessage(REPORT_GROUP_ID, message);
+    console.log(`✅ [SITE] Site online notification sent to group: ${REPORT_GROUP_ID}`);
+    res.json({ success: true, message: 'Site online notification sent' });
+  } catch (error) {
+    console.error('❌ [SITE] Error sending site online notification:', error);
+    res.status(500).json({ error: 'Failed to send notification' });
+  }
+});
 
 // SSE endpoint برای همگام‌سازی real-time
 app.get('/api/report-events', (req, res) => {
@@ -717,19 +735,19 @@ function announceRobotOnline() {
   console.log('🟢 [ROBOT] Robot is now ONLINE');
 }
 
-// اطلاع‌رسانی آنلاین شدن سایت
-async function announceSiteOnline(port) {
+// اطلاع‌رسانی آنلاین شدن Gateway (اتصال ربات-سایت)
+async function announceGatewayOnline(port) {
   try {
-    const message = `🌐 *پنل مدیریت آنلاین شد*
+    const message = `🔗 *اتصال ربات-سایت برقرار شد*
 
-🔗 آدرس: http://localhost:${port}
+🌐 Gateway API: http://localhost:${port}
 ⏰ ${new Date().toLocaleString('fa-IR')}
-🎯 آماده دریافت درخواست‌ها`;
+🎯 آماده همگام‌سازی داده‌ها`;
 
     await sendBaleMessage(REPORT_GROUP_ID, message);
-    console.log(`✅ [SITE] Site online notification sent to group: ${REPORT_GROUP_ID}`);
+    console.log(`✅ [GATEWAY] Gateway online notification sent to group: ${REPORT_GROUP_ID}`);
   } catch (error) {
-    console.error('❌ [SITE] Error sending site online notification:', error);
+    console.error('❌ [GATEWAY] Error sending gateway online notification:', error);
   }
 }
 
@@ -784,8 +802,8 @@ async function start() {
       // ذخیره پورت در فایل برای frontend
       savePortConfig(currentPort);
       
-      // اطلاع‌رسانی آنلاین شدن سایت به گروه گزارش
-      announceSiteOnline(currentPort);
+      // اطلاع‌رسانی آنلاین شدن Gateway به گروه گزارش
+      announceGatewayOnline(currentPort);
     });
     
     // اعلام آنلاین شدن ربات
