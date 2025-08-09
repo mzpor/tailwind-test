@@ -27,12 +27,12 @@ logStartup().then(() => {
   updateSystemStatus('robot', true);
   console.log('🟢 [INDEX] Robot status: ONLINE');
   
-  // ارسال داشبورد وضعیت (اگر Gateway در دسترس باشد)
+  // ارسال داشبورد ترکیبی (اگر Gateway در دسترس باشد)
   try {
-    const { sendSystemStatusDashboard } = require('./gateway_bale');
-    if (sendSystemStatusDashboard) {
-      sendSystemStatusDashboard().catch(err => {
-        console.log('⚠️ [INDEX] Error sending status dashboard:', err.message);
+    const { sendCombinedDashboard } = require('./gateway_bale');
+    if (sendCombinedDashboard) {
+      sendCombinedDashboard().catch(err => {
+        console.log('⚠️ [INDEX] Error sending combined dashboard:', err.message);
       });
     }
   } catch (error) {
@@ -61,12 +61,12 @@ process.on('SIGINT', async () => {
     require('./3config').updateSystemStatus('robot', false);
     console.log('🔴 [INDEX] Robot status: OFFLINE');
     
-    // ارسال داشبورد وضعیت (اگر Gateway در دسترس باشد)
+    // ارسال داشبورد ترکیبی (اگر Gateway در دسترس باشد)
     try {
-      const { sendSystemStatusDashboard } = require('./gateway_bale');
-      if (sendSystemStatusDashboard) {
-        await sendSystemStatusDashboard();
-        console.log('✅ [INDEX] Status dashboard sent on robot shutdown');
+      const { sendCombinedDashboard } = require('./gateway_bale');
+      if (sendCombinedDashboard) {
+        await sendCombinedDashboard();
+        console.log('✅ [INDEX] Combined dashboard sent on robot shutdown');
       }
     } catch (error) {
       console.log('⚠️ [INDEX] Gateway not available for status dashboard:', error.message);

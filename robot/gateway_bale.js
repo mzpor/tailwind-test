@@ -347,8 +347,8 @@ app.post('/api/reset-system-status', async (req, res) => {
     const success = resetSystemStatus();
     
     if (success) {
-      // ارسال داشبورد آپدیت شده
-      await sendSystemStatusDashboard();
+      // ارسال داشبورد ترکیبی آپدیت شده
+      await sendCombinedDashboard();
       
       res.json({ success: true, message: 'وضعیت سیستم‌ها ریست شد' });
     } else {
@@ -381,8 +381,8 @@ app.post('/api/announce-site-online', async (req, res) => {
     
     console.log('📝 [SITE] سایت در JSON نوشت: فعال شدم');
     
-    // ارسال داشبورد به‌روزرسانی شده
-    await sendSystemStatusDashboard();
+    // ارسال داشبورد ترکیبی به‌روزرسانی شده
+    await sendCombinedDashboard();
     
     console.log(`✅ [SITE] Website online - status updated`);
     res.json({ success: true, message: 'Website online status updated' });
@@ -413,8 +413,8 @@ app.post('/api/announce-site-offline', async (req, res) => {
     
     console.log('📝 [SITE] سایت در JSON نوشت: غیرفعال شدم');
     
-    // ارسال داشبورد به‌روزرسانی شده
-    await sendSystemStatusDashboard();
+    // ارسال داشبورد ترکیبی به‌روزرسانی شده
+    await sendCombinedDashboard();
     
     console.log(`✅ [SITE] Website offline - status updated`);
     res.json({ success: true, message: 'Website offline status updated' });
@@ -1187,8 +1187,8 @@ async function announceGatewayOnline(port) {
     // آپدیت وضعیت Gateway
     updateSystemStatus('gateway', true);
     
-    // ارسال داشبورد به‌روزرسانی شده
-    await sendSystemStatusDashboard();
+    // ارسال داشبورد ترکیبی به‌روزرسانی شده
+    await sendCombinedDashboard();
     
     console.log(`✅ [GATEWAY] Gateway online - status updated`);
   } catch (error) {
@@ -1209,20 +1209,20 @@ function gracefulShutdown() {
     server.close(async () => {
       console.log(`🔌 [SHUTDOWN] سرور پورت ${currentPort} بسته شد`);
       
-      // فقط ارسال داشبورد آپدیت شده
-      await sendSystemStatusDashboard();
+      // فقط ارسال داشبورد ترکیبی آپدیت شده
+      await sendCombinedDashboard();
       process.exit(0);
     });
     
     // اگر بعد از 10 ثانیه بسته نشد، force exit
     setTimeout(async () => {
       console.log('⚠️ [SHUTDOWN] Force shutdown بعد از timeout');
-      await sendSystemStatusDashboard();
+      await sendCombinedDashboard();
       process.exit(1);
     }, 10000);
   } else {
     (async () => {
-      await sendSystemStatusDashboard();
+      await sendCombinedDashboard();
       process.exit(0);
     })();
   }
