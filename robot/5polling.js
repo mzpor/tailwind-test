@@ -1,7 +1,7 @@
 //⏰ 09:10:00 🗓️ دوشنبه 13 مرداد 1404
 // ماژول اجرای حلقه اصلی دریافت پیام‌ها و کنترل ورود گروه
 
-const { getUpdates, sendMessage, sendMessageWithInlineKeyboard, deleteMessage, getChat, getChatMember } = require('./4bale');
+const { getUpdates, sendMessage, sendMessageWithInlineKeyboard, deleteMessage, getChat, getChatMember, answerCallbackQuery } = require('./4bale');
 const { getTimeStamp } = require('./1time');
 const { 
   isAdmin, 
@@ -1068,6 +1068,7 @@ async function handleGroupManagementCallback(callback_query) {
     const messageId = callback_query.message.message_id;
     const userId = callback_query.from.id;
     const data = callback_query.data;
+    const callbackQueryId = callback_query.id;
     
     console.log(`Processing group management callback: ${data}`);
     
@@ -1078,7 +1079,7 @@ async function handleGroupManagementCallback(callback_query) {
     }
     
     const parts = data.split('_');
-    const action = parts[0];
+    const action = data === 'back_to_main' ? 'back_to_main' : parts[0];
     
     if (action === 'groups' || action === 'coach' || action === 'assistant') {
       // نمایش لیست گروه‌ها
@@ -1190,22 +1191,67 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
       await sendMessageWithInlineKeyboard(chatId, text, keyboard);
       
     } else if (action === 'back_to_main') {
-      // بازگشت به منوی اصلی
-      const text = `🔧 پنل مدیریتی
+      // بازگشت به منوی اصلی - نمایش کیبورد مناسب نقش کاربر
+      const role = getUserRole(userId);
+      console.log(`🔙 [POLLING] Back to main for user ${userId} with role: ${role}`);
+      
+      if (isCoach(userId)) {
+        // پنل مربی
+        const inlineKeyboard = [
+          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
+          [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]
+        ];
+        
+        const reply = `👨‍🏫 پنل مربی
 
 📋 گزینه‌های موجود:
-• معرفی ربات قرآنی
-• مدیریت گروه‌ها (حضور و غیاب)
+• 🤖 معرفی ربات
+• 🏫 مدیریت گروه‌ها (حضور و غیاب)
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
+        
+        await sendMessageWithInlineKeyboard(chatId, reply, inlineKeyboard);
+      } else if (isAssistant(userId)) {
+        // پنل کمک مربی
+        const inlineKeyboard = [
+          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
+          [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]
+        ];
+        
+        const reply = `👨‍🏫 پنل کمک مربی
+
+📋 گزینه‌های موجود:
+• 🤖 معرفی ربات
+• 🏫 مدیریت گروه‌ها (حضور و غیاب)
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+        
+        await sendMessageWithInlineKeyboard(chatId, reply, inlineKeyboard);
+      } else {
+        // پنل مدیر - همه گزینه‌ها
+        const inlineKeyboard = [
+          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
+          [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }],
+          [{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]
+        ];
+        
+        const reply = `🔧 پنل مدیر مدرسه
+
+📋 گزینه‌های موجود:
+• 🤖 معرفی ربات
+• 🏫 مدیریت گروه‌ها (حضور و غیاب)
+• 🏭 کارگاه‌ها
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+        
+        await sendMessageWithInlineKeyboard(chatId, reply, inlineKeyboard);
+      }
       
-      const inlineKeyboard = [
-        [{ text: 'معرفی ربات قرآنی', callback_data: `intro_quran_bot_school_admin` }],
-        [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]
-      ];
-      
-      await sendMessageWithInlineKeyboard(chatId, text, inlineKeyboard);
+      // پاسخ به callback query
+      await answerCallbackQuery(callbackQueryId, '✅ بازگشت به منوی اصلی');
       
     } else if (action === 'status') {
       // تغییر وضعیت عضو

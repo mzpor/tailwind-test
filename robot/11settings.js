@@ -1034,7 +1034,7 @@ class SettingsModule {
 انتخاب کنید:`;
       
       const replyMarkup = await this.getMainSettingsKeyboard();
-      await editMessage(chatId, messageId, text, replyMarkup.inline_keyboard);
+      await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
       await answerCallbackQuery(callbackQueryId, `📝 ثبت‌نام ${status} شد!`);
       
     } catch (error) {

@@ -828,17 +828,19 @@ async function sendCombinedDashboard() {
     const registrationIcon = registrationEnabled ? '🟢' : '🔴';
     const surveyIcon = surveyEnabled ? '🟢' : '🔴';
     
-    // محاسبه آخرین تغییر از بین همه تنظیمات
+    // محاسبه آخرین تغییر از بین همه تنظیمات و وضعیت سیستم‌ها
     let lastChangeInfo = 'نامشخص';
     let latestTimestamp = null;
-    let lastChangedSetting = '';
+    let lastChangedItem = '';
     let lastChangedFrom = '';
+    let lastChangedStatus = true;
     
     // بررسی زمان تغییر گزارش‌ها
     if (config.lastUpdate) {
       latestTimestamp = new Date(config.lastUpdate);
-      lastChangedSetting = 'گزارش‌ها';
+      lastChangedItem = 'گزارش‌ها';
       lastChangedFrom = config.updatedFrom || 'سیستم';
+      lastChangedStatus = config.enabled;
     }
     
     // بررسی زمان تغییر نظرسنجی و ثبت‌نام
@@ -850,8 +852,9 @@ async function sendCombinedDashboard() {
         const surveyTime = new Date(siteStatus.survey.lastUpdate);
         if (!latestTimestamp || surveyTime > latestTimestamp) {
           latestTimestamp = surveyTime;
-          lastChangedSetting = 'نظرسنجی';
+          lastChangedItem = 'نظرسنجی';
           lastChangedFrom = siteStatus.survey.updatedFrom || 'سیستم';
+          lastChangedStatus = surveyEnabled;
         }
       }
       
@@ -860,22 +863,40 @@ async function sendCombinedDashboard() {
         const registrationTime = new Date(siteStatus.registration.lastUpdate);
         if (!latestTimestamp || registrationTime > latestTimestamp) {
           latestTimestamp = registrationTime;
-          lastChangedSetting = 'ثبت‌نام';
+          lastChangedItem = 'ثبت‌نام';
           lastChangedFrom = siteStatus.registration.updatedFrom || 'سیستم';
+          lastChangedStatus = registrationEnabled;
         }
       }
     } catch (error) {
       console.log('⚠️ [COMBINED-DASHBOARD] Could not read site status for latest change time');
     }
     
-    // تشخیص آیکون بر اساس نوع تنظیم و وضعیت
-    if (lastChangedSetting && lastChangedFrom) {
-      let settingIcon = '🟢';
-      if (lastChangedSetting === 'نظرسنجی' && !surveyEnabled) settingIcon = '🔴';
-      if (lastChangedSetting === 'گزارش‌ها' && !config.enabled) settingIcon = '🔴';
-      if (lastChangedSetting === 'ثبت‌نام' && !registrationEnabled) settingIcon = '🔴';
+    // بررسی زمان تغییر وضعیت سیستم‌ها (ربات، اتصال، سایت)
+    if (status.lastChange?.timestamp) {
+      const systemChangeTime = new Date(status.lastChange.timestamp);
+      if (!latestTimestamp || systemChangeTime > latestTimestamp) {
+        latestTimestamp = systemChangeTime;
+        
+        // تعیین نام و وضعیت سیستم
+        const systemNames = {
+          robot: 'ربات',
+          gateway: 'اتصال', 
+          website: 'سایت'
+        };
+        
+        lastChangedItem = systemNames[status.lastChange.system] || status.lastChange.system;
+        lastChangedFrom = 'سیستم';
+        lastChangedStatus = status.lastChange.status;
+      }
+    }
+    
+    // تشخیص آیکون و متن نهایی
+    if (lastChangedItem && lastChangedFrom) {
+      const statusIcon = lastChangedStatus ? '🟢' : '🔴';
+      const statusText = lastChangedStatus ? 'فعال' : 'غیرفعال';
       
-      lastChangeInfo = `${settingIcon} ${lastChangedSetting} (${lastChangedFrom})`;
+      lastChangeInfo = `${statusIcon} ${lastChangedItem} ${statusText} (${lastChangedFrom})`;
     }
     
     // فرمت زمان فارسی
@@ -901,8 +922,27 @@ ${registrationIcon} ثبت‌نام (${registrationUpdatedFrom})
 
 ⏰ زمان فعلی: ${currentTime}`;
 
-    await sendBaleMessage(REPORT_GROUP_ID, combinedMessage);
-    console.log('✅ [COMBINED] Combined dashboard sent');
+    // حذف پیام داشبورد جامع قبلی (اگر وجود دارد)
+    if (lastCombinedDashboardMessageId) {
+      try {
+        const { deleteMessage } = require('./4bale');
+        await deleteMessage(REPORT_GROUP_ID, lastCombinedDashboardMessageId);
+        console.log('🗑️ [COMBINED] Previous combined dashboard deleted');
+      } catch (error) {
+        console.log('⚠️ [COMBINED] Could not delete previous dashboard:', error.message);
+      }
+    }
+    
+    // ارسال داشبورد جامع جدید
+    const sentMessage = await sendBaleMessage(REPORT_GROUP_ID, combinedMessage);
+    
+    // ذخیره شناسه پیام جدید برای حذف در دفعه بعد
+    if (sentMessage && sentMessage.message_id) {
+      lastCombinedDashboardMessageId = sentMessage.message_id;
+      console.log('✅ [COMBINED] Combined dashboard sent, message_id saved:', sentMessage.message_id);
+    } else {
+      console.log('✅ [COMBINED] Combined dashboard sent (no message_id returned)');
+    }
   } catch (error) {
     console.error('❌ [COMBINED] Error sending combined dashboard:', error);
   }
@@ -917,6 +957,9 @@ module.exports = { reportEvents, sendSystemStatusDashboard, sendSettingsDashboar
 let groupsCache = null;
 let groupsCacheTime = 0;
 const GROUPS_CACHE_DURATION = 5 * 60 * 1000; // 5 دقیقه
+
+// شناسه پیام آخرین داشبورد جامع سیستم (برای حذف پیام قبلی)
+let lastCombinedDashboardMessageId = null;
 
 // محاسبه زمان گذشته
 function getTimeAgo(timestamp) {
@@ -1187,10 +1230,8 @@ async function announceGatewayOnline(port) {
     // آپدیت وضعیت Gateway
     updateSystemStatus('gateway', true);
     
-    // ارسال داشبورد ترکیبی به‌روزرسانی شده
-    await sendCombinedDashboard();
-    
-    console.log(`✅ [GATEWAY] Gateway online - status updated`);
+    // داشبورد توسط ربات ارسال می‌شود (robot/index.js)
+    console.log(`✅ [GATEWAY] Gateway online - status updated (dashboard sent by robot)`);
   } catch (error) {
     console.error('❌ [GATEWAY] Error announcing gateway online:', error);
   }
