@@ -26,9 +26,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Import JSON Store utility
+const { readJson, writeJson } = require('./server/utils/jsonStore');
+
 // فایل تنظیمات
 const SETTINGS_FILE = './data/settings.json';
 const REPORTS_FILE = './data/reports.json';
+const WS_FILE = './data/workshops.json';
+const RG_FILE = './data/registrations.json';
 
 // لود کردن تنظیمات
 async function loadSettings() {
@@ -149,6 +154,104 @@ app.post('/api/toggle-reports', async (req, res) => {
 
 // اندپوینت وضعیت برای تست سریع
 app.get('/api/health', (req,res)=> res.json({ ok:true, ts: Date.now() }));
+
+// API برای کارگاه‌ها
+app.get('/api/workshops', async (req, res) => {
+  try {
+    const list = await readJson(WS_FILE, []);
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: 'خطا در لود کردن کارگاه‌ها' });
+  }
+});
+
+app.post('/api/workshops', async (req, res) => {
+  try {
+    const body = req.body;
+    let list = await readJson(WS_FILE, []);
+    
+    if (Array.isArray(body)) {
+      // Bulk replace
+      list = body;
+      await writeJson(WS_FILE, list);
+      return res.json({ ok: true, count: list.length });
+    }
+    
+    // Create/Update single workshop
+    if (!body.id) body.id = 'w_' + Date.now();
+    const i = list.findIndex(w => w.id === body.id);
+    if (i >= 0) {
+      list[i] = { ...list[i], ...body };
+    } else {
+      list.push(body);
+    }
+    
+    await writeJson(WS_FILE, list);
+    return res.json({ ok: true, item: body });
+  } catch (error) {
+    res.status(500).json({ error: 'خطا در ذخیره کارگاه‌ها' });
+  }
+});
+
+// API برای ثبت‌نام
+app.post('/api/register', async (req, res) => {
+  try {
+    const { firstName, nationalId, phone, workshopId } = req.body || {};
+    
+    // Validation
+    if (!firstName || !/^09\d{9}$/.test(phone) || !workshopId) {
+      return res.status(400).json({ ok: false, error: 'bad input' });
+    }
+    
+    // دریافت کارگاه
+    const workshops = await readJson(WS_FILE, []);
+    const ws = workshops.find(w => w.id === workshopId);
+    
+    if (!ws) {
+      return res.status(404).json({ ok: false, error: 'workshop not found' });
+    }
+    
+    // ایجاد ثبت‌نام جدید
+    const reg = {
+      id: 'r_' + Date.now(),
+      firstName,
+      nationalId: nationalId || null,
+      phone,
+      workshopId,
+      status: 'pending',
+      ts: Date.now()
+    };
+    
+    // ذخیره در فایل
+    const regs = await readJson(RG_FILE, []);
+    regs.push(reg);
+    await writeJson(RG_FILE, regs);
+    
+    // ارسال پیام به مدیر و گروه گزارش
+    const msg = `📝 ثبت‌نام جدید:
+👤 نام: ${firstName}
+📞 موبایل: ${phone}
+🏷️ کارگاه: ${ws.title}
+⏰ زمان: ${new Date().toLocaleString('fa-IR')}`;
+
+    try {
+      await sendBaleMessage(REPORT_GROUP_ID, msg);
+      await sendBaleMessage(ADMIN_ID, msg);
+    } catch (e) {
+      console.error('خطا در ارسال پیام:', e);
+    }
+    
+    res.json({ 
+      ok: true, 
+      id: reg.id,
+      groupLink: ws.baleLink || null
+    });
+    
+  } catch (error) {
+    console.error('خطا در ثبت‌نام:', error);
+    res.status(500).json({ ok: false, error: 'خطا در ثبت‌نام' });
+  }
+});
 
 // اطلاع‌رسانی به ربات
 async function notifyBotSettingsChanged(settings) {
