@@ -940,20 +940,55 @@ class SettingsModule {
   }
   
   async handleToggleSatisfactionSurvey(chatId, messageId, callbackQueryId) {
-    this.settings.enable_satisfaction_survey = !this.settings.enable_satisfaction_survey;
-    this.saveSettings();
-    
-    const status = this.settings.enable_satisfaction_survey ? 'فعال' : 'غیرفعال';
-    
-    // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
-    console.log(`✅ [SETTINGS] Satisfaction survey status changed to: ${status}`);
-    
-    const text = `⚙️ *پنل تنظیمات مدیر*
+    try {
+      // تغییر وضعیت در فایل محلی
+      this.settings.enable_satisfaction_survey = !this.settings.enable_satisfaction_survey;
+      this.saveSettings();
+      
+      // تغییر وضعیت در site-status.json برای همگام‌سازی
+      const { readJson, writeJson } = require('./server/utils/jsonStore');
+      const siteStatus = await readJson('data/site-status.json', {
+        registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' },
+        survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' }
+      });
+      
+      siteStatus.survey.enabled = this.settings.enable_satisfaction_survey;
+      siteStatus.survey.lastUpdate = Date.now();
+      siteStatus.survey.updatedFrom = 'ربات';
+      
+      await writeJson('data/site-status.json', siteStatus);
+      
+      const status = this.settings.enable_satisfaction_survey ? 'فعال' : 'غیرفعال';
+      
+      // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
+      console.log(`✅ [SETTINGS] Satisfaction survey status changed to: ${status}`);
+      
+      // ارسال event برای SSE clients و داشبورد (اگر gateway فعال باشد)
+      try {
+        const gateway = require('./gateway_bale');
+        if (gateway && gateway.reportEvents) {
+          gateway.reportEvents.emit('survey-change', siteStatus.survey);
+          console.log('📡 [SETTINGS] SSE event emitted for survey change');
+        }
+        if (gateway && gateway.sendSettingsDashboard) {
+          await gateway.sendSettingsDashboard();
+          console.log('📊 [SETTINGS] Settings dashboard sent');
+        }
+      } catch (error) {
+        console.log('⚠️ [SETTINGS] Could not emit SSE event or send dashboard (gateway might be offline)');
+      }
+      
+      const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;
-    
-    const replyMarkup = await this.getMainSettingsKeyboard();
-    await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
-    await answerCallbackQuery(callbackQueryId, `📝 نظرسنجی ${status} شد!`);
+      
+      const replyMarkup = await this.getMainSettingsKeyboard();
+      await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
+      await answerCallbackQuery(callbackQueryId, `📝 نظرسنجی ${status} شد!`);
+      
+    } catch (error) {
+      console.error('❌ [SETTINGS] Error toggling satisfaction survey:', error);
+      await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر وضعیت نظرسنجی');
+    }
   }
   
   async handleToggleRegistration(chatId, messageId, callbackQueryId) {

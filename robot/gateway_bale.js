@@ -946,9 +946,9 @@ async function sendSettingsDashboard() {
     
     const settingsMessage = `⚙️ *داشبورد تنظیمات سیستم*
 
-${reportsIcon} **گزارش‌ها**: ${config.enabled ? 'فعال' : 'غیرفعال'} (از طرف: ${config.updatedFrom || 'سیستم'})
-${registrationIcon} **ثبت‌نام**: ${registrationEnabled ? 'فعال' : 'غیرفعال'} (از طرف: ${registrationUpdatedFrom})
-${surveyIcon} **نظرسنجی**: ${surveyEnabled ? 'فعال' : 'غیرفعال'} (از طرف: ${surveyUpdatedFrom})
+${reportsIcon} گزارش‌ها (از طرف: ${config.updatedFrom || 'سیستم'})
+${registrationIcon} ثبت‌نام (از طرف: ${registrationUpdatedFrom})
+${surveyIcon} نظرسنجی (از طرف: ${surveyUpdatedFrom})
 
 📊 آخرین تغییر: ${lastChangeTime}
 ⏰ زمان فعلی: ${currentTime}`;
