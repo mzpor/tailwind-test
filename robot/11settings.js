@@ -970,9 +970,9 @@ class SettingsModule {
           gateway.reportEvents.emit('survey-change', siteStatus.survey);
           console.log('📡 [SETTINGS] SSE event emitted for survey change');
         }
-        if (gateway && gateway.sendSettingsDashboard) {
-          await gateway.sendSettingsDashboard();
-          console.log('📊 [SETTINGS] Settings dashboard sent');
+        if (gateway && gateway.sendCombinedDashboard) {
+          await gateway.sendCombinedDashboard();
+          console.log('📊 [SETTINGS] Combined dashboard sent');
         }
       } catch (error) {
         console.log('⚠️ [SETTINGS] Could not emit SSE event or send dashboard (gateway might be offline)');
@@ -1021,9 +1021,9 @@ class SettingsModule {
           gateway.reportEvents.emit('registration-change', siteStatus.registration);
           console.log('📡 [SETTINGS] SSE event emitted for registration change');
         }
-        if (gateway && gateway.sendSettingsDashboard) {
-          await gateway.sendSettingsDashboard();
-          console.log('📊 [SETTINGS] Settings dashboard sent');
+        if (gateway && gateway.sendCombinedDashboard) {
+          await gateway.sendCombinedDashboard();
+          console.log('📊 [SETTINGS] Combined dashboard sent');
         }
       } catch (error) {
         console.log('⚠️ [SETTINGS] Could not emit SSE event or send dashboard (gateway might be offline)');
@@ -1047,7 +1047,7 @@ class SettingsModule {
     // تغییر وضعیت در فایل مشترک
     const currentStatus = getReportsEnabled();
     const newStatus = !currentStatus;
-    const success = setReportsEnabled(newStatus, 'admin', 'bot');
+    const success = setReportsEnabled(newStatus, 'admin', 'ربات');
     
     if (!success) {
       await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر تنظیمات');
@@ -1076,12 +1076,12 @@ class SettingsModule {
            }
          }
          
-         // ارسال داشبورد تنظیمات
+         // ارسال داشبورد ترکیبی
          try {
            const gateway = require('./gateway_bale');
-           if (gateway && gateway.sendSettingsDashboard) {
-             await gateway.sendSettingsDashboard();
-             console.log('📊 [SETTINGS] Settings dashboard sent');
+           if (gateway && gateway.sendCombinedDashboard) {
+             await gateway.sendCombinedDashboard();
+             console.log('📊 [SETTINGS] Combined dashboard sent');
            }
          } catch (error) {
            console.log('⚠️ [SETTINGS] Could not send settings dashboard (gateway might be offline)');

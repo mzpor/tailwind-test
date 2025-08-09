@@ -298,7 +298,7 @@ app.post('/api/toggle-reports', async (req, res) => {
     }
     
     // ذخیره در فایل مشترک
-    const success = setReportsEnabled(enabled, 'admin', 'website');
+    const success = setReportsEnabled(enabled, 'admin', 'سایت');
     
     if (success) {
       // اطلاع‌رسانی به ربات (فقط اگر آنلاین باشد)
@@ -318,6 +318,10 @@ app.post('/api/toggle-reports', async (req, res) => {
         robotOnline: updatedConfig.robotOnline,
         timestamp: Date.now()
       });
+      
+      // ارسال داشبورد ترکیبی به گروه گزارش
+      await sendCombinedDashboard();
+      console.log(`📊 [GATEWAY] Report status changed and combined dashboard sent`);
       
       res.json({ 
         success: true, 
@@ -784,8 +788,128 @@ async function notifyReportsStatusChanged(enabled) {
   console.log(`📊 [GATEWAY] Report status changed to: ${status} from website`);
 }
 
+// ارسال داشبورد ترکیبی (وضعیت + تنظیمات)
+async function sendCombinedDashboard() {
+  try {
+    // دریافت وضعیت سیستم
+    const status = getSystemStatus();
+    const robotIcon = status.robot ? '🟢' : '🔴';
+    const gatewayIcon = status.gateway ? '🟢' : '🔴';
+    const websiteIcon = status.website ? '🟢' : '🔴';
+    
+    // دریافت لیست گروه‌ها
+    const groupsList = await getGroupsList();
+    
+    // دریافت تنظیمات گزارش‌ها
+    const config = loadReportsConfig();
+    
+    // دریافت وضعیت ثبت‌نام و نظرسنجی
+    let registrationEnabled = true;
+    let surveyEnabled = true;
+    let registrationUpdatedFrom = 'سیستم';
+    let surveyUpdatedFrom = 'سیستم';
+    
+    try {
+      const siteStatus = await readJson('data/site-status.json', {});
+      if (siteStatus.registration) {
+        registrationEnabled = siteStatus.registration.enabled;
+        registrationUpdatedFrom = siteStatus.registration.updatedFrom || 'سیستم';
+      }
+      if (siteStatus.survey) {
+        surveyEnabled = siteStatus.survey.enabled;
+        surveyUpdatedFrom = siteStatus.survey.updatedFrom || 'سیستم';
+      }
+    } catch (error) {
+      console.log('⚠️ [COMBINED-DASHBOARD] Could not read site status, using defaults');
+    }
+    
+    // آیکون‌های تنظیمات
+    const reportsIcon = config.enabled ? '🟢' : '🔴';
+    const registrationIcon = registrationEnabled ? '🟢' : '🔴';
+    const surveyIcon = surveyEnabled ? '🟢' : '🔴';
+    
+    // محاسبه آخرین تغییر از بین همه تنظیمات
+    let lastChangeInfo = 'نامشخص';
+    let latestTimestamp = null;
+    let lastChangedSetting = '';
+    let lastChangedFrom = '';
+    
+    // بررسی زمان تغییر گزارش‌ها
+    if (config.lastUpdate) {
+      latestTimestamp = new Date(config.lastUpdate);
+      lastChangedSetting = 'گزارش‌ها';
+      lastChangedFrom = config.updatedFrom || 'سیستم';
+    }
+    
+    // بررسی زمان تغییر نظرسنجی و ثبت‌نام
+    try {
+      const siteStatus = await readJson('data/site-status.json', {});
+      
+      // بررسی نظرسنجی
+      if (siteStatus.survey?.lastUpdate) {
+        const surveyTime = new Date(siteStatus.survey.lastUpdate);
+        if (!latestTimestamp || surveyTime > latestTimestamp) {
+          latestTimestamp = surveyTime;
+          lastChangedSetting = 'نظرسنجی';
+          lastChangedFrom = siteStatus.survey.updatedFrom || 'سیستم';
+        }
+      }
+      
+      // بررسی ثبت‌نام
+      if (siteStatus.registration?.lastUpdate) {
+        const registrationTime = new Date(siteStatus.registration.lastUpdate);
+        if (!latestTimestamp || registrationTime > latestTimestamp) {
+          latestTimestamp = registrationTime;
+          lastChangedSetting = 'ثبت‌نام';
+          lastChangedFrom = siteStatus.registration.updatedFrom || 'سیستم';
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ [COMBINED-DASHBOARD] Could not read site status for latest change time');
+    }
+    
+    // تشخیص آیکون بر اساس نوع تنظیم و وضعیت
+    if (lastChangedSetting && lastChangedFrom) {
+      let settingIcon = '🟢';
+      if (lastChangedSetting === 'نظرسنجی' && !surveyEnabled) settingIcon = '🔴';
+      if (lastChangedSetting === 'گزارش‌ها' && !config.enabled) settingIcon = '🔴';
+      if (lastChangedSetting === 'ثبت‌نام' && !registrationEnabled) settingIcon = '🔴';
+      
+      lastChangeInfo = `${settingIcon} ${lastChangedSetting} (${lastChangedFrom})`;
+    }
+    
+    // فرمت زمان فارسی
+    const moment = require('moment-jalaali');
+    const now = moment();
+    const currentTime = now.format('HH:mm:ss - jD jMMMM jYYYY').replace(/^ا/, '');
+    
+    const combinedMessage = `🎛️ *داشبورد جامع سیستم*
+
+📊 آخرین : ${lastChangeInfo}
+
+📡 **وضعیت سیستم‌ها:**
+${robotIcon} ربات
+${gatewayIcon} اتصال
+${websiteIcon} سایت
+
+${groupsList}
+
+⚙️ **تنظیمات:**
+${surveyIcon} نظرسنجی (${surveyUpdatedFrom})
+${reportsIcon} گزارش‌ها (${config.updatedFrom || 'سیستم'})
+${registrationIcon} ثبت‌نام (${registrationUpdatedFrom})
+
+⏰ زمان فعلی: ${currentTime}`;
+
+    await sendBaleMessage(REPORT_GROUP_ID, combinedMessage);
+    console.log('✅ [COMBINED] Combined dashboard sent');
+  } catch (error) {
+    console.error('❌ [COMBINED] Error sending combined dashboard:', error);
+  }
+}
+
 // Export reportEvents و sendSystemStatusDashboard برای استفاده در سایر ماژول‌ها
-module.exports = { reportEvents, sendSystemStatusDashboard, sendSettingsDashboard };
+module.exports = { reportEvents, sendSystemStatusDashboard, sendSettingsDashboard, sendCombinedDashboard };
 
 // تابع announceRobotOnline حذف شد - ربات خودش وضعیتش را مدیریت می‌کند
 
@@ -938,19 +1062,65 @@ async function sendSettingsDashboard() {
     const now = moment();
     const currentTime = now.format('HH:mm:ss - jD jMMMM jYYYY').replace(/^ا/, '');
     
-    let lastChangeTime = 'نامشخص';
+    // محاسبه آخرین تغییر از بین همه تنظیمات
+    let lastChangeInfo = 'نامشخص';
+    let latestTimestamp = null;
+    let lastChangedSetting = '';
+    let lastChangedFrom = '';
+    
+    // بررسی زمان تغییر گزارش‌ها
     if (config.lastUpdate) {
-      const lastChange = moment(config.lastUpdate);
-      lastChangeTime = lastChange.format('HH:mm:ss - jD jMMMM jYYYY').replace(/^ا/, '');
+      latestTimestamp = new Date(config.lastUpdate);
+      lastChangedSetting = 'گزارش‌ها';
+      lastChangedFrom = config.updatedFrom || 'سیستم';
+    }
+    
+    // بررسی زمان تغییر نظرسنجی و ثبت‌نام
+    try {
+      const siteStatus = await readJson('data/site-status.json', {});
+      
+      // بررسی نظرسنجی
+      if (siteStatus.survey?.lastUpdate) {
+        const surveyTime = new Date(siteStatus.survey.lastUpdate);
+        if (!latestTimestamp || surveyTime > latestTimestamp) {
+          latestTimestamp = surveyTime;
+          lastChangedSetting = 'نظرسنجی';
+          lastChangedFrom = siteStatus.survey.updatedFrom || 'سیستم';
+        }
+      }
+      
+      // بررسی ثبت‌نام
+      if (siteStatus.registration?.lastUpdate) {
+        const registrationTime = new Date(siteStatus.registration.lastUpdate);
+        if (!latestTimestamp || registrationTime > latestTimestamp) {
+          latestTimestamp = registrationTime;
+          lastChangedSetting = 'ثبت‌نام';
+          lastChangedFrom = siteStatus.registration.updatedFrom || 'سیستم';
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ [DASHBOARD] Could not read site status for latest change time');
+    }
+    
+    // تشخیص آیکون بر اساس نوع تنظیم و وضعیت
+    if (lastChangedSetting && lastChangedFrom) {
+      let settingIcon = '🟢';
+      if (lastChangedSetting === 'نظرسنجی' && !surveyEnabled) settingIcon = '🔴';
+      if (lastChangedSetting === 'گزارش‌ها' && !config.enabled) settingIcon = '🔴';
+      if (lastChangedSetting === 'ثبت‌نام' && !registrationEnabled) settingIcon = '🔴';
+      
+      lastChangeInfo = `${settingIcon} ${lastChangedSetting} (${lastChangedFrom})`;
     }
     
     const settingsMessage = `⚙️ *داشبورد تنظیمات سیستم*
 
-${reportsIcon} گزارش‌ها (از طرف: ${config.updatedFrom || 'سیستم'})
-${registrationIcon} ثبت‌نام (از طرف: ${registrationUpdatedFrom})
-${surveyIcon} نظرسنجی (از طرف: ${surveyUpdatedFrom})
+📊 آخرین : ${lastChangeInfo}
 
-📊 آخرین تغییر: ${lastChangeTime}
+${surveyIcon} نظرسنجی (${surveyUpdatedFrom})
+${reportsIcon} گزارش‌ها (${config.updatedFrom || 'سیستم'})
+${registrationIcon} ثبت‌نام (${registrationUpdatedFrom})
+
+
 ⏰ زمان فعلی: ${currentTime}`;
 
     await sendBaleMessage(REPORT_GROUP_ID, settingsMessage);
@@ -1089,8 +1259,9 @@ app.post('/api/toggle-registration', async (req, res) => {
     // ارسال رویداد SSE
     reportEvents.emit('registration-change', siteStatus.registration);
     
-    // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
-    console.log(`🔄 Registration status changed to: ${enabled ? 'فعال' : 'غیرفعال'} from website`);
+    // ارسال داشبورد ترکیبی به گروه گزارش
+    await sendCombinedDashboard();
+    console.log(`🔄 Registration status changed to: ${enabled ? 'فعال' : 'غیرفعال'} from website - Combined dashboard sent`);
     
     res.json({ success: true, enabled });
   } catch (error) {
@@ -1130,8 +1301,9 @@ app.post('/api/toggle-survey', async (req, res) => {
     // ارسال رویداد SSE
     reportEvents.emit('survey-change', siteStatus.survey);
     
-    // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
-    console.log(`🔄 Survey status changed to: ${enabled ? 'فعال' : 'غیرفعال'} from website`);
+    // ارسال داشبورد ترکیبی به گروه گزارش
+    await sendCombinedDashboard();
+    console.log(`🔄 Survey status changed to: ${enabled ? 'فعال' : 'غیرفعال'} from website - Combined dashboard sent`);
     
     res.json({ success: true, enabled });
   } catch (error) {

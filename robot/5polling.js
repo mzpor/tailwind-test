@@ -991,8 +991,8 @@ function startPolling() {
             continue;
           }
           
-          // گزارش ورود ربات به گروه
-          await handleGroupJoin(msg.chat);
+          // این قسمت حذف شد - گزارش ورود ربات فقط در زمان واقعی join باید اتفاق بیفتد
+          // await handleGroupJoin(msg.chat);
           continue;
         }
 
