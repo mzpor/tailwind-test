@@ -1,0 +1,32 @@
+{
+  "1638058362": {
+    "national_id": "0123456789",
+    "full_name": "مدیر مدرسه",
+    "first_name": "مدیر",
+    "phone": "09123456789",
+    "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+    "role": "admin",
+    "registration_date": "2024-01-01T00:00:00.000Z",
+    "user_type": "admin"
+  },
+  "1775811194": {
+    "national_id": "1234567890",
+    "full_name": "محرابی استاد",
+    "first_name": "محرابی",
+    "phone": "09123456790",
+    "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+    "role": "teacher",
+    "registration_date": "2024-01-02T00:00:00.000Z",
+    "user_type": "teacher"
+  },
+  "1114227010": {
+    "national_id": "2345678901",
+    "full_name": "محمد دانش‌آموز",
+    "first_name": "محمد",
+    "phone": "09123456791",
+    "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+    "role": "quran_student",
+    "registration_date": "2024-01-03T00:00:00.000Z",
+    "user_type": "quran_student"
+  }
+}

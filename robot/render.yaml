@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: bale-bot-js
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: BALE_TOKEN
+        sync: false

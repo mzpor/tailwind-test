@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود - مدرسه قرآن استاد علی محرابی</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <div class="logo-icon">☪️</div>
+                    <h2>ورود به سیستم</h2>
+                </div>
+                <p>لطفاً اطلاعات خود را وارد کنید</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'error' if category == 'error' else 'success' }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" class="auth-form">
+                <div class="form-group">
+                    <label for="national_id">کد ملی</label>
+                    <input type="text" id="national_id" name="national_id" required 
+                           placeholder="کد ملی خود را وارد کنید" maxlength="10">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">رمز عبور</label>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="رمز عبور خود را وارد کنید">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">ورود</button>
+            </form>
+
+            <div class="auth-footer">
+                <p>حساب کاربری ندارید؟ <a href="/register">ثبت‌نام کنید</a></p>
+                <a href="/" class="back-link">← بازگشت به صفحه اصلی</a>
+            </div>
+        </div>
+
+        <div class="auth-decoration">
+            <div class="quran-pattern">
+                <div class="pattern-element">📖</div>
+                <div class="pattern-element">☪️</div>
+                <div class="pattern-element">⭐</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

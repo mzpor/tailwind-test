@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد - مدرسه قرآن استاد علی محرابی</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="dashboard-page">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="logo-icon">☪️</div>
+                <h3>مدرسه قرآن</h3>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="nav-item active">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">داشبورد</span>
+            </a>
+            <a href="/report-card" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">کارنامه</span>
+            </a>
+            <a href="/classes" class="nav-item">
+                <span class="nav-icon">📚</span>
+                <span class="nav-text">کلاس‌های کارگاهی</span>
+            </a>
+            <a href="/tajweed" class="nav-item">
+                <span class="nav-icon">🎤</span>
+                <span class="nav-text">تلاوت قرآن</span>
+            </a>
+            <a href="/activities" class="nav-item">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-text">فعالیت‌ها</span>
+            </a>
+            {% if session.user_role in ['admin', 'teacher'] %}
+            <a href="/admin" class="nav-item admin-item">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-text">پنل مدیریت</span>
+            </a>
+            {% endif %}
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">👤</div>
+                <div class="user-details">
+                    <h4>{{ session.user_name }}</h4>
+                    <p>{{ session.user_role }}</p>
+                </div>
+            </div>
+            <a href="/logout" class="logout-btn">
+                <span class="nav-icon">🚪</span>
+                <span>خروج</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="content-header">
+            <div class="header-left">
+                <h1>داشبورد</h1>
+                <p>خوش آمدید {{ session.user_name }} عزیز</p>
+            </div>
+            <div class="header-right">
+                <div class="date-time">
+                    <span id="current-date"></span>
+                    <span id="current-time"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3>{{ total_students }}</h3>
+                    <p>کل دانش‌آموزان</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👨‍🏫</div>
+                <div class="stat-content">
+                    <h3>{{ total_teachers }}</h3>
+                    <p>کل اساتید</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📚</div>
+                <div class="stat-content">
+                    <h3>۱۲</h3>
+                    <p>کلاس فعال</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-content">
+                    <h3>۸۵%</h3>
+                    <p>پیشرفت شما</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <h2>دسترسی سریع</h2>
+            <div class="actions-grid">
+                <a href="/report-card" class="action-card">
+                    <div class="action-icon">📊</div>
+                    <h3>مشاهده کارنامه</h3>
+                    <p>نمرات و پیشرفت تحصیلی</p>
+                </a>
+                <a href="/classes" class="action-card">
+                    <div class="action-icon">📚</div>
+                    <h3>کلاس‌های کارگاهی</h3>
+                    <p>ثبت‌نام و مشاهده کلاس‌ها</p>
+                </a>
+                <a href="/tajweed" class="action-card">
+                    <div class="action-icon">🎤</div>
+                    <h3>تلاوت قرآن</h3>
+                    <p>فایل‌های صوتی تلاوت</p>
+                </a>
+                <a href="/profile" class="action-card">
+                    <div class="action-icon">👤</div>
+                    <h3>پروفایل شخصی</h3>
+                    <p>ویرایش اطلاعات شخصی</p>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="recent-activities">
+            <h2>فعالیت‌های اخیر</h2>
+            <div class="activities-list">
+                <div class="activity-item">
+                    <div class="activity-icon">📚</div>
+                    <div class="activity-content">
+                        <h4>ثبت‌نام در کلاس تجوید</h4>
+                        <p>۲ روز پیش</p>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">📊</div>
+                    <div class="activity-content">
+                        <h4>دریافت کارنامه ترم اول</h4>
+                        <p>۱ هفته پیش</p>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">🎤</div>
+                    <div class="activity-content">
+                        <h4>آپلود فایل تلاوت</h4>
+                        <p>۲ هفته پیش</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Chart -->
+        <div class="progress-section">
+            <h2>نمودار پیشرفت</h2>
+            <div class="chart-container">
+                <canvas id="progressChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // نمایش تاریخ و زمان
+        function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            
+            document.getElementById('current-date').textContent = now.toLocaleDateString('fa-IR', dateOptions);
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('fa-IR', timeOptions);
+        }
+        
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        // نمودار پیشرفت
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'],
+                datasets: [{
+                    label: 'پیشرفت تحصیلی',
+                    data: [65, 70, 75, 80, 82, 85],
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

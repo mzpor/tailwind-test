@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت - مدرسه قرآن استاد علی محرابی</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="dashboard-page">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="logo-icon">☪️</div>
+                <h3>مدرسه قرآن</h3>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="nav-item">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">داشبورد</span>
+            </a>
+            <a href="/report-card" class="nav-item">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">کارنامه</span>
+            </a>
+            <a href="/classes" class="nav-item">
+                <span class="nav-icon">📚</span>
+                <span class="nav-text">کلاس‌های کارگاهی</span>
+            </a>
+            <a href="/tajweed" class="nav-item">
+                <span class="nav-icon">🎤</span>
+                <span class="nav-text">تلاوت قرآن</span>
+            </a>
+            <a href="/activities" class="nav-item">
+                <span class="nav-icon">🎯</span>
+                <span class="nav-text">فعالیت‌ها</span>
+            </a>
+            <a href="/admin" class="nav-item active admin-item">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-text">پنل مدیریت</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">👤</div>
+                <div class="user-details">
+                    <h4>{{ session.user_name }}</h4>
+                    <p>{{ session.user_role }}</p>
+                </div>
+            </div>
+            <a href="/logout" class="logout-btn">
+                <span class="nav-icon">🚪</span>
+                <span>خروج</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="content-header">
+            <div class="header-left">
+                <h1>پنل مدیریت</h1>
+                <p>مدیریت سیستم مدرسه قرآن</p>
+            </div>
+            <div class="header-right">
+                <div class="admin-actions">
+                    <button class="btn btn-primary" onclick="showAddUserModal()">
+                        <span class="btn-icon">➕</span>
+                        افزودن کاربر
+                    </button>
+                    <button class="btn btn-secondary" onclick="showAddClassModal()">
+                        <span class="btn-icon">📚</span>
+                        افزودن کلاس
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Stats -->
+        <div class="admin-stats">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <h3>{{ users|length }}</h3>
+                    <p>کل کاربران</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📚</div>
+                <div class="stat-content">
+                    <h3>{{ classes|length }}</h3>
+                    <p>کلاس‌های فعال</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-content">
+                    <h3>۱۲,۵۰۰,۰۰۰</h3>
+                    <p>درآمد ماهانه (تومان)</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-content">
+                    <h3>+۱۵%</h3>
+                    <p>رشد نسبت به ماه قبل</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tabs -->
+        <div class="admin-tabs">
+            <button class="tab-btn active" data-tab="users">مدیریت کاربران</button>
+            <button class="tab-btn" data-tab="classes">مدیریت کلاس‌ها</button>
+            <button class="tab-btn" data-tab="reports">گزارشات</button>
+            <button class="tab-btn" data-tab="settings">تنظیمات</button>
+        </div>
+
+        <!-- Users Management Tab -->
+        <div id="users" class="tab-content active">
+            <div class="tab-header">
+                <h2>مدیریت کاربران</h2>
+                <div class="search-box">
+                    <input type="text" id="userSearch" placeholder="جستجو در کاربران...">
+                    <button class="search-btn">🔍</button>
+                </div>
+            </div>
+            
+            <div class="users-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>نام و نام خانوادگی</th>
+                            <th>کد ملی</th>
+                            <th>نوع کاربر</th>
+                            <th>وضعیت</th>
+                            <th>تاریخ ثبت‌نام</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user_id, user in users.items() %}
+                        <tr>
+                            <td>{{ user.full_name }}</td>
+                            <td>{{ user.national_id }}</td>
+                            <td>
+                                <span class="user-type {{ user.user_type }}">
+                                    {% if user.user_type == 'quran_student' %}قرآن‌آموز
+                                    {% elif user.user_type == 'teacher' %}مربی
+                                    {% elif user.user_type == 'assistant_teacher' %}کمک مربی
+                                    {% elif user.user_type == 'parent' %}والدین
+                                    {% else %}{{ user.user_type }}{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status {{ 'success' if user.is_active else 'error' }}">
+                                    {{ 'فعال' if user.is_active else 'غیرفعال' }}
+                                </span>
+                            </td>
+                            <td>{{ user.registration_date[:10] }}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-primary" onclick="editUser('{{ user_id }}')">ویرایش</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteUser('{{ user_id }}')">حذف</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Classes Management Tab -->
+        <div id="classes" class="tab-content">
+            <div class="tab-header">
+                <h2>مدیریت کلاس‌ها</h2>
+            </div>
+            
+            <div class="classes-grid admin-classes">
+                {% for class_id, class_data in classes.items() %}
+                <div class="class-card admin-class-card">
+                    <div class="class-header">
+                        <div class="class-icon">📚</div>
+                        <div class="class-badge">{{ class_data.name }}</div>
+                    </div>
+                    <div class="class-content">
+                        <h3>{{ class_data.name }}</h3>
+                        <p>{{ class_data.description }}</p>
+                        <div class="class-details">
+                            <div class="detail-item">
+                                <span class="detail-icon">👨‍🏫</span>
+                                <span>{{ class_data.instructor }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">💰</span>
+                                <span>{{ class_data.price }} تومان</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-icon">⏰</span>
+                                <span>{{ class_data.duration }} جلسه</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="class-actions">
+                        <button class="btn btn-primary btn-sm">ویرایش</button>
+                        <button class="btn btn-danger btn-sm">حذف</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content">
+            <div class="tab-header">
+                <h2>گزارشات</h2>
+            </div>
+            
+            <div class="reports-grid">
+                <div class="report-card">
+                    <h3>گزارش ثبت‌نام</h3>
+                    <canvas id="registrationChart" width="400" height="300"></canvas>
+                </div>
+                <div class="report-card">
+                    <h3>درآمد کلاس‌ها</h3>
+                    <canvas id="incomeChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="tab-header">
+                <h2>تنظیمات سیستم</h2>
+            </div>
+            
+            <div class="settings-form">
+                <div class="form-group">
+                    <label>نام مدرسه:</label>
+                    <input type="text" value="{{ settings.school_name }}" id="schoolName">
+                </div>
+                <div class="form-group">
+                    <label>توضیحات:</label>
+                    <textarea id="schoolDescription" rows="3">{{ settings.school_description }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>تلفن تماس:</label>
+                    <input type="tel" value="{{ settings.contact_phone }}" id="contactPhone">
+                </div>
+                <div class="form-group">
+                    <label>ایمیل:</label>
+                    <input type="email" value="{{ settings.contact_email }}" id="contactEmail">
+                </div>
+                <button class="btn btn-primary" onclick="saveSettings()">ذخیره تنظیمات</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>افزودن کاربر جدید</h3>
+                <span class="close" onclick="closeAddUserModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="form-group">
+                        <label>کد ملی:</label>
+                        <input type="text" name="national_id" required maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label>نام و نام خانوادگی:</label>
+                        <input type="text" name="full_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>شماره تلفن:</label>
+                        <input type="tel" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>نوع کاربر:</label>
+                        <select name="user_type" required>
+                            <option value="quran_student">قرآن‌آموز</option>
+                            <option value="teacher">مربی</option>
+                            <option value="assistant_teacher">کمک مربی</option>
+                            <option value="parent">والدین</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>نقش:</label>
+                        <select name="role" required>
+                            <option value="student">دانش‌آموز</option>
+                            <option value="teacher">مربی</option>
+                            <option value="admin">مدیر</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>رمز عبور:</label>
+                        <input type="password" name="password" required minlength="6">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddUserModal()">انصراف</button>
+                <button class="btn btn-primary" onclick="submitAddUser()">افزودن کاربر</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                
+                // Remove active class from all tabs and contents
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to current tab and content
+                this.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        // Charts
+        const registrationCtx = document.getElementById('registrationChart').getContext('2d');
+        new Chart(registrationCtx, {
+            type: 'line',
+            data: {
+                labels: ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور'],
+                datasets: [{
+                    label: 'ثبت‌نام‌های جدید',
+                    data: [12, 19, 15, 25, 22, 30],
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)'
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+
+        const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+        new Chart(incomeCtx, {
+            type: 'bar',
+            data: {
+                labels: ['تجوید', 'حفظ', 'تلاوت', 'خوشنویسی', 'تفسیر'],
+                datasets: [{
+                    label: 'درآمد (میلیون تومان)',
+                    data: [2.5, 3.2, 4.1, 1.8, 2.9],
+                    backgroundColor: '#FF9800'
+                }]
+            },
+            options: {
+                responsive: true
+            }
+        });
+
+        // Modal functions
+        function showAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'block';
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').style.display = 'none';
+        }
+
+        function submitAddUser() {
+            const form = document.getElementById('addUserForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            fetch('/admin/add_user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('کاربر با موفقیت اضافه شد!');
+                    closeAddUserModal();
+                    location.reload();
+                } else {
+                    alert('خطا در افزودن کاربر!');
+                }
+            });
+        }
+
+        function editUser(userId) {
+            alert('ویرایش کاربر: ' + userId);
+        }
+
+        function deleteUser(userId) {
+            if (confirm('آیا از حذف این کاربر اطمینان دارید؟')) {
+                fetch(`/admin/delete_user/${userId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('کاربر با موفقیت حذف شد!');
+                        location.reload();
+                    } else {
+                        alert('خطا در حذف کاربر!');
+                    }
+                });
+            }
+        }
+
+        function saveSettings() {
+            const settings = {
+                school_name: document.getElementById('schoolName').value,
+                school_description: document.getElementById('schoolDescription').value,
+                contact_phone: document.getElementById('contactPhone').value,
+                contact_email: document.getElementById('contactEmail').value
+            };
+            
+            // Here you would send the settings to the server
+            alert('تنظیمات با موفقیت ذخیره شد!');
+        }
+
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('addUserModal');
+            if (event.target === modal) {
+                closeAddUserModal();
+            }
+        });
+    </script>
+</body>
+</html>
