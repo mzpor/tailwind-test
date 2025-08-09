@@ -1,15 +1,19 @@
+require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs').promises;
+const cors = require('cors');
 
 // تنظیمات
-const BOT_TOKEN = "1778171143:vD6rjJXAYidLL7hQyQkBeu5TJ9KpRd4zAKegqUt3";
-const ADMIN_ID = 1638058362; // مدیر مدرسه
-const REPORT_GROUP_ID = 5668045453; // گروه گزارش
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const ADMIN_ID = Number(process.env.ADMIN_ID);
+const REPORT_GROUP_ID = Number(process.env.REPORT_GROUP_ID);
+const PORT = Number(process.env.PORT) || 3000;
 const BASE_URL = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
 
 // راه‌اندازی Express
 const app = express();
+app.use(cors({ origin: 'http://localhost:5173', methods: ['GET','POST'] }));
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -134,6 +138,9 @@ app.post('/api/toggle-reports', async (req, res) => {
   }
 });
 
+// اندپوینت وضعیت برای تست سریع
+app.get('/api/health', (req,res)=> res.json({ ok:true, ts: Date.now() }));
+
 // اطلاع‌رسانی به ربات
 async function notifyBotSettingsChanged(settings) {
   const message = `⚙️ **تنظیمات تغییر کرد!**
@@ -180,10 +187,8 @@ ${status} شدند
 async function start() {
   try {
     // راه‌اندازی سرور وب
-    const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-      console.log(`🌐 سرور وب روی پورت ${PORT} راه‌اندازی شد`);
-      console.log(`🔗 پنل مدیر: http://localhost:${PORT}`);
+      console.log(`🌐 Server on :${PORT}`);
     });
     
     // تست اتصال به بله
