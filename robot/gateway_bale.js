@@ -978,6 +978,9 @@ ${robotIcon} **ربات**
 ${gatewayIcon} **اتصال**
 ${websiteIcon} **سایت**
 
+**📈 گزارش فعال از:**
+${status.lastChange ? (status.lastChange.system === 'robot' ? '🤖 ربات' : status.lastChange.system === 'website' ? '🌐 سایت' : status.lastChange.system === 'gateway' ? '🔗 اتصال' : 'سیستم نامشخص') : 'تغییری ثبت نشده'}
+
 ${groupsList}
 
 ⏰ آخرین بروزرسانی: ${new Date(status.lastUpdate).toLocaleString('fa-IR')}`;
