@@ -22,4 +22,7 @@ export const gw = {
   toggleReports: (enabled) => post('/api/toggle-reports', { enabled }),
   getSettings: () => get('/api/settings'),
   setSettings: (settings) => post('/api/settings', settings),
+  workshops: () => get('/api/workshops'),
+  saveWorkshop: (payload) => post('/api/workshops', payload),
+  register: (payload) => post('/api/register', payload),
 };

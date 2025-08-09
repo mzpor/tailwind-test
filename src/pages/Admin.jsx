@@ -1,6 +1,8 @@
 import { useMemo, useEffect, useState } from "react";
 import { gw } from "../lib/gateway";
 import SettingsForm from "../components/SettingsForm";
+import WorkshopManager from "../components/WorkshopManager";
+import WorkshopsAdmin from "../components/WorkshopsAdmin";
 
 function toCSV(rows){
   const head = Object.keys(rows[0]).join(',');
@@ -71,6 +73,9 @@ export default function Admin(){
 
         {/* تنظیمات مدرسه */}
         <SettingsForm />
+
+        {/* مدیریت کارگاه‌ها */}
+        <WorkshopsAdmin />
 
         {/* جدول دانش‌آموزان */}
         <div className="bg-white shadow rounded-2xl p-6">
