@@ -190,6 +190,8 @@ export default function Admin(){
     // cleanup در هنگام unmount
     return () => {
       stopSSE();
+      // اطلاع‌رسانی خاموشی سایت
+      announceSiteOffline();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   
@@ -200,6 +202,16 @@ export default function Admin(){
       console.log('✅ [SITE] Site online notification sent');
     } catch (error) {
       console.log('⚠️ [SITE] Could not send site online notification:', error);
+    }
+  };
+  
+  // تابع اطلاع‌رسانی خاموشی سایت
+  const announceSiteOffline = async () => {
+    try {
+      await gw.announceSiteOffline();
+      console.log('✅ [SITE] Site offline notification sent');
+    } catch (error) {
+      console.log('⚠️ [SITE] Could not send site offline notification:', error);
     }
   };
 

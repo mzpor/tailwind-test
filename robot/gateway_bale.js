@@ -15,7 +15,10 @@ const {
   getReportsEnabled,
   setReportsEnabled,
   updateRobotHeartbeat,
-  isRobotOnline
+  isRobotOnline,
+  updateSystemStatus,
+  getSystemStatus,
+  resetSystemStatus
 } = require('./3config');
 
 // تنظیمات  
@@ -335,21 +338,56 @@ app.post('/api/toggle-reports', async (req, res) => {
 // اندپوینت وضعیت برای تست سریع
 app.get('/api/health', (req,res)=> res.json({ ok:true, ts: Date.now() }));
 
+// اندپوینت ریست وضعیت سیستم‌ها (برای تست)
+app.post('/api/reset-system-status', async (req, res) => {
+  try {
+    const success = resetSystemStatus();
+    
+    if (success) {
+      // ارسال داشبورد آپدیت شده
+      await sendSystemStatusDashboard();
+      
+      res.json({ success: true, message: 'وضعیت سیستم‌ها ریست شد' });
+    } else {
+      res.status(500).json({ error: 'خطا در ریست وضعیت' });
+    }
+  } catch (error) {
+    console.error('❌ [RESET] Error resetting system status:', error);
+    res.status(500).json({ error: 'خطا در ریست وضعیت' });
+  }
+});
+
 // اندپوینت اطلاع‌رسانی آنلاین شدن سایت
 app.post('/api/announce-site-online', async (req, res) => {
   try {
-    const message = `🌐 *سایت مدیریت آنلاین شد*
-
-🔗 آدرس: http://localhost:5173/admin
-⏰ ${new Date().toLocaleString('fa-IR')}
-👨‍💼 آماده مدیریت پنل`;
-
-    await sendBaleMessage(REPORT_GROUP_ID, message);
-    console.log(`✅ [SITE] Site online notification sent to group: ${REPORT_GROUP_ID}`);
-    res.json({ success: true, message: 'Site online notification sent' });
+    // آپدیت وضعیت سایت
+    updateSystemStatus('website', true);
+    
+    // ارسال داشبورد به‌روزرسانی شده
+    await sendSystemStatusDashboard();
+    
+    console.log(`✅ [SITE] Website online - status updated`);
+    res.json({ success: true, message: 'Website online status updated' });
   } catch (error) {
-    console.error('❌ [SITE] Error sending site online notification:', error);
-    res.status(500).json({ error: 'Failed to send notification' });
+    console.error('❌ [SITE] Error updating website status:', error);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// اندپوینت اطلاع‌رسانی خاموشی سایت
+app.post('/api/announce-site-offline', async (req, res) => {
+  try {
+    // آپدیت وضعیت سایت
+    updateSystemStatus('website', false);
+    
+    // ارسال داشبورد به‌روزرسانی شده
+    await sendSystemStatusDashboard();
+    
+    console.log(`✅ [SITE] Website offline - status updated`);
+    res.json({ success: true, message: 'Website offline status updated' });
+  } catch (error) {
+    console.error('❌ [SITE] Error updating website offline status:', error);
+    res.status(500).json({ error: 'Failed to update offline status' });
   }
 });
 
@@ -726,64 +764,199 @@ async function notifyReportsStatusChanged(enabled) {
   }
 }
 
-// Export reportEvents برای استفاده در سایر ماژول‌ها
-module.exports = { reportEvents };
+// Export reportEvents و sendSystemStatusDashboard برای استفاده در سایر ماژول‌ها
+module.exports = { reportEvents, sendSystemStatusDashboard };
 
-// اعلام روشن شدن ربات
-function announceRobotOnline() {
-  updateRobotHeartbeat();
-  console.log('🟢 [ROBOT] Robot is now ONLINE');
+// تابع announceRobotOnline حذف شد - ربات خودش وضعیتش را مدیریت می‌کند
+
+// کش برای اطلاعات گروه‌ها (5 دقیقه)
+let groupsCache = null;
+let groupsCacheTime = 0;
+const GROUPS_CACHE_DURATION = 5 * 60 * 1000; // 5 دقیقه
+
+// محاسبه زمان گذشته
+function getTimeAgo(timestamp) {
+  try {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diffMs = now - past;
+    
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffMinutes < 1) {
+      return 'همین الان';
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes} دقیقه پیش`;
+    } else if (diffHours < 24) {
+      return `${diffHours} ساعت پیش`;
+    } else {
+      return `${diffDays} روز پیش`;
+    }
+  } catch (error) {
+    return 'نامشخص';
+  }
+}
+
+// دریافت لیست گروه‌ها با تعداد اعضا
+async function getGroupsList() {
+  try {
+    // بررسی کش
+    const now = Date.now();
+    if (groupsCache && (now - groupsCacheTime) < GROUPS_CACHE_DURATION) {
+      return groupsCache;
+    }
+    
+    const { GROUP_NAMES } = require('./3config');
+    let groupsText = '📋 **گروه‌های ربات:**\n';
+    
+    let groupIndex = 1;
+    for (const [groupId, groupName] of Object.entries(GROUP_NAMES)) {
+      try {
+        // دریافت اطلاعات گروه از API بله
+        const response = await axios.post(`${BASE_URL}/getChat`, {
+          chat_id: groupId
+        });
+        
+        if (response.data && response.data.ok) {
+          const chat = response.data.result;
+          const memberCount = chat.members_count || 'نامشخص';
+          
+          // تشخیص نوع عضویت ربات
+          let roleIcon = '👤'; // عضو معمولی
+          try {
+            const memberResponse = await axios.post(`${BASE_URL}/getChatMember`, {
+              chat_id: groupId,
+              user_id: 'me' // خود ربات
+            });
+            
+            if (memberResponse.data && memberResponse.data.ok) {
+              const member = memberResponse.data.result;
+              if (member.status === 'administrator' || member.status === 'creator') {
+                roleIcon = '👑'; // ادمین
+              } else if (member.status === 'member') {
+                roleIcon = '👤'; // عضو معمولی
+              }
+            }
+          } catch (roleError) {
+            console.log(`⚠️ [GROUPS] Could not get role for group ${groupId}`);
+          }
+          
+          groupsText += `${groupIndex}. ${roleIcon} **${groupName}** - ${memberCount} نفر\n`;
+        } else {
+          groupsText += `${groupIndex}. ❓ **${groupName}** - دسترسی نداریم\n`;
+        }
+      } catch (error) {
+        groupsText += `${groupIndex}. ❌ **${groupName}** - خطا در اتصال\n`;
+      }
+      groupIndex++;
+    }
+    
+    // ذخیره در کش
+    groupsCache = groupsText;
+    groupsCacheTime = now;
+    
+    return groupsText;
+  } catch (error) {
+    console.error('❌ [GROUPS] Error getting groups list:', error);
+    return '📋 **گروه‌ها:** خطا در دریافت اطلاعات';
+  }
+}
+
+// ارسال داشبورد وضعیت سیستم‌ها
+async function sendSystemStatusDashboard() {
+  try {
+    const status = getSystemStatus();
+    
+    const robotIcon = status.robot ? '🟢' : '🔴';
+    const gatewayIcon = status.gateway ? '🟢' : '🔴';
+    const websiteIcon = status.website ? '🟢' : '🔴';
+    
+    // نمایش آخرین تغییر
+    let lastChangeText = '';
+    if (status.lastChange) {
+      const systemNames = {
+        robot: '🤖 ربات',
+        gateway: '🔗 Gateway', 
+        website: '🌐 سایت'
+      };
+      
+      const systemName = systemNames[status.lastChange.system] || status.lastChange.system;
+      const action = status.lastChange.action;
+      const timeAgo = getTimeAgo(status.lastChange.timestamp);
+      
+      lastChangeText = `${systemName} ${action} (${timeAgo})`;
+    } else {
+      lastChangeText = 'تغییری ثبت نشده';
+    }
+    
+    // دریافت لیست گروه‌ها
+    const groupsList = await getGroupsList();
+    
+    const message = `📊 *داشبورد وضعیت سیستم*
+
+**آخرین تغییر:** ${lastChangeText}
+
+${robotIcon} **ربات**: ${status.robot ? 'آنلاین' : 'آفلاین'}
+${gatewayIcon} **Gateway**: ${status.gateway ? 'آنلاین' : 'آفلاین'}  
+${websiteIcon} **سایت**: ${status.website ? 'آنلاین' : 'آفلاین'}
+
+${groupsList}
+
+⏰ آخرین بروزرسانی: ${new Date(status.lastUpdate).toLocaleString('fa-IR')}`;
+
+    await sendBaleMessage(REPORT_GROUP_ID, message);
+    console.log('✅ [STATUS] System status dashboard sent');
+  } catch (error) {
+    console.error('❌ [STATUS] Error sending system status dashboard:', error);
+  }
 }
 
 // اطلاع‌رسانی آنلاین شدن Gateway (اتصال ربات-سایت)
 async function announceGatewayOnline(port) {
   try {
-    const message = `🔗 *اتصال ربات-سایت برقرار شد*
-
-🌐 Gateway API: http://localhost:${port}
-⏰ ${new Date().toLocaleString('fa-IR')}
-🎯 آماده همگام‌سازی داده‌ها`;
-
-    await sendBaleMessage(REPORT_GROUP_ID, message);
-    console.log(`✅ [GATEWAY] Gateway online notification sent to group: ${REPORT_GROUP_ID}`);
+    // آپدیت وضعیت Gateway
+    updateSystemStatus('gateway', true);
+    
+    // ارسال داشبورد به‌روزرسانی شده
+    await sendSystemStatusDashboard();
+    
+    console.log(`✅ [GATEWAY] Gateway online - status updated`);
   } catch (error) {
-    console.error('❌ [GATEWAY] Error sending gateway online notification:', error);
+    console.error('❌ [GATEWAY] Error announcing gateway online:', error);
   }
 }
 
-// اعلام خاموش شدن ربات
-function announceRobotOffline() {
-  try {
-    const config = loadReportsConfig();
-    config.robotOnline = false;
-    config.lastRobotPing = new Date().toISOString();
-    saveReportsConfig(config);
-    console.log('🔴 [ROBOT] Robot is now OFFLINE');
-  } catch (error) {
-    console.error('❌ [ROBOT] Error announcing offline:', error);
-  }
-}
+// تابع announceRobotOffline حذف شد - ربات خودش وضعیتش را مدیریت می‌کند
 
 // بستن graceful سرور
 function gracefulShutdown() {
   console.log('🔴 [SHUTDOWN] شروع خاموشی graceful...');
   
+  // آپدیت وضعیت Gateway به آفلاین
+  updateSystemStatus('gateway', false);
+  
   if (server) {
-    server.close(() => {
+    server.close(async () => {
       console.log(`🔌 [SHUTDOWN] سرور پورت ${currentPort} بسته شد`);
-      announceRobotOffline();
+      
+      // فقط ارسال داشبورد آپدیت شده
+      await sendSystemStatusDashboard();
       process.exit(0);
     });
     
     // اگر بعد از 10 ثانیه بسته نشد، force exit
-    setTimeout(() => {
+    setTimeout(async () => {
       console.log('⚠️ [SHUTDOWN] Force shutdown بعد از timeout');
-      announceRobotOffline();
+      await sendSystemStatusDashboard();
       process.exit(1);
     }, 10000);
   } else {
-    announceRobotOffline();
-    process.exit(0);
+    (async () => {
+      await sendSystemStatusDashboard();
+      process.exit(0);
+    })();
   }
 }
 
@@ -806,8 +979,8 @@ async function start() {
       announceGatewayOnline(currentPort);
     });
     
-    // اعلام آنلاین شدن ربات
-    announceRobotOnline();
+    // فقط اعلام آنلاین شدن Gateway (نه ربات)
+    // ربات باید خودش وضعیتش را اعلام کند
     
     // تست اتصال به بله (بدون ارسال پیام)
     console.log('🔍 تست اتصال به بله...');

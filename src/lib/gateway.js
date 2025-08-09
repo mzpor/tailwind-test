@@ -46,4 +46,5 @@ export const gw = {
   sendVerification: (payload) => post('/api/send-verification', payload),
   verifyAndRegister: (payload) => post('/api/verify-and-register', payload),
   announceSiteOnline: () => post('/api/announce-site-online', {}),
+  announceSiteOffline: () => post('/api/announce-site-offline', {}),
 };

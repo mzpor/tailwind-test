@@ -329,6 +329,93 @@ function saveReportsConfig(config) {
   }
 }
 
+// آپدیت وضعیت سیستم‌ها
+function updateSystemStatus(system, status) {
+  try {
+    const config = loadReportsConfig();
+    
+    if (!config.systemStatus) {
+      config.systemStatus = {
+        robot: false,
+        gateway: false,
+        website: false,
+        lastUpdate: new Date().toISOString(),
+        lastChange: null
+      };
+    }
+    
+    // بررسی اینکه آیا واقعاً تغییر کرده
+    const previousStatus = config.systemStatus[system];
+    if (previousStatus !== status) {
+      config.systemStatus[system] = status;
+      config.systemStatus.lastUpdate = new Date().toISOString();
+      config.systemStatus.lastChange = {
+        system: system,
+        status: status,
+        timestamp: new Date().toISOString(),
+        action: status ? 'آنلاین شد' : 'آفلاین شد'
+      };
+      
+      console.log(`🔄 [STATUS] ${system} ${status ? 'آنلاین' : 'آفلاین'} شد`);
+      return saveReportsConfig(config);
+    } else {
+      console.log(`⚠️ [STATUS] ${system} وضعیت تغییری نکرده: ${status}`);
+      return true; // تغییری نبوده
+    }
+  } catch (error) {
+    console.error('❌ [CONFIG] Error updating system status:', error);
+    return false;
+  }
+}
+
+// دریافت وضعیت سیستم‌ها
+function getSystemStatus() {
+  try {
+    const config = loadReportsConfig();
+    return config.systemStatus || {
+      robot: false,
+      gateway: false,
+      website: false,
+      lastUpdate: new Date().toISOString(),
+      lastChange: null
+    };
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting system status:', error);
+    return {
+      robot: false,
+      gateway: false,
+      website: false,
+      lastUpdate: new Date().toISOString(),
+      lastChange: null
+    };
+  }
+}
+
+// ریست کردن وضعیت سیستم‌ها (برای تست)
+function resetSystemStatus() {
+  try {
+    const config = loadReportsConfig();
+    config.systemStatus = {
+      robot: false,
+      gateway: false,
+      website: false,
+      lastUpdate: new Date().toISOString(),
+      lastChange: {
+        system: 'system',
+        status: false,
+        timestamp: new Date().toISOString(),
+        action: 'ریست شد'
+      }
+    };
+    
+    console.log('🔄 [STATUS] وضعیت سیستم‌ها ریست شد');
+    return saveReportsConfig(config);
+  } catch (error) {
+    console.error('❌ [CONFIG] Error resetting system status:', error);
+    return false;
+  }
+}
+
 // دریافت وضعیت فعلی گزارش‌گیری
 function getReportsEnabled() {
   const config = loadReportsConfig();
@@ -456,5 +543,9 @@ module.exports = {
   // ===== توابع مدیریت شماره تلفن =====
   PRIVATE_ADMIN_PHONE,
   getAdminIdByPhone,
-  normalizePhoneNumber
+  normalizePhoneNumber,
+  // ===== توابع مدیریت وضعیت سیستم =====
+  updateSystemStatus,
+  getSystemStatus,
+  resetSystemStatus
 };

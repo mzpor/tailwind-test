@@ -14,11 +14,15 @@ const { hasPermission } = require('./6mid');
 
 // Import reportEvents برای SSE
 let reportEvents = null;
+let updateSystemStatus = null;
 try {
   const gateway = require('./gateway_bale');
   reportEvents = gateway.reportEvents;
+  
+  const config = require('./3config');
+  updateSystemStatus = config.updateSystemStatus;
 } catch (error) {
-  console.log('⚠️ [SETTINGS] Could not import reportEvents, SSE disabled');
+  console.log('⚠️ [SETTINGS] Could not import reportEvents or updateSystemStatus, SSE disabled');
 }
 
 class SettingsModule {
@@ -990,22 +994,32 @@ class SettingsModule {
       console.error('❌ [SETTINGS] Error sending report status notification:', error.message);
     }
     
-    // ارسال event برای SSE clients
-    if (reportEvents) {
-      try {
-        const config = loadReportsConfig();
-        reportEvents.emit('reportChanged', {
-          enabled: config.enabled,
-          lastUpdate: config.lastUpdate,
-          updatedBy: config.updatedBy,
-          updatedFrom: config.updatedFrom,
-          timestamp: Date.now()
-        });
-        console.log('📡 [SETTINGS] SSE event emitted for report change');
-      } catch (error) {
-        console.error('❌ [SETTINGS] Error emitting SSE event:', error);
-      }
-    }
+             // ارسال event برای SSE clients
+         if (reportEvents) {
+           try {
+             const config = loadReportsConfig();
+             reportEvents.emit('reportChanged', {
+               enabled: config.enabled,
+               lastUpdate: config.lastUpdate,
+               updatedBy: config.updatedBy,
+               updatedFrom: config.updatedFrom,
+               timestamp: Date.now()
+             });
+             console.log('📡 [SETTINGS] SSE event emitted for report change');
+           } catch (error) {
+             console.error('❌ [SETTINGS] Error emitting SSE event:', error);
+           }
+         }
+         
+         // آپدیت وضعیت ربات و ارسال داشبورد
+         if (updateSystemStatus) {
+           try {
+             updateSystemStatus('robot', true);
+             console.log('📊 [SETTINGS] Robot status updated via settings');
+           } catch (error) {
+             console.error('❌ [SETTINGS] Error updating robot status:', error);
+           }
+         }
     
     const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;

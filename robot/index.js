@@ -14,7 +14,7 @@ console.log('✅ [INDEX] 5polling module loaded');
 const { logShutdown, logStartup } = require('./8logs');
 console.log('✅ [INDEX] 8logs module loaded');
 
-const { updateRobotHeartbeat } = require('./3config');
+const { updateRobotHeartbeat, updateSystemStatus } = require('./3config');
 console.log('✅ [INDEX] 3config module loaded');
 
 // گزارش فعال شدن بات
@@ -24,7 +24,20 @@ logStartup().then(() => {
   
   // اعلام آنلاین شدن ربات
   updateRobotHeartbeat();
+  updateSystemStatus('robot', true);
   console.log('🟢 [INDEX] Robot status: ONLINE');
+  
+  // ارسال داشبورد وضعیت (اگر Gateway در دسترس باشد)
+  try {
+    const { sendSystemStatusDashboard } = require('./gateway_bale');
+    if (sendSystemStatusDashboard) {
+      sendSystemStatusDashboard().catch(err => {
+        console.log('⚠️ [INDEX] Error sending status dashboard:', err.message);
+      });
+    }
+  } catch (error) {
+    console.log('⚠️ [INDEX] Gateway not available for status dashboard');
+  }
   
   console.log('🚀 [INDEX] Starting polling...');
   startPolling();
@@ -43,7 +56,22 @@ process.on('SIGINT', async () => {
     config.robotOnline = false;
     config.lastRobotPing = new Date().toISOString();
     require('./3config').saveReportsConfig(config);
+    
+    // آپدیت وضعیت ربات
+    require('./3config').updateSystemStatus('robot', false);
     console.log('🔴 [INDEX] Robot status: OFFLINE');
+    
+    // ارسال داشبورد وضعیت (اگر Gateway در دسترس باشد)
+    try {
+      const { sendSystemStatusDashboard } = require('./gateway_bale');
+      if (sendSystemStatusDashboard) {
+        sendSystemStatusDashboard().catch(err => {
+          console.log('⚠️ [INDEX] Error sending status dashboard:', err.message);
+        });
+      }
+    } catch (error) {
+      console.log('⚠️ [INDEX] Gateway not available for status dashboard');
+    }
   } catch (error) {
     console.error('❌ [INDEX] Error setting offline status:', error);
   }
