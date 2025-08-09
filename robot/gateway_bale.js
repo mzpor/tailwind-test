@@ -363,6 +363,21 @@ app.post('/api/announce-site-online', async (req, res) => {
     // آپدیت وضعیت سایت
     updateSystemStatus('website', true);
     
+    // لاگ در JSON
+    const config = loadReportsConfig();
+    config.websiteLog = config.websiteLog || [];
+    config.websiteLog.push({
+      action: 'فعال شدم',
+      timestamp: new Date().toISOString()
+    });
+    // نگه‌داری فقط 10 لاگ آخر
+    if (config.websiteLog.length > 10) {
+      config.websiteLog = config.websiteLog.slice(-10);
+    }
+    saveReportsConfig(config);
+    
+    console.log('📝 [SITE] سایت در JSON نوشت: فعال شدم');
+    
     // ارسال داشبورد به‌روزرسانی شده
     await sendSystemStatusDashboard();
     
@@ -379,6 +394,21 @@ app.post('/api/announce-site-offline', async (req, res) => {
   try {
     // آپدیت وضعیت سایت
     updateSystemStatus('website', false);
+    
+    // لاگ در JSON
+    const config = loadReportsConfig();
+    config.websiteLog = config.websiteLog || [];
+    config.websiteLog.push({
+      action: 'غیرفعال شدم',
+      timestamp: new Date().toISOString()
+    });
+    // نگه‌داری فقط 10 لاگ آخر
+    if (config.websiteLog.length > 10) {
+      config.websiteLog = config.websiteLog.slice(-10);
+    }
+    saveReportsConfig(config);
+    
+    console.log('📝 [SITE] سایت در JSON نوشت: غیرفعال شدم');
     
     // ارسال داشبورد به‌روزرسانی شده
     await sendSystemStatusDashboard();
@@ -765,7 +795,7 @@ async function notifyReportsStatusChanged(enabled) {
 }
 
 // Export reportEvents و sendSystemStatusDashboard برای استفاده در سایر ماژول‌ها
-module.exports = { reportEvents, sendSystemStatusDashboard };
+module.exports = { reportEvents, sendSystemStatusDashboard, sendSettingsDashboard };
 
 // تابع announceRobotOnline حذف شد - ربات خودش وضعیتش را مدیریت می‌کند
 
@@ -821,7 +851,26 @@ async function getGroupsList() {
         
         if (response.data && response.data.ok) {
           const chat = response.data.result;
-          const memberCount = chat.members_count || 'نامشخص';
+          let memberCount = 'نامشخص';
+          let adminCount = 'نامشخص';
+          
+          // تلاش برای دریافت تعداد اعضا
+          if (chat.members_count) {
+            memberCount = chat.members_count;
+          }
+          
+          // تلاش برای دریافت لیست ادمین‌ها
+          try {
+            const adminResponse = await axios.post(`${BASE_URL}/getChatAdministrators`, {
+              chat_id: groupId
+            });
+            
+            if (adminResponse.data && adminResponse.data.ok) {
+              adminCount = adminResponse.data.result.length;
+            }
+          } catch (adminError) {
+            console.log(`⚠️ [GROUPS] Could not get admin count for group ${groupId}`);
+          }
           
           // تشخیص نوع عضویت ربات
           let roleIcon = '👤'; // عضو معمولی
@@ -843,7 +892,7 @@ async function getGroupsList() {
             console.log(`⚠️ [GROUPS] Could not get role for group ${groupId}`);
           }
           
-          groupsText += `${groupIndex}. ${roleIcon} **${groupName}** - ${memberCount} نفر\n`;
+          groupsText += `${groupIndex}. **${groupName}** - ${adminCount}👑 | ${memberCount} عضو\n`;
         } else {
           groupsText += `${groupIndex}. ❓ **${groupName}** - دسترسی نداریم\n`;
         }
@@ -864,6 +913,34 @@ async function getGroupsList() {
   }
 }
 
+// ارسال داشبورد تنظیمات سیستم
+async function sendSettingsDashboard() {
+  try {
+    const config = loadReportsConfig();
+    
+    // آیکون‌های تنظیمات
+    const reportsIcon = config.enabled ? '🟢' : '🔴';
+    const registrationIcon = '🟢'; // فعلاً فرض کنیم همیشه فعال است
+    const pollIcon = '🟢'; // فعلاً فرض کنیم همیشه فعال است
+    
+    const settingsMessage = `⚙️ *داشبورد تنظیمات سیستم*
+
+${reportsIcon} **گزارش‌ها**: ${config.enabled ? 'فعال' : 'غیرفعال'}
+${registrationIcon} **ثبت‌نام**: فعال
+${pollIcon} **نظرسنجی**: فعال
+
+📊 آخرین تغییر گزارش: ${config.lastUpdate ? new Date(config.lastUpdate).toLocaleString('fa-IR') : 'نامشخص'}
+👤 آخرین تغییر توسط: ${config.updatedBy || 'سیستم'}
+
+⏰ آخرین بروزرسانی: ${new Date().toLocaleString('fa-IR')}`;
+
+    await sendBaleMessage(REPORT_GROUP_ID, settingsMessage);
+    console.log('✅ [SETTINGS] Settings dashboard sent');
+  } catch (error) {
+    console.error('❌ [SETTINGS] Error sending settings dashboard:', error);
+  }
+}
+
 // ارسال داشبورد وضعیت سیستم‌ها
 async function sendSystemStatusDashboard() {
   try {
@@ -878,15 +955,14 @@ async function sendSystemStatusDashboard() {
     if (status.lastChange) {
       const systemNames = {
         robot: '🤖 ربات',
-        gateway: '🔗 Gateway', 
+        gateway: '🔗 اتصال', 
         website: '🌐 سایت'
       };
       
       const systemName = systemNames[status.lastChange.system] || status.lastChange.system;
       const action = status.lastChange.action;
-      const timeAgo = getTimeAgo(status.lastChange.timestamp);
       
-      lastChangeText = `${systemName} ${action} (${timeAgo})`;
+      lastChangeText = `${systemName} ${action}`;
     } else {
       lastChangeText = 'تغییری ثبت نشده';
     }
@@ -898,9 +974,9 @@ async function sendSystemStatusDashboard() {
 
 **آخرین تغییر:** ${lastChangeText}
 
-${robotIcon} **ربات**: ${status.robot ? 'آنلاین' : 'آفلاین'}
-${gatewayIcon} **Gateway**: ${status.gateway ? 'آنلاین' : 'آفلاین'}  
-${websiteIcon} **سایت**: ${status.website ? 'آنلاین' : 'آفلاین'}
+${robotIcon} **ربات**
+${gatewayIcon} **اتصال**
+${websiteIcon} **سایت**
 
 ${groupsList}
 

@@ -35,37 +35,8 @@ function getFormattedDateTime(includeYear = false) {
 async function logShutdown() {
   console.log('🛑 [LOGS] logShutdown called');
   
-  // بررسی وضعیت گزارش
-  const settings = new SettingsModule();
-  await settings.loadSettings();
-  if (!settings.settings.enable_bot_reports) {
-    console.log('📋 [LOGS] Reports disabled, skipping shutdown message');
-    return;
-  }
-  
-  const now = Date.now();
-  if (now - lastShutdownMessage > 60000) { // حداقل 1 دقیقه فاصله
-    console.log('✅ [LOGS] Shutdown message allowed (time check passed)');
-    const today = moment().format('YYYY-MM-DD');
-    const includeYear = today !== lastShutdownDate;
-    
-    const text = `ربات خاموش شد 🔴
-ساعت: ${getFormattedDateTime(includeYear)}`;
-    
-    console.log('📤 [LOGS] Sending shutdown message:', text);
-    try {
-      await sendMessage(REPORT_GROUP_ID, text);
-      console.log('✅ [LOGS] Shutdown message sent successfully');
-      lastShutdownMessage = now;
-      if (includeYear) {
-        lastShutdownDate = today;
-      }
-    } catch (error) {
-      console.error('❌ [LOGS] Error sending shutdown message:', error.message);
-    }
-  } else {
-    console.log('⚠️ [LOGS] Shutdown message blocked (time check failed)');
-  }
+  console.log('📊 [LOGS] پیام جداگانه خاموشی ارسال نمی‌شود - داشبورد وضعیت کافی است');
+  // پیام خاموشی جداگانه غیرفعال شده - داشبورد وضعیت اطلاع‌رسانی می‌کند
 }
 
 async function logStartup() {
@@ -92,9 +63,9 @@ async function logStartup() {
       const groupsInfo = await getGroupsSummary();
       console.log('📊 [LOGS] Groups summary:', groupsInfo);
       
-      const text = `🤖 مربی هوشمند فعال شد
-
-${groupsInfo}⏰ اکنون: ${getFormattedDateTime(includeYear)}`;
+      console.log('📊 [LOGS] پیام راه‌اندازی ربات حذف شد - داشبورد وضعیت کافی است');
+      // پیام راه‌اندازی حذف شده - داشبورد وضعیت اطلاع‌رسانی می‌کند
+      return;
       
       console.log('📤 [LOGS] Sending startup message:', text);
       await sendMessage(REPORT_GROUP_ID, text);

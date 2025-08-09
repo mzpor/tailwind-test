@@ -65,12 +65,11 @@ process.on('SIGINT', async () => {
     try {
       const { sendSystemStatusDashboard } = require('./gateway_bale');
       if (sendSystemStatusDashboard) {
-        sendSystemStatusDashboard().catch(err => {
-          console.log('⚠️ [INDEX] Error sending status dashboard:', err.message);
-        });
+        await sendSystemStatusDashboard();
+        console.log('✅ [INDEX] Status dashboard sent on robot shutdown');
       }
     } catch (error) {
-      console.log('⚠️ [INDEX] Gateway not available for status dashboard');
+      console.log('⚠️ [INDEX] Gateway not available for status dashboard:', error.message);
     }
   } catch (error) {
     console.error('❌ [INDEX] Error setting offline status:', error);

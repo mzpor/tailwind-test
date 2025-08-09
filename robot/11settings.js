@@ -990,6 +990,17 @@ class SettingsModule {
       
       await sendMessage(REPORT_GROUP_ID, reportText);
       console.log(`✅ [SETTINGS] Report status change notification sent to group: ${status}`);
+      
+      // ارسال داشبورد تنظیمات
+      try {
+        const gateway = require('./gateway_bale');
+        if (gateway.sendSettingsDashboard) {
+          await gateway.sendSettingsDashboard();
+          console.log('📊 [SETTINGS] Settings dashboard sent');
+        }
+      } catch (error) {
+        console.log('⚠️ [SETTINGS] Could not send settings dashboard:', error.message);
+      }
     } catch (error) {
       console.error('❌ [SETTINGS] Error sending report status notification:', error.message);
     }
