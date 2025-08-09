@@ -59,6 +59,12 @@
                         <p>فعال/غیرفعال کردن گزارش‌ها</p>
                     </div>
                     
+                    <div class="setting-card" onclick="showRegistrationSettings()">
+                        <div class="card-icon">📝</div>
+                        <h4>ثبت‌نام</h4>
+                        <p>فعال/غیرفعال کردن ثبت‌نام</p>
+                    </div>
+                    
                     <div class="setting-card" onclick="showResetSettings()">
                         <div class="card-icon">🔄</div>
                         <h4>بازنشانی</h4>
@@ -219,6 +225,21 @@
                 </div>
                 <div class="action-buttons">
                     <button onclick="toggleReportsManual()" class="action-btn primary">🔄 تغییر وضعیت</button>
+                    <button onclick="backToMainMenu()" class="action-btn secondary">🔙 بازگشت</button>
+                </div>
+            </div>
+
+            <!-- تنظیمات ثبت‌نام -->
+            <div id="registrationPanel" class="settings-panel" style="display: none;">
+                <h3>📝 تنظیمات ثبت‌نام</h3>
+                <div class="toggle-setting">
+                    <label>وضعیت فعلی ثبت‌نام:</label>
+                    <div id="registrationStatus" class="status-display">
+                        <span id="registrationStatusText">در حال بارگذاری...</span>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button onclick="toggleRegistrationManual()" class="action-btn primary glass-btn">🔄 تغییر وضعیت</button>
                     <button onclick="backToMainMenu()" class="action-btn secondary">🔙 بازگشت</button>
                 </div>
             </div>

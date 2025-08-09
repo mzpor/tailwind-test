@@ -292,9 +292,31 @@ class KargahModule {
         }
         
         this.tempData[userId].cost = normalizedCost;
+        this.userStates[userId] = 'kargah_add_phone';
+        
+        const responseText = `✅ هزینه ثبت شد: *${normalizedCost}*\n\n📱 لطفاً شماره تلفن مربی را وارد کنید (اختیاری):\n\n📝 مثال‌های صحیح:\n• 09123456789\n• 0912 345 6789\n• 0 برای رد کردن`;
+        await this.sendMessage(chatId, responseText);
+        
+      } else if (userState === 'kargah_add_phone') {
+        // پردازش شماره تلفن مربی (اختیاری)
+        let instructorPhone = '';
+        if (text && text.trim() !== '0' && text.trim() !== '') {
+          // تمیز کردن شماره تلفن
+          instructorPhone = text.replace(/\s/g, '').replace(/[۰-۹]/g, function(w) {
+            return String.fromCharCode(w.charCodeAt(0) - '۰'.charCodeAt(0) + '0'.charCodeAt(0));
+          });
+          
+          // بررسی اعتبار شماره تلفن (اختیاری)
+          if (!/^09\d{9}$/.test(instructorPhone)) {
+            instructorPhone = ''; // اگر نامعتبر باشد، خالی بگذار
+          }
+        }
+        
+        this.tempData[userId].instructor_phone = instructorPhone;
         this.userStates[userId] = 'kargah_add_link';
         
-        const responseText = `✅ هزینه ثبت شد: *${normalizedCost}*\n\n🔗 لطفاً لینک گروه تلگرام را وارد کنید:\n\n📝 مثال‌های صحیح:\n• https://t.me/workshop_group\n• https://t.me/+abcdefghijk\n• t.me/workshop_group`;
+        const phoneStatus = instructorPhone ? `✅ تلفن مربی: *${instructorPhone}*` : '⏭️ تلفن مربی رد شد';
+        const responseText = `${phoneStatus}\n\n🔗 لطفاً لینک گروه تلگرام را وارد کنید:\n\n📝 مثال‌های صحیح:\n• https://t.me/workshop_group\n• https://t.me/+abcdefghijk\n• t.me/workshop_group`;
         await this.sendMessage(chatId, responseText);
         
       } else if (userState === 'kargah_add_link') {
@@ -302,7 +324,8 @@ class KargahModule {
         this.tempData[userId].link = text;
         
         // نمایش خلاصه کارگاه قبل از ذخیره
-        const summaryText = `📋 *خلاصه کارگاه جدید*\n\n👨‍🏫 *نام مربی:* ${this.tempData[userId].instructor_name}\n💰 *هزینه:* ${this.tempData[userId].cost}\n🔗 *لینک گروه:* ${this.tempData[userId].link}\n\n✅ آیا می‌خواهید این کارگاه را ذخیره کنید؟`;
+        const phoneDisplay = this.tempData[userId].instructor_phone ? `\n📱 *تلفن مربی:* ${this.tempData[userId].instructor_phone}` : '\n📱 *تلفن مربی:* وارد نشده';
+        const summaryText = `📋 *خلاصه کارگاه جدید*\n\n👨‍🏫 *نام مربی:* ${this.tempData[userId].instructor_name}${phoneDisplay}\n💰 *هزینه:* ${this.tempData[userId].cost}\n🔗 *لینک گروه:* ${this.tempData[userId].link}\n\n✅ آیا می‌خواهید این کارگاه را ذخیره کنید؟`;
         
         const keyboard = [
           [{ text: '✅ بله، ذخیره کن', callback_data: 'kargah_confirm_save' }],
@@ -343,6 +366,7 @@ class KargahModule {
     
     const workshop = this.workshops[workshopId];
     const instructorName = workshop.instructor_name || 'نامشخص';
+    const instructorPhone = workshop.instructor_phone || 'وارد نشده';
     const cost = workshop.cost || 'نامشخص';
     const link = workshop.link || 'نامشخص';
     const description = workshop.description || 'توضیحات موجود نیست';
@@ -352,6 +376,7 @@ class KargahModule {
     
     let text = `🏭 *جزئیات کارگاه*\n\n`;
     text += `👨‍🏫 *نام مربی:* ${instructorName}\n`;
+    text += `📱 *تلفن مربی:* ${instructorPhone}\n`;
     text += `💰 *هزینه:* ${cost}\n`;
     text += `📝 *توضیحات:* ${description}\n`;
     text += `👥 *ظرفیت:* ${capacity} نفر\n`;

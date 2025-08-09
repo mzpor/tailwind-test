@@ -219,6 +219,13 @@ function showReportSettings() {
     loadReportSettings();
 }
 
+// نمایش تنظیمات ثبت‌نام
+function showRegistrationSettings() {
+    hideAllPanels();
+    document.getElementById('registrationPanel').style.display = 'block';
+    loadRegistrationSettings();
+}
+
 // نمایش بازنشانی تنظیمات
 function showResetSettings() {
     hideAllPanels();
@@ -233,6 +240,7 @@ function hideAllPanels() {
         'attendanceDaysPanel',
         'surveyPanel',
         'reportPanel',
+        'registrationPanel',
         'resetPanel'
     ];
     
@@ -483,6 +491,65 @@ async function toggleReportsManual() {
     } catch (error) {
         console.error('خطا در تغییر وضعیت گزارش‌ها:', error);
         showNotification('❌ خطا در تغییر وضعیت گزارش‌ها', 'error');
+    }
+}
+
+// لود تنظیمات ثبت‌نام
+async function loadRegistrationSettings() {
+    try {
+        const response = await fetch('/api/registration-status');
+        const status = await response.json();
+        
+        // نمایش وضعیت فعلی
+        const statusText = document.getElementById('registrationStatusText');
+        if (statusText) {
+            statusText.textContent = status.enabled ? '✅ فعال' : '❌ غیرفعال';
+            statusText.style.color = status.enabled ? '#28a745' : '#dc3545';
+        }
+        
+        // ذخیره وضعیت فعلی برای استفاده در toggle
+        window.currentRegistrationStatus = status.enabled;
+        
+    } catch (error) {
+        console.error('خطا در لود تنظیمات ثبت‌نام:', error);
+        const statusText = document.getElementById('registrationStatusText');
+        if (statusText) {
+            statusText.textContent = '✅ فعال';
+            statusText.style.color = '#28a745';
+        }
+        window.currentRegistrationStatus = true;
+    }
+}
+
+// تغییر وضعیت ثبت‌نام با دکمه
+async function toggleRegistrationManual() {
+    const newStatus = !window.currentRegistrationStatus;
+    console.log('تغییر وضعیت ثبت‌نام به:', newStatus);
+    
+    try {
+        const response = await fetch('/api/toggle-registration', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ enabled: newStatus })
+        });
+        
+        const result = await response.json();
+        console.log('پاسخ سرور:', result);
+        
+        if (result.success) {
+            window.currentRegistrationStatus = newStatus;
+            showNotification(`✅ ثبت‌نام ${newStatus ? 'فعال' : 'غیرفعال'} شد`, 'success');
+            // بروزرسانی نمایش
+            await loadRegistrationSettings();
+        } else {
+            showNotification('❌ خطا در تغییر وضعیت ثبت‌نام', 'error');
+        }
+        
+    } catch (error) {
+        console.error('خطا در تغییر وضعیت ثبت‌نام:', error);
+        showNotification('❌ خطا در تغییر وضعیت ثبت‌نام', 'error');
     }
 }
 
