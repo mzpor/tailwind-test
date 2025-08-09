@@ -1,0 +1,7 @@
+/* فونت فارسی باید اولین خط باشد */
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+
+/* Tailwind v4 */
+@import "tailwindcss";
+
+html { direction: rtl; }
