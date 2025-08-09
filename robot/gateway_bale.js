@@ -211,7 +211,8 @@ app.get('/api/report-status', async (req, res) => {
       enabled: config.enabled,
       lastUpdate: config.lastUpdate,
       updatedBy: config.updatedBy,
-      updatedFrom: config.updatedFrom
+      updatedFrom: config.updatedFrom,
+      timestamp: Date.now() // برای تشخیص تغییرات
     });
   } catch (error) {
     res.status(500).json({ error: 'خطا در لود کردن وضعیت گزارش‌ها' });
