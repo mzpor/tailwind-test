@@ -14,4 +14,40 @@ function getTimeStamp() {
   return timestamp;
 }
 
-module.exports = { getTimeStamp };
+// تابع دریافت نام ماه فارسی فعلی
+function getPersianMonthName() {
+  const now = moment();
+  return now.format('jMMMM');
+}
+
+// تابع دریافت نام ماه فارسی بعدی
+function getNextPersianMonthName() {
+  const now = moment();
+  const nextMonth = now.add(1, 'jMonth');
+  return nextMonth.format('jMMMM');
+}
+
+// تابع تولید متن ثبت‌نام بر اساس وضعیت
+function getRegistrationMonthText(isEnabled = false) {
+  if (isEnabled) {
+    const currentMonth = getPersianMonthName();
+    
+    // در ماه مرداد، امکان ثبت‌نام برای شهریور
+    if (currentMonth === 'مرداد') {
+      return `📝 ثبت نام شهریور`;
+    } else {
+      // در سایر ماه‌ها، نمایش ماه آینده
+      const nextMonth = getNextPersianMonthName();
+      return `📝 ثبت نام ${nextMonth}`;
+    }
+  } else {
+    return `📝 ثبت نام به زودی...`;
+  }
+}
+
+module.exports = { 
+  getTimeStamp, 
+  getPersianMonthName, 
+  getNextPersianMonthName, 
+  getRegistrationMonthText 
+};

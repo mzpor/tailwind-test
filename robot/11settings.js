@@ -224,12 +224,23 @@ class SettingsModule {
     
     // دریافت وضعیت ثبت‌نام از فایل site-status.json
     let registrationStatus = '✅ فعال'; // پیش‌فرض
+    let registrationButtonText = '📝 ثبت‌نام: ✅ فعال';
     try {
       const { readJson } = require('./server/utils/jsonStore');
+      const { getRegistrationMonthText } = require('./1time');
       const siteStatus = await readJson('data/site-status.json', {
         registration: { enabled: true }
       });
       registrationStatus = siteStatus.registration.enabled ? '✅ فعال' : '❌ غیرفعال';
+      
+      // تولید متن دکمه بر اساس وضعیت و ماه
+      if (siteStatus.registration.enabled) {
+        const buttonText = getRegistrationMonthText(true);
+        registrationButtonText = `${buttonText}: ✅ فعال`;
+      } else {
+        const nextMonthText = getRegistrationMonthText(false);
+        registrationButtonText = `${nextMonthText}: ❌ غیرفعال`;
+      }
     } catch (error) {
       console.log('⚠️ [SETTINGS] Could not read registration status, using default');
     }
@@ -241,7 +252,7 @@ class SettingsModule {
       [{ text: `🎯 روزهای تمرین و ارزیابی`, callback_data: 'practice_evaluation_days_settings' }],
       [{ text: `📝 نظرسنجی: ${satisfactionStatus}`, callback_data: 'toggle_satisfaction_survey' }],
       [{ text: `📋 گروه گزارش: ${reportsStatus}`, callback_data: 'toggle_bot_reports' }],
-      [{ text: `📝 ثبت‌نام: ${registrationStatus}`, callback_data: 'toggle_registration' }]
+      [{ text: registrationButtonText, callback_data: 'toggle_registration' }]
     ];
     
     console.log('🔧 [SETTINGS] Keyboard generated:', JSON.stringify(keyboard, null, 2));

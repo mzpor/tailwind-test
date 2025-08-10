@@ -97,7 +97,7 @@ class SmartRegistrationModule {
 
   // 🎹 ساخت کیبورد شیشه‌ای
   buildInlineKeyboard(buttons) {
-    return { inline_keyboard: buttons };
+    return buttons; // برگرداندن مستقیم آرایه دکمه‌ها
   }
 
   // 📱 پردازش پیام‌ها
@@ -130,10 +130,24 @@ class SmartRegistrationModule {
     } else if (userIdStr in this.userStates) {
       return this.handleRegistrationStep(chatId, userIdStr, text, contact);
     } else {
+      // 🆕 مدیریت دکمه‌های کیبورد معمولی برای کاربران ناشناس
       if (this.isUserRegistered(userIdStr)) {
         return this.handleQuranStudentPanel(chatId, userIdStr);
       } else {
-        return this.handleStartCommand(chatId, userIdStr);
+        // 🔍 بررسی دکمه‌های کیبورد معمولی کاربران ناشناس
+        switch (text) {
+          case 'شروع':
+            return this.handleUnknownUserStart(chatId);
+          case 'مدرسه':
+            return this.handleUnknownUserSchool(chatId);
+          case 'ربات':
+            return this.handleUnknownUserBot(chatId);
+          case 'خروج':
+            return this.handleUnknownUserExit(chatId);
+          default:
+            // 🔄 اگر دکمه‌ای انتخاب نشده، منوی اصلی را نمایش بده
+            return this.handleStartCommand(chatId, userIdStr);
+        }
       }
     }
   }
@@ -201,25 +215,36 @@ class SmartRegistrationModule {
         ]));
       }
     } else {
-      const welcomeText = `🌟 *خوش آمدید به مدرسه تلاوت!*
+      // 🆕 سیستم جدید برای کاربران ناشناس
+      await this.handleUnknownUserStart(chatId);
+    }
+    return true;
+  }
 
-🏫 **معرفی مدرسه:**
-مدرسه تلاوت با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم، خدمات متنوعی ارائه می‌دهد.
+  // 🆕 متد جدید برای کاربران ناشناس
+  async handleUnknownUserStart(chatId) {
+    try {
+      // 📖 خواندن وضعیت ثبت‌نام
+      const { readJson } = require('./server/utils/jsonStore');
+      const siteStatus = await readJson('data/site-status.json', {
+        registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' }
+      });
+
+      // 🗓️ تشخیص ماه فعلی
+      const currentMonth = this.getCurrentPersianMonth();
+      const nextMonth = this.getNextPersianMonth(currentMonth);
+
+      // 📝 پیام خوش‌آمدگویی
+      const welcomeText = `🌟 *خوش آمدید به مدرسه تلاوت قرآن*
+
+🏫 **مدرسه تلاوت قرآن**
+با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم
 
 📚 **کلاس‌های موجود:**
 • تجوید قرآن کریم
 • صوت و لحن
 • حفظ قرآن کریم
 • تفسیر قرآن
-
-🤖 **قابلیت‌های ربات:**
-• 📖 آموزش تلاوت قرآن کریم
-• 🧠 حفظ آیات کریمه
-• 📝 تفسیر آیات
-• 📊 آزمون‌های قرآنی
-• 📈 گزارش پیشرفت
-• 👥 مدیریت گروه‌ها
-• 📋 حضور و غیاب
 
 💎 **مزایای ثبت‌نام:**
 • اساتید مجرب
@@ -228,16 +253,273 @@ class SmartRegistrationModule {
 • قیمت مناسب
 
 📝 **ثبت‌نام ماهانه:**
-ثبت‌نام به صورت ماهانه انجام می‌شود و مدیر مدرسه زمان آن را مشخص می‌کند.
+ثبت‌نام به صورت ماهانه انجام می‌شود`;
 
-👆 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+      // 🎹 کیبورد معمولی (Reply Keyboard)
+      const replyKeyboard = this.buildReplyKeyboard([
+        ['شروع', 'خروج'],
+        ['مدرسه', 'ربات']
+      ]);
 
-      await sendMessageWithInlineKeyboard(chatId, welcomeText, this.buildInlineKeyboard([
-        [{ text: '🏫 معرفی مدرسه', callback_data: 'school_intro' }],
-        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-        [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
-      ]));
+      // 📤 ارسال پیام با کیبورد معمولی
+      await sendMessage(chatId, welcomeText, replyKeyboard);
+
+      // 🔄 بررسی وضعیت ثبت‌نام و نمایش کیبورد شیشه‌ای
+      if (siteStatus.registration.enabled) {
+        // ✅ ثبت‌نام فعال - بررسی منطق ماه
+        if (currentMonth === 'مرداد') {
+          // در ماه مرداد، امکان ثبت‌نام برای شهریور
+          const inlineText = `📝 **ثبت‌نام شهریور**\nثبت‌نام برای ماه شهریور فعال است`;
+          
+          await sendMessageWithInlineKeyboard(chatId, inlineText, this.buildInlineKeyboard([
+            [{ text: '📝 ثبت‌نام شهریور', callback_data: 'start_registration' }]
+          ]));
+        } else {
+          // در سایر ماه‌ها، نمایش ماه آینده
+          const inlineText = `📝 **ثبت‌نام ماه آینده**\nثبت‌نام برای ماه آینده فعال است`;
+          
+          await sendMessageWithInlineKeyboard(chatId, inlineText, this.buildInlineKeyboard([
+            [{ text: `📝 ثبت‌نام ${nextMonth}`, callback_data: 'start_registration' }]
+          ]));
+        }
+      } else {
+        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
+        const nextMonthText = `📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد`;
+        
+        await sendMessage(chatId, nextMonthText);
+      }
+
+    } catch (error) {
+      console.error('❌ [REG] Error in handleUnknownUserStart:', error);
+      
+      // 🔄 در صورت خطا، پیام ساده ارسال کن
+      const fallbackText = `🌟 خوش آمدید به مدرسه تلاوت قرآن\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+      
+      const replyKeyboard = this.buildReplyKeyboard([
+        ['شروع', 'خروج'],
+        ['مدرسه', 'ربات']
+      ]);
+      
+      await sendMessage(chatId, fallbackText, replyKeyboard);
     }
+  }
+
+  // 🗓️ متد تشخیص ماه فارسی فعلی
+  getCurrentPersianMonth() {
+    const persianMonths = [
+      'فروردین', 'اردیبهشت', 'خرداد',
+      'تیر', 'مرداد', 'شهریور',
+      'مهر', 'آبان', 'آذر',
+      'دی', 'بهمن', 'اسفند'
+    ];
+    
+    // 🕐 تاریخ فعلی
+    const now = new Date();
+    const persianDate = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+      month: 'long'
+    }).format(now);
+    
+    // 🔍 پیدا کردن ماه در آرایه
+    const monthIndex = persianMonths.findIndex(month => 
+      persianDate.includes(month)
+    );
+    
+    return monthIndex !== -1 ? persianMonths[monthIndex] : 'ماه';
+  }
+
+  // 🗓️ متد تشخیص ماه فارسی بعدی
+  getNextPersianMonth(currentMonth) {
+    const persianMonths = [
+      'فروردین', 'اردیبهشت', 'خرداد',
+      'تیر', 'مرداد', 'شهریور',
+      'مهر', 'آبان', 'آذر',
+      'دی', 'بهمن', 'اسفند'
+    ];
+    
+    const currentIndex = persianMonths.indexOf(currentMonth);
+    if (currentIndex === -1) return 'ماه آینده';
+    
+    const nextIndex = (currentIndex + 1) % 12;
+    return persianMonths[nextIndex];
+  }
+
+  // 🆕 متدهای جدید برای مدیریت دکمه‌های کیبورد معمولی کاربران ناشناس
+
+  // 🚀 متد شروع برای کاربران ناشناس
+  async handleUnknownUserStart(chatId) {
+    const startText = `🚀 **شروع کار با مدرسه تلاوت قرآن**
+
+برای شروع کار با مدرسه تلاوت قرآن، لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
+
+🏫 **معرفی مدرسه** - آشنایی با مدرسه و کلاس‌ها
+🤖 **معرفی ربات** - آشنایی با قابلیت‌های ربات
+📝 **ثبت‌نام** - ثبت‌نام در مدرسه
+
+یا می‌توانید از دکمه‌های کیبورد استفاده کنید:`;
+
+    const replyKeyboard = this.buildReplyKeyboard([
+      ['شروع', 'خروج'],
+      ['مدرسه', 'ربات']
+    ]);
+
+    await sendMessage(chatId, startText, replyKeyboard);
+    return true;
+  }
+
+  // 🏫 متد مدرسه برای کاربران ناشناس
+  async handleUnknownUserSchool(chatId) {
+    try {
+      // 🔄 بررسی وضعیت ثبت‌نام
+      const { readJson } = require('./server/utils/jsonStore');
+      const siteStatus = await readJson('data/site-status.json', {
+        registration: { enabled: false }
+      });
+
+      const schoolText = `🏫 **مدرسه تلاوت قرآن**
+
+مدرسه تلاوت با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم، خدمات متنوعی ارائه می‌دهد:
+
+📚 **کلاس‌های موجود:**
+• تجوید قرآن کریم
+• صوت و لحن
+• حفظ قرآن کریم
+• تفسیر قرآن
+
+💎 **مزایای ثبت‌نام:**
+• اساتید مجرب
+• کلاس‌های آنلاین و حضوری
+• گواهی پایان دوره
+• قیمت مناسب`;
+
+      if (siteStatus.registration.enabled) {
+        // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای
+        await sendMessageWithInlineKeyboard(chatId, schoolText + '\n\nبرای ثبت‌نام روی دکمه زیر کلیک کنید:', this.buildInlineKeyboard([
+          [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
+        ]));
+      } else {
+        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
+        await sendMessage(chatId, schoolText + '\n\n📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد');
+      }
+
+      // 🔄 بازگرداندن کیبورد معمولی
+      const replyKeyboard = this.buildReplyKeyboard([
+        ['شروع', 'خروج'],
+        ['مدرسه', 'ربات']
+      ]);
+      
+      await sendMessage(chatId, '🔙 برای بازگشت به منوی اصلی از دکمه‌های بالا استفاده کنید:', replyKeyboard);
+      return true;
+    } catch (error) {
+      console.error('❌ [REG] Error in handleUnknownUserSchool:', error);
+      
+      // 🔄 در صورت خطا، پیام ساده ارسال کن
+      const fallbackText = `🏫 **مدرسه تلاوت قرآن**
+
+مدرسه تلاوت با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم، خدمات متنوعی ارائه می‌دهد.
+
+📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد`;
+
+      await sendMessage(chatId, fallbackText);
+      
+      // 🔄 بازگرداندن کیبورد معمولی
+      const replyKeyboard = this.buildReplyKeyboard([
+        ['شروع', 'خروج'],
+        ['مدرسه', 'ربات']
+      ]);
+      
+      await sendMessage(chatId, '🔙 برای بازگشت به منوی اصلی از دکمه‌های بالا استفاده کنید:', replyKeyboard);
+      return true;
+    }
+  }
+
+  // 🤖 متد ربات برای کاربران ناشناس
+  async handleUnknownUserBot(chatId) {
+    try {
+      // 🔄 بررسی وضعیت ثبت‌نام
+      const { readJson } = require('./server/utils/jsonStore');
+      const siteStatus = await readJson('data/site-status.json', {
+        registration: { enabled: false }
+      });
+
+      const botText = `🤖 **ربات مدرسه تلاوت**
+
+ربات مدرسه تلاوت با قابلیت‌های پیشرفته، تجربه‌ای منحصر به فرد در آموزش قرآن کریم ارائه می‌دهد:
+
+🚀 **قابلیت‌های اصلی:**
+• 📖 آموزش تلاوت قرآن کریم
+• 🧠 حفظ آیات کریمه
+• 📝 تفسیر آیات
+• 📊 آزمون‌های قرآنی
+• 📈 گزارش پیشرفت
+• 👥 مدیریت گروه‌ها
+• 📋 حضور و غیاب
+
+💡 **ویژگی‌های منحصر به فرد:**
+• رابط کاربری ساده و کاربردی
+• پشتیبانی از زبان فارسی
+• پاسخگویی ۲۴ ساعته
+• امنیت بالا
+• پشتیبانی از همه دستگاه‌ها`;
+
+      if (siteStatus.registration.enabled) {
+        // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای
+        await sendMessageWithInlineKeyboard(chatId, botText + '\n\nبرای شروع استفاده از ربات، ثبت‌نام کنید:', this.buildInlineKeyboard([
+          [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
+        ]));
+      } else {
+        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
+        await sendMessage(chatId, botText + '\n\n📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد');
+      }
+
+      // 🔄 بازگرداندن کیبورد معمولی
+      const replyKeyboard = this.buildReplyKeyboard([
+        ['شروع', 'خروج'],
+        ['مدرسه', 'ربات']
+      ]);
+      
+      await sendMessage(chatId, '🔙 برای بازگشت به منوی اصلی از دکمه‌های بالا استفاده کنید:', replyKeyboard);
+      return true;
+    } catch (error) {
+      console.error('❌ [REG] Error in handleUnknownUserBot:', error);
+      
+      // 🔄 در صورت خطا، پیام ساده ارسال کن
+      const fallbackText = `🤖 **ربات مدرسه تلاوت**
+
+ربات مدرسه تلاوت با قابلیت‌های پیشرفته، تجربه‌ای منحصر به فرد در آموزش قرآن کریم ارائه می‌دهد.
+
+📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد`;
+
+      await sendMessage(chatId, fallbackText);
+      
+      // 🔄 بازگرداندن کیبورد معمولی
+      const replyKeyboard = this.buildReplyKeyboard([
+        ['شروع', 'خروج'],
+        ['مدرسه', 'ربات']
+      ]);
+      
+      await sendMessage(chatId, '🔙 برای بازگشت به منوی اصلی از دکمه‌های بالا استفاده کنید:', replyKeyboard);
+      return true;
+    }
+  }
+
+  // 🚪 متد خروج برای کاربران ناشناس
+  async handleUnknownUserExit(chatId) {
+    const exitText = `🚪 **خروج از مدرسه تلاوت قرآن**
+
+متأسفیم که تصمیم به خروج گرفتید! 😔
+
+اگر در آینده تصمیم به بازگشت گرفتید، کافیست دوباره /start را ارسال کنید.
+
+🌟 **یادآوری:**
+• ثبت‌نام در مدرسه رایگان است
+• کلاس‌های آنلاین و حضوری
+• اساتید مجرب و با تجربه
+• گواهی پایان دوره
+
+برای بازگشت، /start را دوباره ارسال کنید.`;
+
+    // 🔄 حذف کیبورد
+    await sendMessage(chatId, exitText, { remove_keyboard: true });
     return true;
   }
 

@@ -342,17 +342,41 @@ async function handleRoleMessage(msg, role) {
       await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
       return; // ادامه حلقه بدون ارسال پیام معمولی
     } else if (getUserRole(msg.from.id) === ROLES.STUDENT) {
-      // پنل قرآن آموز - فقط دو گزینه
-      const inlineKeyboard = [
-        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-        [{ text: '📝 ثبت نام', callback_data: 'student_registration' }]
+      // پنل قرآن آموز - بررسی وضعیت ثبت‌نام
+      let inlineKeyboard = [
+        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
       ];
       
-      reply = `📖 پنل قرآن آموز
+      let reply = `📖 پنل قرآن آموز
 
 📋 گزینه‌های موجود:
-• 🤖 معرفی ربات
-• 📝 ثبت نام
+• 🤖 معرفی ربات`;
+      
+      // بررسی وضعیت ثبت‌نام
+      try {
+        const { readJson } = require('./server/utils/jsonStore');
+        const { getRegistrationMonthText } = require('./1time');
+        const siteStatus = await readJson('data/site-status.json', {
+          registration: { enabled: true }
+        });
+        
+        if (siteStatus.registration.enabled) {
+          const buttonText = getRegistrationMonthText(true);
+          inlineKeyboard.push([{ text: buttonText, callback_data: 'student_registration' }]);
+          reply += '\n• 📝 ثبت نام';
+        } else {
+          // وقتی ثبت‌نام غیرفعال است، دکمه کاملاً حذف می‌شود
+          // فقط پیام اطلاع‌رسانی نمایش داده می‌شود
+          const nextMonthText = getRegistrationMonthText(false);
+          reply += `\n• ${nextMonthText}`;
+        }
+      } catch (error) {
+        console.log('⚠️ [POLLING] Could not read registration status, registration button will not be shown');
+        // در صورت خطا، دکمه ثبت‌نام نمایش داده نمی‌شود
+        reply += '\n• 📝 ثبت نام (وضعیت نامشخص)';
+      }
+      
+      reply += `
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
@@ -746,6 +770,23 @@ function startPolling() {
           } else if (callback_query.data === 'student_registration') {
             
             console.log('🔄 [POLLING] Student registration callback detected');
+            
+            // بررسی وضعیت ثبت‌نام قبل از شروع
+            try {
+              const { readJson } = require('./server/utils/jsonStore');
+              const siteStatus = await readJson('data/site-status.json', {
+                registration: { enabled: true }
+              });
+              
+              if (!siteStatus.registration.enabled) {
+                const reply = '⚠️ ثبت‌نام در حال حاضر غیرفعال است.\n\nلطفاً بعداً تلاش کنید یا با مدیر تماس بگیرید.';
+                await safeSendMessage(callback_query.from.id, reply);
+                return;
+              }
+            } catch (error) {
+              console.log('⚠️ [POLLING] Could not read registration status, proceeding with registration');
+            }
+            
             // پردازش ثبت‌نام قرآن آموز با استفاده از ماژول ثبت‌نام هوشمند
             const regModule = new SmartRegistrationModule();
             const success = await regModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
