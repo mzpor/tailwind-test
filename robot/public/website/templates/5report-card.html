@@ -1,275 +1,0 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>کارنامه - مدرسه قرآن استاد علی محرابی</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body class="dashboard-page">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">
-                <div class="logo-icon">☪️</div>
-                <h3>مدرسه قرآن</h3>
-            </div>
-        </div>
-        
-        <nav class="sidebar-nav">
-            <a href="/dashboard" class="nav-item">
-                <span class="nav-icon">🏠</span>
-                <span class="nav-text">داشبورد</span>
-            </a>
-            <a href="/report-card" class="nav-item active">
-                <span class="nav-icon">📊</span>
-                <span class="nav-text">کارنامه</span>
-            </a>
-            <a href="/classes" class="nav-item">
-                <span class="nav-icon">📚</span>
-                <span class="nav-text">کلاس‌های کارگاهی</span>
-            </a>
-            <a href="/tajweed" class="nav-item">
-                <span class="nav-icon">🎤</span>
-                <span class="nav-text">تلاوت قرآن</span>
-            </a>
-            <a href="/activities" class="nav-item">
-                <span class="nav-icon">🎯</span>
-                <span class="nav-text">فعالیت‌ها</span>
-            </a>
-            {% if session.user_role in ['admin', 'teacher'] %}
-            <a href="/admin" class="nav-item admin-item">
-                <span class="nav-icon">⚙️</span>
-                <span class="nav-text">پنل مدیریت</span>
-            </a>
-            {% endif %}
-        </nav>
-        
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <div class="user-avatar">👤</div>
-                <div class="user-details">
-                    <h4>{{ session.user_name }}</h4>
-                    <p>{{ session.user_role }}</p>
-                </div>
-            </div>
-            <a href="/logout" class="logout-btn">
-                <span class="nav-icon">🚪</span>
-                <span>خروج</span>
-            </a>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="content-header">
-            <div class="header-left">
-                <h1>کارنامه تحصیلی</h1>
-                <p>مشاهده نمرات و پیشرفت تحصیلی</p>
-            </div>
-            <div class="header-right">
-                <select id="semester-select" class="semester-select">
-                    <option value="1">ترم اول</option>
-                    <option value="2">ترم دوم</option>
-                    <option value="3">ترم سوم</option>
-                </select>
-            </div>
-        </header>
-
-        <!-- Report Card Summary -->
-        <div class="report-summary">
-            <div class="summary-card">
-                <div class="summary-icon">📊</div>
-                <div class="summary-content">
-                    <h3>معدل کل</h3>
-                    <div class="grade">۱۸.۵</div>
-                    <p>از ۲۰</p>
-                </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-icon">🏆</div>
-                <div class="summary-content">
-                    <h3>رتبه کلاسی</h3>
-                    <div class="grade">۳</div>
-                    <p>از ۲۵ دانش‌آموز</p>
-                </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-icon">📈</div>
-                <div class="summary-content">
-                    <h3>پیشرفت</h3>
-                    <div class="grade">+۲.۵</div>
-                    <p>نسبت به ترم قبل</p>
-                </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-icon">✅</div>
-                <div class="summary-content">
-                    <h3>وضعیت</h3>
-                    <div class="grade success">قبول</div>
-                    <p>مشروط نیست</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Grades Table -->
-        <div class="grades-section">
-            <h2>نمرات دروس</h2>
-            <div class="grades-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>نام درس</th>
-                            <th>نمره</th>
-                            <th>وضعیت</th>
-                            <th>توضیحات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>تجوید قرآن</td>
-                            <td class="grade-cell">۱۹</td>
-                            <td><span class="status success">عالی</span></td>
-                            <td>پیشرفت قابل توجه</td>
-                        </tr>
-                        <tr>
-                            <td>حفظ قرآن</td>
-                            <td class="grade-cell">۱۸</td>
-                            <td><span class="status success">خوب</span></td>
-                            <td>نیاز به تمرین بیشتر</td>
-                        </tr>
-                        <tr>
-                            <td>تلاوت قرآن</td>
-                            <td class="grade-cell">۱۷</td>
-                            <td><span class="status warning">متوسط</span></td>
-                            <td>نیاز به بهبود</td>
-                        </tr>
-                        <tr>
-                            <td>خوشنویسی</td>
-                            <td class="grade-cell">۲۰</td>
-                            <td><span class="status success">ممتاز</span></td>
-                            <td>عملکرد عالی</td>
-                        </tr>
-                        <tr>
-                            <td>تفسیر قرآن</td>
-                            <td class="grade-cell">۱۶</td>
-                            <td><span class="status warning">متوسط</span></td>
-                            <td>نیاز به مطالعه بیشتر</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Charts Section -->
-        <div class="charts-section">
-            <div class="chart-row">
-                <div class="chart-card">
-                    <h3>نمودار پیشرفت دروس</h3>
-                    <canvas id="subjectsChart" width="400" height="300"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>مقایسه با کلاس</h3>
-                    <canvas id="comparisonChart" width="400" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Teacher Comments -->
-        <div class="comments-section">
-            <h2>نظرات مربی</h2>
-            <div class="comment-card">
-                <div class="comment-header">
-                    <div class="teacher-info">
-                        <div class="teacher-avatar">👨‍🏫</div>
-                        <div>
-                            <h4>استاد احمدی</h4>
-                            <p>مربی تجوید</p>
-                        </div>
-                    </div>
-                    <div class="comment-date">۲ هفته پیش</div>
-                </div>
-                <div class="comment-content">
-                    <p>دانش‌آموز عزیز، پیشرفت خوبی در زمینه تجوید داشته‌اید. توصیه می‌کنم برای بهبود بیشتر، روزانه حداقل ۳۰ دقیقه تمرین کنید.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Download Options -->
-        <div class="download-section">
-            <h2>دانلود کارنامه</h2>
-            <div class="download-buttons">
-                <button class="btn btn-primary">
-                    <span class="btn-icon">📄</span>
-                    دانلود PDF
-                </button>
-                <button class="btn btn-secondary">
-                    <span class="btn-icon">📧</span>
-                    ارسال به ایمیل
-                </button>
-                <button class="btn btn-outline">
-                    <span class="btn-icon">🖨️</span>
-                    چاپ کارنامه
-                </button>
-            </div>
-        </div>
-    </main>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // نمودار پیشرفت دروس
-        const subjectsCtx = document.getElementById('subjectsChart').getContext('2d');
-        new Chart(subjectsCtx, {
-            type: 'radar',
-            data: {
-                labels: ['تجوید', 'حفظ', 'تلاوت', 'خوشنویسی', 'تفسیر'],
-                datasets: [{
-                    label: 'نمرات شما',
-                    data: [19, 18, 17, 20, 16],
-                    borderColor: '#4CAF50',
-                    backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                    pointBackgroundColor: '#4CAF50'
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    r: {
-                        beginAtZero: true,
-                        max: 20
-                    }
-                }
-            }
-        });
-
-        // نمودار مقایسه با کلاس
-        const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
-        new Chart(comparisonCtx, {
-            type: 'bar',
-            data: {
-                labels: ['تجوید', 'حفظ', 'تلاوت', 'خوشنویسی', 'تفسیر'],
-                datasets: [{
-                    label: 'شما',
-                    data: [19, 18, 17, 20, 16],
-                    backgroundColor: '#4CAF50'
-                }, {
-                    label: 'میانگین کلاس',
-                    data: [16, 15, 14, 17, 13],
-                    backgroundColor: '#FF9800'
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 20
-                    }
-                }
-            }
-        });
-    </script>
-</body>
-</html>

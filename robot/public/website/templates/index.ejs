@@ -1,228 +1,0 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مدرسه تلاوت - سیستم مدیریت هوشمند</title>
-    <link rel="stylesheet" href="/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div class="container">
-            <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">
-                <div class="logo-icon">🏫</div>
-                <h1>مدرسه تلاوت</h1>
-            </div>
-            <nav class="nav">
-                <a href="#home" class="nav-link">خانه</a>
-                <a href="#about" class="nav-link">درباره ما</a>
-                <a href="#activities" class="nav-link">فعالیت‌ها</a>
-                <a href="#contact" class="nav-link">تماس</a>
-                <a href="/login" class="btn btn-primary">ورود</a>
-            </nav>
-            <button class="mobile-nav-toggle" onclick="toggleMobileNav()">☰</button>
-        </div>
-    </header>
-    
-    <!-- Mobile Navigation Overlay -->
-    <div class="mobile-overlay" onclick="closeMobileNav()"></div>
-
-        <!-- Hero Section -->
-        <section id="home" class="hero">
-            <div class="hero-content">
-                <div class="hero-text">
-                    <h2>بهترین آموزش قرآن کریم</h2>
-                    <p>در مدرسه قرآن استاد علی محرابی، قرآن را با بهترین روش‌ها و اساتید مجرب یاد بگیرید</p>
-                    <div class="hero-buttons">
-                        <a href="/register" class="btn btn-primary btn-large">ثبت‌نام کنید</a>
-                        <a href="#about" class="btn btn-secondary btn-large">بیشتر بدانید</a>
-                    </div>
-                </div>
-                <div class="hero-image">
-                    <div class="quran-illustration">
-                        <div class="quran-book">📖</div>
-                        <div class="decorative-elements">
-                            <span class="star">⭐</span>
-                            <span class="star">⭐</span>
-                            <span class="star">⭐</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Services Section -->
-        <section id="services" class="services-section">
-            <div class="section-header">
-                <h2>خدمات مدرسه قرآن</h2>
-                <p>خدمات متنوع و تخصصی برای قرآن‌آموزان</p>
-            </div>
-            <div class="services-grid">
-                <div class="service-card">
-                    <div class="service-icon">🎤</div>
-                    <h3>تجوید قرآن</h3>
-                    <p>آموزش اصول تجوید و قواعد تلاوت زیبای قرآن کریم</p>
-                    <ul class="service-features">
-                        <li>آموزش قواعد تجوید</li>
-                        <li>تمرین عملی تلاوت</li>
-                        <li>ارزیابی مستمر</li>
-                    </ul>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon">📖</div>
-                    <h3>حفظ قرآن</h3>
-                    <p>برنامه‌های حفظ قرآن کریم با روش‌های نوین</p>
-                    <ul class="service-features">
-                        <li>حفظ جزء ۳۰</li>
-                        <li>روش‌های تقویت حافظه</li>
-                        <li>مرور و تکرار</li>
-                    </ul>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon">🎵</div>
-                    <h3>تلاوت پیشرفته</h3>
-                    <p>آموزش تلاوت زیبا و حرفه‌ای قرآن کریم</p>
-                    <ul class="service-features">
-                        <li>آموزش لحن و صوت</li>
-                        <li>تمرین با اساتید</li>
-                        <li>شرکت در مسابقات</li>
-                    </ul>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon">✒️</div>
-                    <h3>خوشنویسی</h3>
-                    <p>آموزش خطاطی و خوشنویسی آیات قرآن</p>
-                    <ul class="service-features">
-                        <li>آموزش خط نستعلیق</li>
-                        <li>تمرین با قلم و مرکب</li>
-                        <li>نمایشگاه آثار</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- Activities Section -->
-        <section id="activities" class="activities">
-            <div class="section-header">
-                <h2>فعالیت‌های مدرسه</h2>
-                <p>برنامه‌های متنوع و جذاب برای قرآن‌آموزان</p>
-            </div>
-            <div class="activities-grid">
-                <div class="activity-card">
-                    <div class="activity-icon">🎤</div>
-                    <h3>تلاوت قرآن</h3>
-                    <p>آموزش تلاوت زیبا و صحیح قرآن کریم</p>
-                </div>
-                <div class="activity-card">
-                    <div class="activity-icon">📖</div>
-                    <h3>حفظ قرآن</h3>
-                    <p>برنامه‌های حفظ قرآن کریم</p>
-                </div>
-                <div class="activity-card">
-                    <div class="activity-icon">🎨</div>
-                    <h3>خوشنویسی</h3>
-                    <p>آموزش خطاطی و خوشنویسی قرآن</p>
-                </div>
-                <div class="activity-card">
-                    <div class="activity-icon">🏆</div>
-                    <h3>مسابقات</h3>
-                    <p>مسابقات قرآن و قرائت</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Contact Section -->
-        <section id="contact" class="contact">
-            <div class="section-header">
-                <h2>تماس با ما</h2>
-                <p>برای اطلاعات بیشتر با ما در تماس باشید</p>
-            </div>
-            <div class="contact-content">
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <div class="contact-icon">📞</div>
-                        <div>
-                            <h4>تلفن تماس</h4>
-                            <p>09123456789</p>
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <div class="contact-icon">📧</div>
-                        <div>
-                            <h4>ایمیل</h4>
-                            <p>info@quran-school.ir</p>
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <div class="contact-icon">📍</div>
-                        <div>
-                            <h4>آدرس</h4>
-                            <p>تهران، خیابان ولیعصر</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="contact-form">
-                    <form>
-                        <input type="text" placeholder="نام و نام خانوادگی" required>
-                        <input type="email" placeholder="ایمیل" required>
-                        <textarea placeholder="پیام شما" rows="4" required></textarea>
-                        <button type="submit" class="btn btn-primary">ارسال پیام</button>
-                    </form>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>مدرسه قرآن استاد علی محرابی</h3>
-                    <p>مرکز تخصصی آموزش قرآن کریم</p>
-                </div>
-                <div class="footer-section">
-                    <h4>لینک‌های مفید</h4>
-                    <a href="/login">ورود</a>
-                    <a href="/register">ثبت‌نام</a>
-                    <a href="#about">درباره ما</a>
-                </div>
-                <div class="footer-section">
-                    <h4>شبکه‌های اجتماعی</h4>
-                    <div class="social-links">
-                        <a href="#" class="social-link">📱</a>
-                        <a href="#" class="social-link">📷</a>
-                        <a href="#" class="social-link">📺</a>
-                    </div>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; ۱۴۰۲ مدرسه قرآن استاد علی محرابی. تمامی حقوق محفوظ است.</p>
-            </div>
-        </footer>
-    </div>
-
-    <!-- Mobile Bottom Navigation -->
-    <nav class="mobile-bottom-nav">
-        <a href="/" class="mobile-nav-item active">
-            <div class="mobile-nav-icon">🏠</div>
-            <span>خانه</span>
-        </a>
-        <a href="/classes" class="mobile-nav-item">
-            <div class="mobile-nav-icon">📚</div>
-            <span>کلاس‌ها</span>
-        </a>
-        <a href="/report-card" class="mobile-nav-item">
-            <div class="mobile-nav-icon">📊</div>
-            <span>کارنامه</span>
-        </a>
-        <a href="/login" class="mobile-nav-item">
-            <div class="mobile-nav-icon">👤</div>
-            <span>حساب</span>
-        </a>
-    </nav>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-</body>
-</html>

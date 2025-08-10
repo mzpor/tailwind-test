@@ -1,415 +1,0 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>کلاس‌های کارگاهی - مدرسه قرآن استاد علی محرابی</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body class="dashboard-page">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo">
-                <div class="logo-icon">☪️</div>
-                <h3>مدرسه قرآن</h3>
-            </div>
-        </div>
-        
-        <nav class="sidebar-nav">
-            <a href="/dashboard" class="nav-item">
-                <span class="nav-icon">🏠</span>
-                <span class="nav-text">داشبورد</span>
-            </a>
-            <a href="/report-card" class="nav-item">
-                <span class="nav-icon">📊</span>
-                <span class="nav-text">کارنامه</span>
-            </a>
-            <a href="/classes" class="nav-item active">
-                <span class="nav-icon">📚</span>
-                <span class="nav-text">کلاس‌های کارگاهی</span>
-            </a>
-            <a href="/tajweed" class="nav-item">
-                <span class="nav-icon">🎤</span>
-                <span class="nav-text">تلاوت قرآن</span>
-            </a>
-            <a href="/activities" class="nav-item">
-                <span class="nav-icon">🎯</span>
-                <span class="nav-text">فعالیت‌ها</span>
-            </a>
-            {% if session.user_role in ['admin', 'teacher'] %}
-            <a href="/admin" class="nav-item admin-item">
-                <span class="nav-icon">⚙️</span>
-                <span class="nav-text">پنل مدیریت</span>
-            </a>
-            {% endif %}
-        </nav>
-        
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <div class="user-avatar">👤</div>
-                <div class="user-details">
-                    <h4>{{ session.user_name }}</h4>
-                    <p>{{ session.user_role }}</p>
-                </div>
-            </div>
-            <a href="/logout" class="logout-btn">
-                <span class="nav-icon">🚪</span>
-                <span>خروج</span>
-            </a>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="content-header">
-            <div class="header-left">
-                <h1>کلاس‌های کارگاهی</h1>
-                <p>ثبت‌نام در کلاس‌های تخصصی قرآن</p>
-            </div>
-            <div class="header-right">
-                <div class="filter-buttons">
-                    <button class="filter-btn active" data-filter="all">همه</button>
-                    <button class="filter-btn" data-filter="tajweed">تجوید</button>
-                    <button class="filter-btn" data-filter="memorization">حفظ</button>
-                    <button class="filter-btn" data-filter="recitation">تلاوت</button>
-                    <button class="filter-btn" data-filter="calligraphy">خوشنویسی</button>
-                </div>
-            </div>
-        </header>
-
-        <!-- Classes Grid -->
-        <div class="classes-grid">
-            <!-- کلاس تجوید مقدماتی -->
-            <div class="class-card" data-category="tajweed">
-                <div class="class-header">
-                    <div class="class-icon">🎤</div>
-                    <div class="class-badge">جدید</div>
-                </div>
-                <div class="class-content">
-                    <h3>تجوید مقدماتی</h3>
-                    <p>آموزش اصول اولیه تجوید قرآن کریم</p>
-                    <div class="class-details">
-                        <div class="detail-item">
-                            <span class="detail-icon">👨‍🏫</span>
-                            <span>استاد احمدی</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">⏰</span>
-                            <span>۸ جلسه</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">👥</span>
-                            <span>۱۵ نفر</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">📅</span>
-                            <span>شنبه و سه‌شنبه</span>
-                        </div>
-                    </div>
-                    <div class="class-price">
-                        <span class="price">۸۰۰,۰۰۰</span>
-                        <span class="currency">تومان</span>
-                    </div>
-                </div>
-                <div class="class-actions">
-                    <button class="btn btn-primary btn-full">ثبت‌نام</button>
-                    <button class="btn btn-outline">جزئیات بیشتر</button>
-                </div>
-            </div>
-
-            <!-- کلاس حفظ قرآن -->
-            <div class="class-card" data-category="memorization">
-                <div class="class-header">
-                    <div class="class-icon">📖</div>
-                    <div class="class-badge">پرطرفدار</div>
-                </div>
-                <div class="class-content">
-                    <h3>حفظ قرآن کریم</h3>
-                    <p>حفظ جزء ۳۰ قرآن کریم با روش‌های نوین</p>
-                    <div class="class-details">
-                        <div class="detail-item">
-                            <span class="detail-icon">👨‍🏫</span>
-                            <span>استاد محمدی</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">⏰</span>
-                            <span>۱۲ جلسه</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">👥</span>
-                            <span>۱۰ نفر</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">📅</span>
-                            <span>یکشنبه و چهارشنبه</span>
-                        </div>
-                    </div>
-                    <div class="class-price">
-                        <span class="price">۱,۲۰۰,۰۰۰</span>
-                        <span class="currency">تومان</span>
-                    </div>
-                </div>
-                <div class="class-actions">
-                    <button class="btn btn-primary btn-full">ثبت‌نام</button>
-                    <button class="btn btn-outline">جزئیات بیشتر</button>
-                </div>
-            </div>
-
-            <!-- کلاس تلاوت پیشرفته -->
-            <div class="class-card" data-category="recitation">
-                <div class="class-header">
-                    <div class="class-icon">🎵</div>
-                    <div class="class-badge">پیشرفته</div>
-                </div>
-                <div class="class-content">
-                    <h3>تلاوت پیشرفته</h3>
-                    <p>آموزش تلاوت زیبا و حرفه‌ای قرآن کریم</p>
-                    <div class="class-details">
-                        <div class="detail-item">
-                            <span class="detail-icon">👨‍🏫</span>
-                            <span>استاد رضایی</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">⏰</span>
-                            <span>۱۰ جلسه</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">👥</span>
-                            <span>۸ نفر</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">📅</span>
-                            <span>دوشنبه و پنجشنبه</span>
-                        </div>
-                    </div>
-                    <div class="class-price">
-                        <span class="price">۱,۵۰۰,۰۰۰</span>
-                        <span class="currency">تومان</span>
-                    </div>
-                </div>
-                <div class="class-actions">
-                    <button class="btn btn-primary btn-full">ثبت‌نام</button>
-                    <button class="btn btn-outline">جزئیات بیشتر</button>
-                </div>
-            </div>
-
-            <!-- کلاس خوشنویسی -->
-            <div class="class-card" data-category="calligraphy">
-                <div class="class-header">
-                    <div class="class-icon">✒️</div>
-                    <div class="class-badge">مخصوص</div>
-                </div>
-                <div class="class-content">
-                    <h3>خوشنویسی قرآن</h3>
-                    <p>آموزش خطاطی و خوشنویسی آیات قرآن</p>
-                    <div class="class-details">
-                        <div class="detail-item">
-                            <span class="detail-icon">👨‍🏫</span>
-                            <span>استاد کریمی</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">⏰</span>
-                            <span>۶ جلسه</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">👥</span>
-                            <span>۱۲ نفر</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">📅</span>
-                            <span>جمعه</span>
-                        </div>
-                    </div>
-                    <div class="class-price">
-                        <span class="price">۶۰۰,۰۰۰</span>
-                        <span class="currency">تومان</span>
-                    </div>
-                </div>
-                <div class="class-actions">
-                    <button class="btn btn-primary btn-full">ثبت‌نام</button>
-                    <button class="btn btn-outline">جزئیات بیشتر</button>
-                </div>
-            </div>
-
-            <!-- کلاس تفسیر قرآن -->
-            <div class="class-card" data-category="interpretation">
-                <div class="class-header">
-                    <div class="class-icon">📚</div>
-                    <div class="class-badge">علمی</div>
-                </div>
-                <div class="class-content">
-                    <h3>تفسیر قرآن</h3>
-                    <p>آموزش مفاهیم و تفسیر آیات قرآن کریم</p>
-                    <div class="class-details">
-                        <div class="detail-item">
-                            <span class="detail-icon">👨‍🏫</span>
-                            <span>استاد حسینی</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">⏰</span>
-                            <span>۸ جلسه</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">👥</span>
-                            <span>۲۰ نفر</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">📅</span>
-                            <span>پنجشنبه</span>
-                        </div>
-                    </div>
-                    <div class="class-price">
-                        <span class="price">۹۰۰,۰۰۰</span>
-                        <span class="currency">تومان</span>
-                    </div>
-                </div>
-                <div class="class-actions">
-                    <button class="btn btn-primary btn-full">ثبت‌نام</button>
-                    <button class="btn btn-outline">جزئیات بیشتر</button>
-                </div>
-            </div>
-
-            <!-- کلاس تجوید پیشرفته -->
-            <div class="class-card" data-category="tajweed">
-                <div class="class-header">
-                    <div class="class-icon">🎯</div>
-                    <div class="class-badge">پیشرفته</div>
-                </div>
-                <div class="class-content">
-                    <h3>تجوید پیشرفته</h3>
-                    <p>آموزش پیشرفته قواعد تجوید و لحن</p>
-                    <div class="class-details">
-                        <div class="detail-item">
-                            <span class="detail-icon">👨‍🏫</span>
-                            <span>استاد احمدی</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">⏰</span>
-                            <span>۱۰ جلسه</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">👥</span>
-                            <span>۱۰ نفر</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-icon">📅</span>
-                            <span>دوشنبه و پنجشنبه</span>
-                        </div>
-                    </div>
-                    <div class="class-price">
-                        <span class="price">۱,۱۰۰,۰۰۰</span>
-                        <span class="currency">تومان</span>
-                    </div>
-                </div>
-                <div class="class-actions">
-                    <button class="btn btn-primary btn-full">ثبت‌نام</button>
-                    <button class="btn btn-outline">جزئیات بیشتر</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Registration Modal -->
-        <div id="registrationModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>ثبت‌نام در کلاس</h3>
-                    <span class="close">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <form id="registrationForm">
-                        <div class="form-group">
-                            <label>نام کلاس:</label>
-                            <input type="text" id="className" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>مدرس:</label>
-                            <input type="text" id="instructorName" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>قیمت:</label>
-                            <input type="text" id="classPrice" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>تاریخ شروع:</label>
-                            <input type="date" required>
-                        </div>
-                        <div class="form-group">
-                            <label>توضیحات اضافی:</label>
-                            <textarea rows="3" placeholder="توضیحات خود را بنویسید..."></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeModal()">انصراف</button>
-                    <button class="btn btn-primary" onclick="submitRegistration()">تایید ثبت‌نام</button>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
-    <script>
-        // فیلتر کردن کلاس‌ها
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const filter = this.dataset.filter;
-                
-                // حذف کلاس active از همه دکمه‌ها
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                
-                // نمایش/مخفی کردن کلاس‌ها
-                document.querySelectorAll('.class-card').forEach(card => {
-                    if (filter === 'all' || card.dataset.category === filter) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            });
-        });
-
-        // باز کردن مودال ثبت‌نام
-        document.querySelectorAll('.btn-primary').forEach(btn => {
-            if (btn.textContent === 'ثبت‌نام') {
-                btn.addEventListener('click', function() {
-                    const card = this.closest('.class-card');
-                    const className = card.querySelector('h3').textContent;
-                    const instructor = card.querySelector('.detail-item span').nextSibling.textContent;
-                    const price = card.querySelector('.price').textContent;
-                    
-                    document.getElementById('className').value = className;
-                    document.getElementById('instructorName').value = instructor;
-                    document.getElementById('classPrice').value = price + ' تومان';
-                    
-                    document.getElementById('registrationModal').style.display = 'block';
-                });
-            }
-        });
-
-        // بستن مودال
-        function closeModal() {
-            document.getElementById('registrationModal').style.display = 'none';
-        }
-
-        // تایید ثبت‌نام
-        function submitRegistration() {
-            alert('ثبت‌نام شما با موفقیت انجام شد!');
-            closeModal();
-        }
-
-        // بستن مودال با کلیک روی X
-        document.querySelector('.close').addEventListener('click', closeModal);
-
-        // بستن مودال با کلیک خارج از آن
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('registrationModal');
-            if (event.target === modal) {
-                closeModal();
-            }
-        });
-    </script>
-</body>
-</html>
