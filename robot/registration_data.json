@@ -28,8 +28,8 @@
     "status": "completed",
     "source": "both",
     "registrationComplete": true,
-    "ts": 1754780935847,
-    "lastUpdated": 1754780935857
+    "ts": 1754791065272,
+    "lastUpdated": 1754791065280
   },
   "1790308237": {
     "fullName": "",
@@ -50,7 +50,7 @@
     "status": "incomplete",
     "source": "website",
     "registrationComplete": true,
-    "ts": 1754780935850,
-    "lastUpdated": 1754780935857
+    "ts": 1754791065275,
+    "lastUpdated": 1754791065280
   }
 }
