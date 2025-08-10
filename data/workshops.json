@@ -1,0 +1,35 @@
+{
+  "workshop_1": {
+    "id": "workshop_1",
+    "instructor_name": "استاد محمد رشوند",
+    "description": "آموزش تجوید قرآن کریم با روش‌های نوین",
+    "duration": "۸ جلسه ۲ ساعته",
+    "capacity": 15,
+    "level": "مبتدی تا متوسط",
+    "cost": "۲۵۰ هزار تومان",
+    "link": "https://meet.google.com/abc-defg-hij",
+    "instructor_phone": "۰۹۱۲۳۴۵۶۷۸۹"
+  },
+  "workshop_2": {
+    "id": "workshop_2",
+    "instructor_name": "استاد علی حتم خانی",
+    "description": "آموزش صوت و لحن زیبا در تلاوت قرآن",
+    "duration": "۶ جلسه ۲ ساعته",
+    "capacity": 12,
+    "level": "متوسط تا پیشرفته",
+    "cost": "۳۰۰ هزار تومان",
+    "link": "https://meet.google.com/xyz-uvwq-rst",
+    "instructor_phone": "۰۹۱۸۷۶۵۴۳۲۱"
+  },
+  "workshop_3": {
+    "id": "workshop_3",
+    "instructor_name": "استاد احمد حاجی زاده",
+    "description": "آموزش حفظ قرآن کریم با روش‌های مؤثر",
+    "duration": "۱۲ جلسه ۲ ساعته",
+    "capacity": 10,
+    "level": "مبتدی",
+    "cost": "۴۰۰ هزار تومان",
+    "link": "https://meet.google.com/mno-pqrs-tuv",
+    "instructor_phone": "۰۹۱۵۵۵۵۵۵۵۵"
+  }
+}

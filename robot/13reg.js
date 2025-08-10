@@ -1,5 +1,5 @@
-//🎯 ماژول ثبت‌نام هوشمند - نسخه 1.0.0
-// مکانیزم ثبت‌نام با دکمه‌های تصحیح در هر مرحله
+//🎯 ماژول ثبت‌نام هوشمند - نسخه 2.0.0
+// مکانیزم ثبت‌نام کامل با مسیر نهایی هوشمند
 
 const fs = require('fs');
 const path = require('path');
@@ -8,8 +8,10 @@ const { sendMessage, sendMessageWithInlineKeyboard } = require('./4bale');
 class SmartRegistrationModule {
   constructor() {
     this.dataFile = 'data/smart_registration.json';
+    this.workshopsFile = 'data/workshops.json';
     this.userStates = {}; // وضعیت کاربران برای ثبت‌نام
     this.userData = this.loadData();
+    this.workshops = this.loadWorkshops();
     
     // ایجاد دایرکتوری data اگر وجود ندارد
     this.ensureDataDirectory();
@@ -34,6 +36,19 @@ class SmartRegistrationModule {
       return {};
     } catch (error) {
       console.error('❌ Error loading registration data:', error);
+      return {};
+    }
+  }
+
+  loadWorkshops() {
+    try {
+      if (fs.existsSync(this.workshopsFile)) {
+        const data = fs.readFileSync(this.workshopsFile, 'utf8');
+        return JSON.parse(data);
+      }
+      return {};
+    } catch (error) {
+      console.error('❌ Error loading workshops data:', error);
       return {};
     }
   }
@@ -87,6 +102,18 @@ class SmartRegistrationModule {
     return /^\d{10}$/.test(nid);
   }
 
+  // 🔍 بررسی مدیر بودن کاربر
+  isUserAdmin(phone) {
+    try {
+      const { getAdminIdByPhone } = require('./3config');
+      const adminId = getAdminIdByPhone(phone);
+      return adminId !== null;
+    } catch (error) {
+      console.error('❌ Error checking admin status:', error);
+      return false;
+    }
+  }
+
   // 🎹 ساخت کیبورد معمولی
   buildReplyKeyboard(buttons) {
     return {
@@ -100,276 +127,143 @@ class SmartRegistrationModule {
     return buttons; // برگرداندن مستقیم آرایه دکمه‌ها
   }
 
-  // 📱 پردازش پیام‌ها
-  async handleMessage(message) {
-    if (!message || !message.chat || !message.from) return false;
+  // 🎹 ساخت کیبورد اصلی (شروع، ربات، خروج)
+  buildMainKeyboard() {
+    return this.buildReplyKeyboard([
+      ['شروع'],
+      ['مدرسه', 'ربات'],
+      ['مدرسه', 'مدرسه'],
+    ]);
+  }
 
-    const chatId = message.chat.id;
-    const userId = chatId;
-    const userIdStr = userId.toString();
-    const text = message.text || '';
-    const contact = message.contact;
+  // 🎹 ساخت کیبورد کارگاه‌ها
+  buildWorkshopsKeyboard() {
+    const buttons = [];
+    let currentRow = [];
+    
+    Object.entries(this.workshops).forEach(([id, workshop]) => {
+      const buttonText = `📚 ${workshop.instructor_name} - ${workshop.cost}`;
+      currentRow.push(buttonText);
+      
+      if (currentRow.length === 2) {
+        buttons.push([...currentRow]);
+        currentRow = [];
+      }
+    });
+    
+    // اضافه کردن ردیف آخر اگر ناقص باشد
+    if (currentRow.length > 0) {
+      buttons.push(currentRow);
+    }
+    
+    // اضافه کردن دکمه‌های پایین
+    buttons.push(['🏠 برگشت به منو', 'خروج']);
+    
+    return this.buildReplyKeyboard(buttons);
+  }
+
+  // 🔄 پردازش پیام‌های ورودی
+  async handleMessage(message) {
+    const { chat, text, contact, from } = message;
+    const chatId = chat.id;
+    const userId = from.id;
+    const isPrivate = chat.type === 'private';
+
+    if (!isPrivate) {
+      return false; // فقط پیام‌های خصوصی
+    }
 
     console.log(`📱 Processing message from user ${userId}: text='${text}', contact=${!!contact}`);
 
-    // پردازش پیام‌های معمولی
-    if (text === '/start' || text === 'شروع مجدد' || text === 'شروع') {
-      return this.handleStartCommand(chatId, userIdStr);
-    } else if (text === 'معرفی مدرسه') {
+    // بررسی دستورات خاص
+    if (text === '/start' || text === 'شروع' || text === 'شروع/' || text === 'شروع مجدد' || text === 'استارت' || text === '/استارت') {
+    } else if (text === 'مدرسه') {
       return this.handleSchoolIntro(chatId);
-    } else if (text === 'ثبت‌نام') {
-      return this.handleRegistrationStart(chatId, userIdStr);
+    } else if (text === 'ربات') {
+      return this.handleQuranBotIntro(chatId);
     } else if (text === 'خروج') {
       return this.handleExitCommand(chatId);
     } else if (text === 'برگشت به قبل') {
-      return this.handleBackCommand(chatId, userIdStr);
+      return this.handleBackCommand(chatId, userId);
+    } else if (text === '🏠 برگشت به منو') {
+      return this.handleBackToMainMenu(chatId, userId);
+    } else if (text === '📚 انتخاب کلاس') {
+      return this.handleWorkshopSelection(chatId, userId);
     } else if (text === 'پنل قرآن‌آموز') {
-      return this.handleQuranStudentPanel(chatId, userIdStr);
-    } else if (contact && userIdStr in this.userStates) {
-      return this.handleRegistrationStep(chatId, userIdStr, '', contact);
-    } else if (userIdStr in this.userStates) {
-      return this.handleRegistrationStep(chatId, userIdStr, text, contact);
-    } else {
-      // 🆕 مدیریت دکمه‌های کیبورد معمولی برای کاربران ناشناس
-      if (this.isUserRegistered(userIdStr)) {
-        return this.handleQuranStudentPanel(chatId, userIdStr);
-      } else {
-        // 🔍 بررسی دکمه‌های کیبورد معمولی کاربران ناشناس
-        switch (text) {
-          case 'شروع':
-            return this.handleUnknownUserStart(chatId);
-          case 'مدرسه':
-            return this.handleUnknownUserSchool(chatId);
-          case 'ربات':
-            return this.handleUnknownUserBot(chatId);
-          case 'خروج':
-            return this.handleUnknownUserExit(chatId);
-          default:
-            // 🔄 اگر دکمه‌ای انتخاب نشده، منوی اصلی را نمایش بده
-            return this.handleStartCommand(chatId, userIdStr);
-        }
-      }
+      return this.handleQuranStudentPanel(chatId, userId);
     }
+
+    // بررسی انتخاب کارگاه
+    if (text && text.startsWith('📚 ')) {
+      return this.handleWorkshopSelection(chatId, userId, text);
+    }
+
+    // پردازش مراحل ثبت‌نام
+    if (userId in this.userStates) {
+      return this.handleRegistrationStep(chatId, userId, text, contact);
+    }
+
+    // کاربر جدید - شروع ثبت‌نام
+    return this.handleUnknownUserStart(chatId);
   }
 
-  // 📱 پردازش callback ها
+  // 🔄 پردازش callback query ها
   async handleCallback(callback) {
-    if (!callback || !callback.message || !callback.from || !callback.data) return false;
+    const { data, message, from } = callback;
+    const chatId = message.chat.id;
+    const userId = from.id;
 
-    const chatId = callback.message.chat.id;
-    const userIdStr = chatId.toString();
-    const data = callback.data;
-
-    console.log(`🔄 Processing callback from user ${chatId}: ${data}`);
+    console.log(`🔄 [POLLING] Callback data: ${data}`);
 
     switch (data) {
-      case 'start_registration':
-        return this.handleRegistrationStart(chatId, userIdStr);
-      case 'school_intro':
-        return this.handleSchoolIntro(chatId);
-      case 'intro_quran_bot':
-        return this.handleQuranBotIntro(chatId);
       case 'edit_name':
-        return this.handleEditName(chatId, userIdStr);
+        return this.handleEditName(chatId, userId);
       case 'edit_national_id':
-        return this.handleEditNationalId(chatId, userIdStr);
+        return this.handleEditNationalId(chatId, userId);
       case 'edit_phone':
-        return this.handleEditPhone(chatId, userIdStr);
+        return this.handleEditPhone(chatId, userId);
       case 'final_confirm':
-        return this.handleFinalConfirm(chatId, userIdStr);
-      case 'quran_student_panel':
-        return this.handleQuranStudentPanel(chatId, userIdStr);
-      case 'complete_registration':
-        return this.handleCompleteRegistration(chatId, userIdStr);
+        return this.handleFinalConfirm(chatId, userId);
       default:
+        console.log(`⚠️ Unknown callback data: ${data}`);
         return false;
     }
   }
 
-  // 🚀 دستور شروع
+  // 🚀 شروع دستور
   async handleStartCommand(chatId, userId) {
+    console.log(`🚀 [REG] Start command from user ${userId}`);
+    
+    // همیشه ابتدا کیبورد اصلی را نمایش بده
+    const welcomeText = `🏫 **مدرسه تلاوت قرآن**
+
+به مدرسه تلاوت قرآن کریم خوش آمدید! 👋
+
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+    await sendMessage(chatId, welcomeText, this.buildMainKeyboard());
+    
+    // سپس بر اساس وضعیت کاربر تصمیم بگیر
     if (this.isUserRegistered(userId)) {
-      const userInfo = this.userData[userId];
-      const firstName = userInfo.first_name || 'کاربر';
-      const fullName = userInfo.full_name;
-      const nationalId = userInfo.national_id || 'هنوز مانده';
-      const phone = userInfo.phone || 'هنوز مانده';
-
       if (this.isRegistrationComplete(userId)) {
-        const welcomeText = `🌟 ${firstName} عزیز، خوش آمدید!\nحساب کاربری شما آماده است 👇\n*نام*: ${fullName}\n*کد ملی*: ${nationalId}\n*تلفن*: ${phone}`;
-
-        await sendMessage(chatId, welcomeText, this.buildReplyKeyboard([
-          ['شروع', 'پنل قرآن‌آموز'],
-          ['معرفی مدرسه', 'خروج']
-        ]));
+        // کاربر ثبت‌نام شده - پیام اضافی ارسال نکن
+        return true;
       } else {
-        const missingFields = this.getMissingFields(userId);
-        const missingText = missingFields.join('، ');
-
-        const welcomeText = `⚠️ ${firstName} عزیز، ثبت‌نام شما ناقص است!\n\n📋 اطلاعات فعلی:\n*نام*: ${fullName}\n*کد ملی*: ${nationalId}\n*تلفن*: ${phone}\n\n❌ فیلدهای ناقص: ${missingText}`;
-
-        await sendMessageWithInlineKeyboard(chatId, welcomeText, this.buildInlineKeyboard([
-          [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
-          [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }],
-          [{ text: '📱 تصحیح تلفن', callback_data: 'edit_phone' }]
-        ]));
+        // کاربر ثبت‌نام ناقص دارد
+        setTimeout(() => {
+          this.handleCompleteRegistration(chatId, userId);
+        }, 1000);
+        return true;
       }
     } else {
-      // 🆕 سیستم جدید برای کاربران ناشناس
-      await this.handleUnknownUserStart(chatId);
-    }
-    return true;
-  }
-
-  // 🆕 متد جدید برای کاربران ناشناس
-  async handleUnknownUserStart(chatId) {
-    try {
-      // 📖 خواندن وضعیت ثبت‌نام
-      const { readJson } = require('./server/utils/jsonStore');
-      const siteStatus = await readJson('data/site-status.json', {
-        registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' }
-      });
-
-      // 🗓️ تشخیص ماه فعلی
-      const currentMonth = this.getCurrentPersianMonth();
-      const nextMonth = this.getNextPersianMonth(currentMonth);
-
-      // 📝 پیام خوش‌آمدگویی
-      const welcomeText = `🌟 *خوش آمدید به مدرسه تلاوت قرآن*
-
-🏫 **مدرسه تلاوت قرآن**
-با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم
-
-📚 **کلاس‌های موجود:**
-• تجوید قرآن کریم
-• صوت و لحن
-• حفظ قرآن کریم
-• تفسیر قرآن
-
-💎 **مزایای ثبت‌نام:**
-• اساتید مجرب
-• کلاس‌های آنلاین و حضوری
-• گواهی پایان دوره
-• قیمت مناسب
-
-📝 **ثبت‌نام ماهانه:**
-ثبت‌نام به صورت ماهانه انجام می‌شود`;
-
-      // 🎹 کیبورد معمولی (Reply Keyboard)
-      const replyKeyboard = this.buildReplyKeyboard([
-        ['شروع', 'خروج'],
-        ['مدرسه', 'ربات']
-      ]);
-
-      // 📤 ارسال پیام با کیبورد معمولی
-      await sendMessage(chatId, welcomeText, replyKeyboard);
-
-      // 🔄 بررسی وضعیت ثبت‌نام و نمایش کیبورد شیشه‌ای
-      if (siteStatus.registration.enabled) {
-        // ✅ ثبت‌نام فعال - نمایش ماه آینده
-        const inlineText = `📝 **ثبت‌نام ${nextMonth}**\nثبت‌نام برای ماه ${nextMonth} فعال است`;
-        
-        await sendMessageWithInlineKeyboard(chatId, inlineText, this.buildInlineKeyboard([
-          [{ text: `📝 ثبت‌نام ${nextMonth}`, callback_data: 'start_registration' }]
-        ]));
-      } else {
-        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی" با نام ماه آینده
-        const nextMonthText = `📅 **ثبت‌نام ${nextMonth}**\nثبت‌نام ${nextMonth} به زودی فعال خواهد شد`;
-        
-        await sendMessage(chatId, nextMonthText);
-      }
-
-    } catch (error) {
-      console.error('❌ [REG] Error in handleUnknownUserStart:', error);
-      
-      // 🔄 در صورت خطا، پیام ساده ارسال کن
-      const fallbackText = `🌟 خوش آمدید به مدرسه تلاوت قرآن\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
-      
-      const replyKeyboard = this.buildReplyKeyboard([
-        ['شروع', 'خروج'],
-        ['مدرسه', 'ربات']
-      ]);
-      
-      await sendMessage(chatId, fallbackText, replyKeyboard);
+      // کاربر جدید - پیام اضافی ارسال نکن
+      return true;
     }
   }
 
-  // 🗓️ متد تشخیص ماه فارسی فعلی
-  getCurrentPersianMonth() {
-    const persianMonths = [
-      'فروردین', 'اردیبهشت', 'خرداد',
-      'تیر', 'مرداد', 'شهریور',
-      'مهر', 'آبان', 'آذر',
-      'دی', 'بهمن', 'اسفند'
-    ];
-    
-    // 🕐 تاریخ فعلی
-    const now = new Date();
-    const persianDate = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-      month: 'long'
-    }).format(now);
-    
-    // 🔍 پیدا کردن ماه در آرایه
-    const monthIndex = persianMonths.findIndex(month => 
-      persianDate.includes(month)
-    );
-    
-    return monthIndex !== -1 ? persianMonths[monthIndex] : 'ماه';
-  }
-
-  // 🗓️ متد تشخیص ماه فارسی بعدی
-  getNextPersianMonth(currentMonth) {
-    const persianMonths = [
-      'فروردین', 'اردیبهشت', 'خرداد',
-      'تیر', 'مرداد', 'شهریور',
-      'مهر', 'آبان', 'آذر',
-      'دی', 'بهمن', 'اسفند'
-    ];
-    
-    const currentIndex = persianMonths.indexOf(currentMonth);
-    if (currentIndex === -1) return 'ماه آینده';
-    
-    const nextIndex = (currentIndex + 1) % 12;
-    return persianMonths[nextIndex];
-  }
-
-  // 🆕 متدهای جدید برای مدیریت دکمه‌های کیبورد معمولی کاربران ناشناس
-
-  // 🚀 متد شروع برای کاربران ناشناس
+  // 🆕 شروع برای کاربر جدید
   async handleUnknownUserStart(chatId) {
-    const startText = `🚀 **شروع کار با مدرسه تلاوت قرآن**
-
-برای شروع کار با مدرسه تلاوت قرآن، لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
-
-🏫 **معرفی مدرسه** - آشنایی با مدرسه و کلاس‌ها
-🤖 **معرفی ربات** - آشنایی با قابلیت‌های ربات
-📝 **ثبت‌نام** - ثبت‌نام در مدرسه
-
-یا می‌توانید از دکمه‌های کیبورد استفاده کنید:`;
-
-    const replyKeyboard = this.buildReplyKeyboard([
-      ['شروع', 'خروج'],
-      ['مدرسه', 'ربات']
-    ]);
-
-    await sendMessage(chatId, startText, replyKeyboard);
-    return true;
-  }
-
-  // 🏫 متد مدرسه برای کاربران ناشناس
-  async handleUnknownUserSchool(chatId) {
-    try {
-      // 🔄 بررسی وضعیت ثبت‌نام
-      const { readJson } = require('./server/utils/jsonStore');
-      const siteStatus = await readJson('data/site-status.json', {
-        registration: { enabled: false }
-      });
-
-      // 🗓️ تشخیص ماه فعلی
-      const currentMonth = this.getCurrentPersianMonth();
-      const nextMonth = this.getNextPersianMonth(currentMonth);
-
-      const schoolText = `🏫 **مدرسه تلاوت قرآن**
+    const welcomeText = `🏫 **مدرسه تلاوت قرآن**
 
 به مدرسه تلاوت قرآن کریم خوش آمدید
 
@@ -382,202 +276,77 @@ class SmartRegistrationModule {
 💎 **مزایای ثبت‌نام:**
 • اساتید مجرب
 • کلاس‌های آنلاین و حضوری
-• گواهی پایان دوره `;
-//• قیمت مناسب`;
-
-      if (siteStatus.registration.enabled) {
-        // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای با ماه آینده
-        const buttonText = `📝 ثبت‌نام ${nextMonth}`;
-        
-        await sendMessageWithInlineKeyboard(chatId, schoolText + '\n\nبرای ثبت‌نام روی دکمه زیر کلیک کنید:', this.buildInlineKeyboard([
-          [{ text: buttonText, callback_data: 'start_registration' }]
-        ]));
-      } else {
-        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی" با نام ماه آینده
-        await sendMessage(chatId, schoolText + `\n\n📅 **ثبت‌نام ${nextMonth}**\nثبت‌نام ${nextMonth} به زودی فعال خواهد شد`);
-      }
-
-      // 🔄 بازگرداندن کیبورد معمولی
-      const replyKeyboard = this.buildReplyKeyboard([
-        ['شروع', 'خروج'],
-        ['مدرسه', 'ربات']
-      ]);
-      
-     // await sendMessage(chatId, '🔙 برای بازگشت به منوی اصلی از دکمه‌های بالا استفاده کنید:', replyKeyboard);
-      return true;
-    } catch (error) {
-      console.error('❌ [REG] Error in handleUnknownUserSchool:', error);
-      
-      // 🔄 در صورت خطا، پیام ساده ارسال کن
-      const fallbackText = `🏫 **مدرسه تلاوت قرآن**
-
-مدرسه تلاوت با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم، خدمات متنوعی ارائه می‌دهد.
-
-📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد`;
-
-      await sendMessage(chatId, fallbackText);
-      
-      // 🔄 بازگرداندن کیبورد معمولی
-      const replyKeyboard = this.buildReplyKeyboard([
-        ['شروع', 'خروج'],
-        ['مدرسه', 'ربات']
-      ]);
-      
-      await sendMessage(chatId, '🔙 برای بازگشت به منوی اصلی از دکمه‌های بالا استفاده کنید:', replyKeyboard);
-      return true;
-    }
-  }
-
-  // 🤖 متد ربات برای کاربران ناشناس
-  async handleUnknownUserBot(chatId) {
-    try {
-      // 🔄 بررسی وضعیت ثبت‌نام
-      const { readJson } = require('./server/utils/jsonStore');
-      const siteStatus = await readJson('data/site-status.json', {
-        registration: { enabled: false }
-      });
-
-      // 🗓️ تشخیص ماه فعلی
-      const currentMonth = this.getCurrentPersianMonth();
-      const nextMonth = this.getNextPersianMonth(currentMonth);
-
-      const botText = `🤖 **ربات مدرسه تلاوت**
-
-ربات مدرسه تلاوت با قابلیت‌های پیشرفته، تجربه‌ای منحصر به فرد در آموزش قرآن کریم ارائه می‌دهد:
-
-🚀 **قابلیت‌های اصلی:**
-• 📖 آموزش تلاوت قرآن کریم
-• 🧠 حفظ آیات کریمه
-• 📝 تفسیر آیات
-• 📊 آزمون‌های قرآنی
-• 📈 گزارش پیشرفت
-• 👥 مدیریت گروه‌ها
-• 📋 حضور و غیاب
-
-💡 **ویژگی‌های منحصر به فرد:**
-• رابط کاربری ساده و کاربردی
-• پشتیبانی از زبان فارسی
-• پاسخگویی ۲۴ ساعته
-• امنیت بالا
-• پشتیبانی از همه دستگاه‌ها`;
-
-      if (siteStatus.registration.enabled) {
-        // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای با ماه آینده
-        const buttonText = `📝 ثبت‌نام ${nextMonth}`;
-        
-        await sendMessageWithInlineKeyboard(chatId, botText + '\n\nبرای شروع استفاده از ربات، ثبت‌نام کنید:', this.buildInlineKeyboard([
-          [{ text: buttonText, callback_data: 'start_registration' }]
-        ]));
-      } else {
-        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی" با نام ماه آینده
-        await sendMessage(chatId, botText + `\n\n📅 **ثبت‌نام ${nextMonth}**\nثبت‌نام ${nextMonth} به زودی فعال خواهد شد`);
-      }
-
-      // 🔄 بازگرداندن کیبورد معمولی
-      const replyKeyboard = this.buildReplyKeyboard([
-        ['شروع', 'خروج'],
-        ['مدرسه', 'ربات']
-      ]);
-      
-      await sendMessage(chatId, '🔙 برای بازگشت به منوی اصلی از دکمه‌های بالا استفاده کنید:', replyKeyboard);
-      return true;
-    } catch (error) {
-      console.error('❌ [REG] Error in handleUnknownUserBot:', error);
-      
-      // 🔄 در صورت خطا، پیام ساده ارسال کن
-      const fallbackText = `🤖 **ربات مدرسه تلاوت**
-
-ربات مدرسه تلاوت با قابلیت‌های پیشرفته، تجربه‌ای منحصر به فرد در آموزش قرآن کریم ارائه می‌دهد.
-
-📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد`;
-
-      await sendMessage(chatId, fallbackText);
-      
-      // 🔄 بازگرداندن کیبورد معمولی
-      const replyKeyboard = this.buildReplyKeyboard([
-        ['شروع', 'خروج'],
-        ['مدرسه', 'ربات']
-      ]);
-      
-      await sendMessage(chatId, '🔙 برای بازگشت به منوی اصلی از دکمه‌های بالا استفاده کنید:', replyKeyboard);
-      return true;
-    }
-  }
-
-  // 🚪 متد خروج برای کاربران ناشناس
-  async handleUnknownUserExit(chatId) {
-    const exitText = `🚪 **خروج از مدرسه تلاوت قرآن**
-
-متأسفیم که تصمیم به خروج گرفتید! 😔
-
-اگر در آینده تصمیم به بازگشت گرفتید، کافیست دوباره /start را ارسال کنید.
-
-🌟 **یادآوری:**
-• ثبت‌نام در مدرسه رایگان است
-• کلاس‌های آنلاین و حضوری
-• اساتید مجرب و با تجربه
 • گواهی پایان دوره
 
-برای بازگشت، /start را دوباره ارسال کنید.`;
+برای شروع، لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
 
-    // 🔄 حذف کیبورد
-    await sendMessage(chatId, exitText, { remove_keyboard: true });
+    await sendMessage(chatId, welcomeText, this.buildMainKeyboard());
     return true;
   }
 
   // 🏫 معرفی مدرسه
   async handleSchoolIntro(chatId) {
-    const introText = `_🏫 *معرفی مدرسه تلاوت*
+    const schoolText = `🏫 **مدرسه تلاوت قرآن کریم**
 
-مدرسه تلاوت با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم، خدمات متنوعی ارائه می‌دهد:
+🌟 **درباره مدرسه:**
+مدرسه تلاوت قرآن کریم با بیش از ۱۰ سال سابقه در آموزش قرآن کریم، یکی از معتبرترین مراکز آموزشی در این حوزه است.
 
-📚 *کلاس‌های موجود:*
-• تجوید قرآن کریم
-• صوت و لحن
-• حفظ قرآن کریم
-• تفسیر قرآن
+📚 **کلاس‌های موجود:**
+• **تجوید قرآن کریم** - آموزش قواعد صحیح خوانی
+• **صوت و لحن** - آموزش آواز و لحن زیبا
+• **حفظ قرآن کریم** - حفظ آیات و سوره‌ها
+• **تفسیر قرآن** - درک معانی و مفاهیم
 
-💎 *مزایای ثبت‌نام:*
-• اساتید مجرب
+👨‍🏫 **اساتید مجرب:**
+• استاد محمد رشوند - متخصص حفظ قرآن
+• استاد علی حتم خانی - متخصص تجوید و صوت
+• استاد احمد حاجی زاده - متخصص تفسیر
+• و سایر اساتید مجرب
+
+💎 **مزایای ثبت‌نام:**
 • کلاس‌های آنلاین و حضوری
-• گواهی پایان دوره
-• قیمت مناسب_
+• گواهی پایان دوره معتبر
+• پشتیبانی ۲۴ ساعته
+• قیمت مناسب و مقرون به صرفه
 
-برای ثبت‌نام روی دکمه زیر کلیک کنید:`;
+📞 **اطلاعات تماس:**
+برای اطلاعات بیشتر با ما تماس بگیرید.
 
-    await sendMessageWithInlineKeyboard(chatId, introText, this.buildInlineKeyboard([
-      [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
-    ]));
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+    await sendMessage(chatId, schoolText, this.buildMainKeyboard());
     return true;
   }
 
   // 🤖 معرفی ربات
   async handleQuranBotIntro(chatId) {
-    const introText = `_🤖 *معرفی ربات مدرسه تلاوت*
+    const botText = `🤖 **ربات مدرسه تلاوت قرآن**
 
-ربات مدرسه تلاوت با قابلیت‌های پیشرفته، تجربه‌ای منحصر به فرد در آموزش قرآن کریم ارائه می‌دهد:
+🌟 **قابلیت‌های ربات:**
+• ثبت‌نام آنلاین در کلاس‌ها
+• مشاهده برنامه کلاس‌ها
+• ارتباط مستقیم با اساتید
+• دریافت اخبار و اطلاعیه‌ها
+• پشتیبانی ۲۴ ساعته
 
-🚀 *قابلیت‌های اصلی:*
-• 📖 آموزش تلاوت قرآن کریم
-• 🧠 حفظ آیات کریمه
-• 📝 تفسیر آیات
-• 📊 آزمون‌های قرآنی
-• 📈 گزارش پیشرفت
-• 👥 مدیریت گروه‌ها
-• 📋 حضور و غیاب
+📱 **نحوه استفاده:**
+۱. ثبت‌نام در ربات
+۲. انتخاب کلاس مورد نظر
+۳. پرداخت شهریه
+۴. دریافت لینک کلاس
+۵. شروع یادگیری
 
-💡 *ویژگی‌های منحصر به فرد:*
-• رابط کاربری ساده و کاربردی
-• پشتیبانی از زبان فارسی
-• پاسخگویی ۲۴ ساعته
-• امنیت بالا
-• پشتیبانی از همه دستگاه‌ها
+🔧 **دستورات موجود:**
+• /start - شروع کار
+• /help - راهنما
+• /register - ثبت‌نام
+• /workshops - مشاهده کارگاه‌ها
 
-برای شروع استفاده از ربات، ثبت‌نام کنید:`;
+💡 **نکته:** ربات همیشه در دسترس است و می‌توانید در هر زمان از خدمات آن استفاده کنید.
 
-    await sendMessageWithInlineKeyboard(chatId, introText, this.buildInlineKeyboard([
-      [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
-    ]));
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+    await sendMessage(chatId, botText, this.buildMainKeyboard());
     return true;
   }
 
@@ -620,6 +389,7 @@ class SmartRegistrationModule {
 
   // 📝 مرحله نام
   async handleNameStep(chatId, userId, text) {
+    // ذخیره نام کامل و نام کوچک
     this.userData[userId].full_name = text;
     this.userData[userId].first_name = text.split(' ')[0];
     this.saveData();
@@ -661,10 +431,10 @@ class SmartRegistrationModule {
       });
 
       // دکمه‌های تصحیح نام و کد ملی
-          await sendMessageWithInlineKeyboard(chatId, 'یا می‌توانید اطلاعات را تصحیح کنید:', this.buildInlineKeyboard([
-      [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
-      [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }]
-    ]));
+      await sendMessageWithInlineKeyboard(chatId, 'یا می‌توانید اطلاعات را تصحیح کنید:', this.buildInlineKeyboard([
+        [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
+        [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }]
+      ]));
 
       this.userStates[userId].step = 'phone';
       return true;
@@ -717,6 +487,7 @@ class SmartRegistrationModule {
   async handleEditName(chatId, userId) {
     if (userId in this.userData) {
       delete this.userData[userId].full_name;
+      delete this.userData[userId].first_name;
       this.saveData();
       this.userStates[userId] = { step: 'name' };
       await sendMessage(chatId, '_✏️ لطفاً نام و نام خانوادگی جدید خود را وارد کنید._', this.buildReplyKeyboard([
@@ -766,7 +537,29 @@ class SmartRegistrationModule {
         this.userData[userId].registration_date = Date.now();
         this.saveData();
 
-        const confirmText = `🎉 **ثبت‌نام با موفقیت تکمیل شد!**
+        // بررسی مدیر بودن کاربر
+        if (this.isUserAdmin(phone)) {
+          const adminText = `🎉 **خوش آمدید مربی عزیز!**
+
+🌟 ${firstName} عزیز، به عنوان مربی مدرسه تلاوت قرآن خوش آمدید!
+
+📋 **اطلاعات حساب:**
+• نام: ${fullName}
+• کد ملی: ${nationalId}
+• تلفن: ${phone}
+• نقش: مربی
+
+✅ حساب کاربری شما فعال شده است.
+
+🏫 **دسترسی‌های مربی:**
+• مدیریت کلاس‌ها
+• مشاهده دانش‌آموزان
+• ارسال گزارش‌ها
+• تنظیمات پیشرفته`;
+
+          await sendMessage(chatId, adminText, this.buildMainKeyboard());
+        } else {
+          const confirmText = `🎉 **ثبت‌نام با موفقیت تکمیل شد!**
 
 🌟 ${firstName} عزیز، ثبت‌نام شما با موفقیت انجام شد!
 
@@ -779,18 +572,60 @@ class SmartRegistrationModule {
 
 📚 **مرحله بعدی:** انتخاب کلاس مورد نظر`;
 
-        await sendMessage(chatId, confirmText, this.buildReplyKeyboard([
-          ['📚 انتخاب کلاس'],
-          ['پنل قرآن‌آموز'],
-          ['شروع مجدد', 'خروج']
-        ]));
+          await sendMessage(chatId, confirmText, this.buildReplyKeyboard([
+            ['📚 انتخاب کلاس'],
+            ['پنل قرآن‌آموز'],
+            ['شروع مجدد', 'خروج']
+          ]));
+        }
       } catch (error) {
         console.error(`❌ Error in final_confirm for user ${userId}:`, error);
-        await sendMessage(chatId, '🎉 ثبت‌نام شما با موفقیت تکمیل شد!', this.buildReplyKeyboard([
-          ['شروع مجدد', 'خروج'],
-          ['پنل قرآن‌آموز']
+        await sendMessage(chatId, '🎉 ثبت‌نام شما با موفقیت تکمیل شد!', this.buildMainKeyboard());
+      }
+    }
+    return true;
+  }
+
+  // 📚 انتخاب کارگاه
+  async handleWorkshopSelection(chatId, userId, selectedWorkshop = null) {
+    if (!this.isRegistrationComplete(userId)) {
+      await sendMessage(chatId, '_❌ ابتدا باید ثبت‌نام خود را تکمیل کنید._', this.buildMainKeyboard());
+      return false;
+    }
+
+    if (selectedWorkshop) {
+      // کاربر کارگاه خاصی را انتخاب کرده
+      const workshopName = selectedWorkshop.replace('📚 ', '');
+      const workshop = Object.values(this.workshops).find(w => 
+        w.instructor_name === workshopName.split(' - ')[0]
+      );
+
+      if (workshop) {
+        const workshopText = `📚 **کارگاه ${workshop.instructor_name}**
+
+📖 **توضیحات:** ${workshop.description}
+⏱️ **مدت زمان:** ${workshop.duration}
+👥 **ظرفیت:** ${workshop.capacity} نفر
+📊 **سطح:** ${workshop.level}
+💰 **هزینه:** ${workshop.cost}
+
+🔗 **لینک کارگاه:** ${workshop.link}
+
+💳 **برای ثبت‌نام و پرداخت:**
+لطفاً با شماره ${workshop.instructor_phone} تماس بگیرید یا از لینک بالا استفاده کنید.`;
+
+        await sendMessage(chatId, workshopText, this.buildReplyKeyboard([
+          ['📚 انتخاب کلاس دیگر'],
+          ['🏠 برگشت به منو', 'خروج']
         ]));
       }
+    } else {
+      // نمایش لیست کارگاه‌ها
+      const workshopsText = `📚 **لیست کارگاه‌های موجود**
+
+لطفاً یکی از کارگاه‌های زیر را انتخاب کنید:`;
+
+      await sendMessage(chatId, workshopsText, this.buildWorkshopsKeyboard());
     }
     return true;
   }
@@ -834,9 +669,27 @@ ${firstName} عزیز، ثبت‌نام شما کامل نیست!
         ]));
       }
     } else {
-      await sendMessage(chatId, '_❌ شما هنوز ثبت‌نام نکرده‌اید. لطفاً ابتدا ثبت‌نام کنید._', this.buildReplyKeyboard([
-        ['شروع مجدد', 'ثبت‌نام']
-      ]));
+      await sendMessage(chatId, '_❌ شما هنوز ثبت‌نام نکرده‌اید. لطفاً ابتدا ثبت‌نام کنید._', this.buildMainKeyboard());
+    }
+    return true;
+  }
+
+  // 🏠 برگشت به منوی اصلی
+  async handleBackToMainMenu(chatId, userId) {
+    if (this.isRegistrationComplete(userId)) {
+      const userInfo = this.userData[userId];
+      const firstName = userInfo.first_name || 'کاربر';
+      
+      const menuText = `🏠 **منوی اصلی**
+
+سلام ${firstName} عزیز! 👋
+به منوی اصلی خوش آمدید.
+
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+      await sendMessage(chatId, menuText, this.buildMainKeyboard());
+    } else {
+      await sendMessage(chatId, '_🏠 به منوی اصلی برگشتید._', this.buildMainKeyboard());
     }
     return true;
   }
@@ -859,6 +712,7 @@ ${firstName} عزیز، ثبت‌نام شما کامل نیست!
         await sendMessage(chatId, '_لطفاً کد ملی خود را دوباره وارد کنید._');
       } else if (this.userData[userId].full_name) {
         delete this.userData[userId].full_name;
+        delete this.userData[userId].first_name;
         this.saveData();
         this.userStates[userId] = { step: 'name' };
         await sendMessage(chatId, '_لطفاً نام خود را دوباره وارد کنید._');
@@ -869,7 +723,15 @@ ${firstName} عزیز، ثبت‌نام شما کامل نیست!
 
   // 👋 دستور خروج
   async handleExitCommand(chatId) {
-    await sendMessage(chatId, '_👋 با تشکر از استفاده شما از ربات ما. موفق باشید! 🌟_');
+    const exitText = `👋 **با تشکر از استفاده شما از ربات ما!**
+
+🌟 **امیدواریم که تجربه خوبی داشته باشید**
+📚 **موفق باشید در یادگیری قرآن کریم**
+🔄 **برای استفاده مجدد، دستور /start را بزنید**
+
+_خداحافظ و موفق باشید!_ 🌟`;
+
+    await sendMessage(chatId, exitText);
     return true;
   }
 
