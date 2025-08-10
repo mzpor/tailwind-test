@@ -11,6 +11,17 @@ class RegistrationModule {
     this.dataFile = 'registration_data.json';
     this.userData = this.loadData();
     this.userStates = {}; // وضعیت کاربران برای ثبت‌نام
+    
+    // استفاده از ماژول مدیریت یکپارچه
+    try {
+      this.unifiedManager = require('./unified_registration_manager');
+      this.manager = new this.unifiedManager();
+      console.log('✅ Unified registration manager loaded');
+    } catch (error) {
+      console.warn('⚠️ Unified registration manager not available, using legacy mode');
+      this.manager = null;
+    }
+    
     console.log('✅ RegistrationModule initialized successfully');
   }
 
@@ -457,6 +468,29 @@ class RegistrationModule {
 
         this.userData[userId].user_type = 'quran_student';
         this.saveData(this.userData);
+
+        // استفاده از ماژول مدیریت یکپارچه برای هماهنگ‌سازی
+        if (this.manager) {
+          try {
+            const userData = {
+              fullName: fullName,
+              firstName: firstName,
+              nationalId: nationalId,
+              phone: phone,
+              workshopId: this.userData[userId].workshopId || null
+            };
+            
+            // ثبت در سیستم یکپارچه
+            const registrationId = this.manager.registerFromBot(userId, userData);
+            console.log(`✅ User ${userId} registered in unified system: ${registrationId}`);
+            
+            // هماهنگ‌سازی با سایت
+            await this.syncWithWebsite(userId, fullName, nationalId, phone);
+            
+          } catch (error) {
+            console.error(`⚠️ Unified registration failed for user ${userId}:`, error);
+          }
+        }
 
         const confirmText = `🎉 **ثبت‌نام با موفقیت تکمیل شد!**
 

@@ -702,8 +702,11 @@ function startPolling() {
           console.log(`🔄 [POLLING] Callback data starts with 'evaluation_': ${callback_query.data.startsWith('evaluation_')}`);
           console.log(`🔄 [POLLING] Callback data === 'practice_evaluation_days_settings': ${callback_query.data === 'practice_evaluation_days_settings'}`);
           
-          // حذف پیام قبلی که کیبورد شیشه‌ای داشت - فقط برای callback های غیر کارگاه
-          if (!callback_query.data.startsWith('kargah_') && !callback_query.data.startsWith('student_')) {
+          // حذف پیام قبلی که کیبورد شیشه‌ای داشت - فقط برای callback های غیر کارگاه و غیر بازگشت
+          if (!callback_query.data.startsWith('kargah_') && 
+              !callback_query.data.startsWith('student_') && 
+              callback_query.data !== 'back_to_groups' && 
+              callback_query.data !== 'back_to_main') {
             try {
               console.log('🗑️ [POLLING] Attempting to delete previous message...');
               await deleteMessage(callback_query.message.chat.id, callback_query.message.message_id);
@@ -1131,9 +1134,21 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
       
       // ایجاد کیبورد حضور و غیاب
       const keyboard = createAttendanceKeyboard(groupId, members);
+      
+      // دریافت نام واقعی گروه به جای ID
+      let groupDisplayName = `گروه ${groupId}`;
+      try {
+        const { GROUP_NAMES } = require('./3config');
+        if (GROUP_NAMES[groupId]) {
+          groupDisplayName = GROUP_NAMES[groupId];
+        }
+      } catch (error) {
+        console.log(`Could not get group name for ${groupId}:`, error.message);
+      }
+      
       const text = `👥 مدیریت حضور و غیاب
 
-📛 گروه: ${groupId}
+📛 گروه: ${groupDisplayName}
 👥 تعداد اعضا: ${members.length}
 
 📋 لیست قرآن آموزان:
@@ -1189,6 +1204,9 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
 ⏰ ${getTimeStamp()}`;
       
       await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+      
+      // پاسخ به callback query
+      await answerCallbackQuery(callbackQueryId, '✅ بازگشت به لیست گروه‌ها');
       
     } else if (action === 'back_to_main') {
       // بازگشت به منوی اصلی - نمایش کیبورد مناسب نقش کاربر
@@ -1343,11 +1361,26 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
     } else if (action === 'reset') {
       // ریست کردن حضور و غیاب
       const groupId = parts[1];
-      attendanceManager.attendanceData = {};
+      attendanceManager.resetAttendance();
       
-      await sendMessageWithInlineKeyboard(chatId,
-        `🔄 حضور و غیاب ریست شد\n\n📛 گروه: ${groupId}\n✅ همه وضعیت‌ها پاک شد\n⏰ ${getTimeStamp()}`,
-        [[{ text: '🔙 بازگشت', callback_data: `group_${groupId}` }]]
+      // دریافت نام واقعی گروه به جای ID
+      let groupDisplayName = `گروه ${groupId}`;
+      try {
+        const { GROUP_NAMES } = require('./3config');
+        if (GROUP_NAMES[groupId]) {
+          groupDisplayName = GROUP_NAMES[groupId];
+        }
+      } catch (error) {
+        console.log(`Could not get group name for ${groupId}:`, error.message);
+      }
+      
+      const text = `🔄 حضور و غیاب ریست شد
+
+📛 گروه: ${groupDisplayName}
+✅ همه وضعیت‌ها پاک شد
+⏰ ${getTimeStamp()}`;
+      
+      await sendMessageWithInlineKeyboard(chatId, text, [[{ text: '🔙 بازگشت', callback_data: `group_${groupId}` }]]
       );
       
     } else if (action === 'back') {

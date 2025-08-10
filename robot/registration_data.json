@@ -1,5 +1,56 @@
 {
-  "95519970": {},
-  "1114227010": {},
-  "1790308237": {}
+  "95519970": {
+    "fullName": "",
+    "firstName": "",
+    "nationalId": "95519970",
+    "phone": "",
+    "status": "incomplete",
+    "source": "website",
+    "registrationComplete": false,
+    "ts": null
+  },
+  "1114227010": {
+    "fullName": "",
+    "firstName": "",
+    "nationalId": "1114227010",
+    "phone": "",
+    "status": "incomplete",
+    "source": "website",
+    "registrationComplete": false,
+    "ts": null
+  },
+  "1234567890": {
+    "fullName": "علی رضایی",
+    "firstName": "علی",
+    "nationalId": "1234567890",
+    "phone": "09123456789",
+    "workshopId": "w-1404-01",
+    "status": "completed",
+    "source": "both",
+    "registrationComplete": true,
+    "ts": 1754780935847,
+    "lastUpdated": 1754780935857
+  },
+  "1790308237": {
+    "fullName": "",
+    "firstName": "",
+    "nationalId": "1790308237",
+    "phone": "",
+    "status": "incomplete",
+    "source": "website",
+    "registrationComplete": false,
+    "ts": null
+  },
+  "0987654321": {
+    "fullName": "سارا احمدی",
+    "firstName": "سارا",
+    "nationalId": "0987654321",
+    "phone": "09987654321",
+    "workshopId": "w-1404-02",
+    "status": "incomplete",
+    "source": "website",
+    "registrationComplete": true,
+    "ts": 1754780935850,
+    "lastUpdated": 1754780935857
+  }
 }

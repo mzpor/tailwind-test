@@ -199,7 +199,23 @@ class AttendanceManager {
     
     try {
       const currentTime = getTimeStamp();
-      const groupName = this.currentGroupId ? `گروه ${this.currentGroupId}` : "کلاس";
+      // استفاده از نام واقعی گروه به جای ID
+      let groupName = "کلاس";
+      if (this.currentGroupId) {
+        const { getGroupName } = require('./3config');
+        // اگر getGroupName async است، از نام پیش‌فرض استفاده کن
+        try {
+          // تلاش برای دریافت نام گروه از config
+          const { GROUP_NAMES } = require('./3config');
+          if (GROUP_NAMES[this.currentGroupId]) {
+            groupName = GROUP_NAMES[this.currentGroupId];
+          } else {
+            groupName = `گروه ${this.currentGroupId}`;
+          }
+        } catch (error) {
+          groupName = `گروه ${this.currentGroupId}`;
+        }
+      }
       
       let text = `📊 **لیست حضور و غیاب - ${groupName}**\n`;
       text += `🕐 آخرین بروزرسانی: ${currentTime}\n\n`;
@@ -219,7 +235,16 @@ class AttendanceManager {
         }
         
         const icon = this.statusIcons[status] || "⏳";
-        const userName = this.userNamesCache[user] || `کاربر ${user}`;
+        // استفاده از نام واقعی کاربر به جای ID
+        let userName = this.userNamesCache[user];
+        if (!userName) {
+          try {
+            const { getUserName } = require('./3config');
+            userName = getUserName(user);
+          } catch (error) {
+            userName = `کاربر ${user}`;
+          }
+        }
         text += `${(i + 1).toString().padStart(2)}. ${icon} ${userName} - ${status}\n`;
       }
       

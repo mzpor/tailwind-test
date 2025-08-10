@@ -116,6 +116,7 @@ class KargahModule {
         const cost = workshop.cost || 'نامشخص';
         const level = workshop.level || '';
         const emoji = level.includes('پیشرفته') ? '🔥' : level.includes('متوسط') ? '⚡' : '🌱';
+        // نمایش نام مربی به جای ID کارگاه
         text += `${emoji} *${instructorName}* - ${cost}\n`;
       }
       text += '\nبرای مشاهده جزئیات و ویرایش، روی کارگاه مورد نظر کلیک کنید:';
@@ -239,6 +240,7 @@ class KargahModule {
         const instructorName = workshop.instructor_name || 'نامشخص';
         const cost = workshop.cost || 'نامشخص';
         const link = workshop.link || 'نامشخص';
+        // نمایش نام مربی به جای ID کارگاه
         text += `🏭 *${instructorName}*\n`;
         text += `💰 هزینه: ${cost}\n`;
         text += `🔗 لینک: ${link}\n\n`;
