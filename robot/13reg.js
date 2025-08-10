@@ -273,8 +273,8 @@ class SmartRegistrationModule {
           [{ text: `📝 ثبت‌نام ${nextMonth}`, callback_data: 'start_registration' }]
         ]));
       } else {
-        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
-        const nextMonthText = `📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد`;
+        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی" با نام ماه آینده
+        const nextMonthText = `📅 **ثبت‌نام ${nextMonth}**\nثبت‌نام ${nextMonth} به زودی فعال خواهد شد`;
         
         await sendMessage(chatId, nextMonthText);
       }
@@ -365,6 +365,10 @@ class SmartRegistrationModule {
         registration: { enabled: false }
       });
 
+      // 🗓️ تشخیص ماه فعلی
+      const currentMonth = this.getCurrentPersianMonth();
+      const nextMonth = this.getNextPersianMonth(currentMonth);
+
       const schoolText = `🏫 **مدرسه تلاوت قرآن**
 
 مدرسه تلاوت با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم، خدمات متنوعی ارائه می‌دهد:
@@ -383,16 +387,14 @@ class SmartRegistrationModule {
 
       if (siteStatus.registration.enabled) {
         // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای با ماه آینده
-        const currentMonth = this.getCurrentPersianMonth();
-        const nextMonth = this.getNextPersianMonth(currentMonth);
         const buttonText = `📝 ثبت‌نام ${nextMonth}`;
         
         await sendMessageWithInlineKeyboard(chatId, schoolText + '\n\nبرای ثبت‌نام روی دکمه زیر کلیک کنید:', this.buildInlineKeyboard([
           [{ text: buttonText, callback_data: 'start_registration' }]
         ]));
       } else {
-        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
-        await sendMessage(chatId, schoolText + '\n\n📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد');
+        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی" با نام ماه آینده
+        await sendMessage(chatId, schoolText + `\n\n📅 **ثبت‌نام ${nextMonth}**\nثبت‌نام ${nextMonth} به زودی فعال خواهد شد`);
       }
 
       // 🔄 بازگرداندن کیبورد معمولی
@@ -435,6 +437,10 @@ class SmartRegistrationModule {
         registration: { enabled: false }
       });
 
+      // 🗓️ تشخیص ماه فعلی
+      const currentMonth = this.getCurrentPersianMonth();
+      const nextMonth = this.getNextPersianMonth(currentMonth);
+
       const botText = `🤖 **ربات مدرسه تلاوت**
 
 ربات مدرسه تلاوت با قابلیت‌های پیشرفته، تجربه‌ای منحصر به فرد در آموزش قرآن کریم ارائه می‌دهد:
@@ -457,16 +463,14 @@ class SmartRegistrationModule {
 
       if (siteStatus.registration.enabled) {
         // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای با ماه آینده
-        const currentMonth = this.getCurrentPersianMonth();
-        const nextMonth = this.getNextPersianMonth(currentMonth);
         const buttonText = `📝 ثبت‌نام ${nextMonth}`;
         
         await sendMessageWithInlineKeyboard(chatId, botText + '\n\nبرای شروع استفاده از ربات، ثبت‌نام کنید:', this.buildInlineKeyboard([
           [{ text: buttonText, callback_data: 'start_registration' }]
         ]));
       } else {
-        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
-        await sendMessage(chatId, botText + '\n\n📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد');
+        // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی" با نام ماه آینده
+        await sendMessage(chatId, botText + `\n\n📅 **ثبت‌نام ${nextMonth}**\nثبت‌نام ${nextMonth} به زودی فعال خواهد شد`);
       }
 
       // 🔄 بازگرداندن کیبورد معمولی
