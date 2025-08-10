@@ -13,7 +13,10 @@ const {
   getCurrentAdminIds,
   getCurrentGroupAdminIds,
   getCurrentCoachId,
-  getCurrentAssistantId
+  getCurrentAssistantId,
+  // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
+  isPhoneCoach,
+  getCoachByPhone
 } = require('./3config');
 const { ROLES } = require('./3config');
 
@@ -91,6 +94,34 @@ function isStudent(userId) {
   
   console.log(`✅ [MID] isStudent result for ${userId}: ${result}`);
   return result;
+}
+
+// بررسی مربی بودن بر اساس شماره تلفن (جدید)
+function isCoachByPhone(phoneNumber) {
+  console.log(`🔍 [MID] isCoachByPhone called for phone: ${phoneNumber}`);
+  
+  try {
+    const result = isPhoneCoach(phoneNumber);
+    console.log(`✅ [MID] isCoachByPhone result for ${phoneNumber}: ${result}`);
+    return result;
+  } catch (error) {
+    console.error('❌ [MID] Error in isCoachByPhone:', error);
+    return false;
+  }
+}
+
+// دریافت اطلاعات مربی بر اساس شماره تلفن (جدید)
+function getCoachInfoByPhone(phoneNumber) {
+  console.log(`🔍 [MID] getCoachInfoByPhone called for phone: ${phoneNumber}`);
+  
+  try {
+    const coachInfo = getCoachByPhone(phoneNumber);
+    console.log(`✅ [MID] getCoachInfoByPhone result for ${phoneNumber}:`, coachInfo);
+    return coachInfo;
+  } catch (error) {
+    console.error('❌ [MID] Error in getCoachInfoByPhone:', error);
+    return null;
+  }
 }
 
 // دریافت نام کاربر (بهینه‌سازی شده)
@@ -265,6 +296,8 @@ module.exports = {
   isCoach,
   isAssistant,
   isStudent,
+  isCoachByPhone,
+  getCoachInfoByPhone,
   getUserName,
   getUserFullInfo,
   getRoleKeyboard,

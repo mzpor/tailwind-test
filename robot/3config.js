@@ -2,6 +2,10 @@
 //⏰ 09:00:00 🗓️ دوشنبه 13 مرداد 1404
 // ماژول تنظیمات اصلی ربات - به‌روزرسانی شده در 1404/05/15 ساعت 23:45
 
+// ماژول‌های مورد نیاز
+const path = require('path');
+const fs = require('fs');
+
 // تنظیمات API تلگرام
 //const BOT_TOKEN = '1714651531:y2xOK6EBg5nzVV6fEWGqtOdc3nVqVgOuf4PZVQ7S';
 //BOT_TOKEN = '1714651531:y2xOK6EBg5nzVV6fEWGqtOdc3nVqVgOuf4PZVQ7S'//#یار مدیر  modyar
@@ -40,7 +44,7 @@ const USERS_BY_ROLE = {
   ],
   COACH: [
   //  2045777722,
-    574330749
+   // 574330749
  //   { id: 574330749, name: "محمد زارع ۲" }
   ],
   ASSISTANT: [
@@ -52,6 +56,53 @@ const USERS_BY_ROLE = {
    // { id: 2045777722, name: "محمد رایتل" }
   ]
 };
+
+// ===== فایل ذخیره‌سازی مربی‌ها =====
+const COACHES_FILE = path.join(__dirname, 'data', 'coaches.json');
+
+// تابع بارگذاری مربی‌ها از فایل
+const loadCoachesFromFile = () => {
+  try {
+    if (fs.existsSync(COACHES_FILE)) {
+      const data = fs.readFileSync(COACHES_FILE, 'utf8');
+      const coaches = JSON.parse(data);
+      console.log(`✅ [CONFIG] Loaded ${coaches.length} coaches from file`);
+      return coaches;
+    }
+  } catch (error) {
+    console.error('❌ [CONFIG] Error loading coaches from file:', error);
+  }
+  return [];
+};
+
+// تابع ذخیره مربی‌ها در فایل
+const saveCoachesToFile = (coaches) => {
+  try {
+    // اطمینان از وجود پوشه data
+    const dataDir = path.dirname(COACHES_FILE);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(COACHES_FILE, JSON.stringify(coaches, null, 2), 'utf8');
+    console.log(`✅ [CONFIG] Saved ${coaches.length} coaches to file`);
+    return true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error saving coaches to file:', error);
+    return false;
+  }
+};
+
+// بارگذاری مربی‌ها از فایل در ابتدا
+const phoneBasedCoaches = loadCoachesFromFile();
+
+// اضافه کردن مربی‌های مبتنی بر شماره تلفن به USERS_BY_ROLE.COACH
+phoneBasedCoaches.forEach(coach => {
+  if (coach && coach.phone && coach.name) {
+    USERS_BY_ROLE.COACH.push(coach);
+    console.log(`🔄 [CONFIG] Loaded coach ${coach.name} with phone ${coach.phone}`);
+  }
+});
 
 // ===== تولید خودکار آرایه‌ها از نقش‌ها =====
 const ADMIN_IDS = USERS_BY_ROLE.SCHOOL_ADMIN.map(user => 
@@ -280,8 +331,6 @@ const SETTINGS_CONFIG = {
 };
 
 // ===== توابع مدیریت تنظیمات گزارش مشترک =====
-const fs = require('fs');
-const path = require('path');
 
 // خواندن وضعیت گزارش از فایل مشترک
 function loadReportsConfig() {
@@ -496,6 +545,173 @@ getGroupName(REPORT_GROUP_ID).then(name => {
   console.log('🔧 [CONFIG] REPORT_GROUP_NAME: Error fetching name');
 });
 
+// ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
+
+// اضافه کردن مربی بر اساس شماره تلفن
+const addCoachByPhone = (phoneNumber, instructorName) => {
+  try {
+    // نرمال‌سازی شماره تلفن
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    
+    // بررسی اینکه آیا شماره تلفن قبلاً مربی است
+    const existingCoach = USERS_BY_ROLE.COACH.find(user => {
+      if (typeof user === 'object' && user.phone) {
+        return normalizePhoneNumber(user.phone) === normalizedPhone;
+      }
+      return false;
+    });
+    
+    if (existingCoach) {
+      console.log(`⚠️ [CONFIG] Phone ${normalizedPhone} is already a coach`);
+      return { success: false, message: 'این شماره تلفن قبلاً مربی است' };
+    }
+    
+    // ایجاد شناسه منحصر به فرد برای مربی
+    const coachId = `phone_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // اضافه کردن به لیست مربی‌ها
+    const newCoach = {
+      id: coachId,
+      name: instructorName || `مربی ${normalizedPhone}`,
+      phone: normalizedPhone,
+      type: 'phone_based'
+    };
+    
+    USERS_BY_ROLE.COACH.push(newCoach);
+    
+    // به‌روزرسانی USERS
+    USERS[coachId] = { 
+      name: newCoach.name, 
+      role: 'COACH',
+      phone: normalizedPhone 
+    };
+    
+    // ذخیره مربی‌ها در فایل
+    const phoneBasedCoaches = USERS_BY_ROLE.COACH.filter(user => 
+      typeof user === 'object' && user.phone && user.type === 'phone_based'
+    );
+    saveCoachesToFile(phoneBasedCoaches);
+    
+    console.log(`✅ [CONFIG] Coach ${instructorName} with phone ${normalizedPhone} added to COACH role and saved to file`);
+    return { success: true, message: 'مربی با موفقیت اضافه شد', coachId };
+    
+  } catch (error) {
+    console.error('❌ [CONFIG] Error adding coach by phone:', error);
+    return { success: false, message: 'خطا در اضافه کردن مربی' };
+  }
+};
+
+// حذف مربی بر اساس شماره تلفن
+const removeCoachByPhone = (phoneNumber) => {
+  try {
+    // نرمال‌سازی شماره تلفن
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    
+    // پیدا کردن مربی در لیست
+    const coachIndex = USERS_BY_ROLE.COACH.findIndex(user => {
+      if (typeof user === 'object' && user.phone) {
+        return normalizePhoneNumber(user.phone) === normalizedPhone;
+      }
+      return false;
+    });
+    
+    if (coachIndex === -1) {
+      console.log(`⚠️ [CONFIG] Phone ${normalizedPhone} is not a coach`);
+      return { success: false, message: 'این شماره تلفن مربی نیست' };
+    }
+    
+    const removedCoach = USERS_BY_ROLE.COACH[coachIndex];
+    
+    // حذف از لیست مربی‌ها
+    USERS_BY_ROLE.COACH.splice(coachIndex, 1);
+    
+    // حذف از USERS
+    if (removedCoach.id && USERS[removedCoach.id]) {
+      delete USERS[removedCoach.id];
+    }
+    
+    // به‌روزرسانی فایل مربی‌ها
+    const phoneBasedCoaches = USERS_BY_ROLE.COACH.filter(user => 
+      typeof user === 'object' && user.phone && user.type === 'phone_based'
+    );
+    saveCoachesToFile(phoneBasedCoaches);
+    
+    console.log(`✅ [CONFIG] Coach with phone ${normalizedPhone} removed from COACH role and file updated`);
+    return { success: true, message: 'مربی با موفقیت حذف شد' };
+    
+  } catch (error) {
+    console.error('❌ [CONFIG] Error removing coach by phone:', error);
+    return { success: false, message: 'خطا در حذف مربی' };
+  }
+};
+
+// بررسی اینکه آیا شماره تلفن مربی است یا نه
+const isPhoneCoach = (phoneNumber) => {
+  try {
+    // نرمال‌سازی شماره تلفن
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    
+    // جستجو در لیست مربی‌ها
+    const isCoach = USERS_BY_ROLE.COACH.some(user => {
+      if (typeof user === 'object' && user.phone) {
+        return normalizePhoneNumber(user.phone) === normalizedPhone;
+      }
+      return false;
+    });
+    
+    console.log(`🔍 [CONFIG] Phone ${normalizedPhone} isCoach: ${isCoach}`);
+    return isCoach;
+    
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking if phone is coach:', error);
+    return false;
+  }
+};
+
+// دریافت اطلاعات مربی بر اساس شماره تلفن
+const getCoachByPhone = (phoneNumber) => {
+  try {
+    // نرمال‌سازی شماره تلفن
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    
+    // جستجو در لیست مربی‌ها
+    const coach = USERS_BY_ROLE.COACH.find(user => {
+      if (typeof user === 'object' && user.phone) {
+        return normalizePhoneNumber(user.phone) === normalizedPhone;
+      }
+      return false;
+    });
+    
+    if (coach) {
+      console.log(`✅ [CONFIG] Found coach for phone ${normalizedPhone}:`, coach);
+      return coach;
+    } else {
+      console.log(`⚠️ [CONFIG] No coach found for phone ${normalizedPhone}`);
+      return null;
+    }
+    
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting coach by phone:', error);
+    return null;
+  }
+};
+
+// دریافت لیست تمام مربی‌ها با شماره تلفن
+const getAllCoachesWithPhones = () => {
+  try {
+    const coachesWithPhones = USERS_BY_ROLE.COACH.filter(user => 
+      typeof user === 'object' && user.phone
+    );
+    
+    console.log(`✅ [CONFIG] Retrieved ${coachesWithPhones.length} coaches with phones`);
+    return coachesWithPhones;
+    
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting coaches with phones:', error);
+    return [];
+  }
+};
+
 module.exports = {
   BOT_TOKEN,
   BASE_URL,
@@ -523,6 +739,12 @@ module.exports = {
   getAllUsersByRole,
   addUserToRole,
   removeUserFromRole,
+  // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
+  addCoachByPhone,
+  removeCoachByPhone,
+  isPhoneCoach,
+  getCoachByPhone,
+  getAllCoachesWithPhones,
   // ===== توابع جدید برای آرایه‌های به‌روزرسانی شده =====
   getCurrentAdminIds,
   getCurrentCoachId,

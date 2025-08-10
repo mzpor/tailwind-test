@@ -18,7 +18,10 @@ const {
   isRobotOnline,
   updateSystemStatus,
   getSystemStatus,
-  resetSystemStatus
+  resetSystemStatus,
+  // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
+  isPhoneCoach,
+  getCoachByPhone
 } = require('./3config');
 
 // تنظیمات  
@@ -180,20 +183,31 @@ async function saveVerificationCode(phone, code, userData) {
 // یافتن user_id بر اساس شماره تلفن
 async function findUserIdByPhone(phone) {
   try {
+    // ابتدا بررسی اینکه آیا شماره تلفن مربی است یا نه
+    const isCoach = isPhoneCoach(phone);
+    if (isCoach) {
+      console.log(`✅ [GATEWAY] Phone ${phone} is a COACH`);
+      const coachInfo = getCoachByPhone(phone);
+      if (coachInfo && coachInfo.id) {
+        console.log(`✅ [GATEWAY] Coach ID ${coachInfo.id} found for phone ${phone}`);
+        return coachInfo.id;
+      }
+    }
+    
     // جستجو در فایل registration_data.json
     const registrationData = await readJson('./registration_data.json', {});
     
     for (const [userId, userData] of Object.entries(registrationData)) {
       if (userData.phone === phone) {
-        console.log(`✅ user_id ${userId} برای شماره ${phone} یافت شد`);
+        console.log(`✅ [GATEWAY] user_id ${userId} برای شماره ${phone} یافت شد`);
         return userId;
       }
     }
     
-    console.log(`⚠️ user_id برای شماره ${phone} یافت نشد`);
+    console.log(`⚠️ [GATEWAY] user_id برای شماره ${phone} یافت نشد`);
     return null;
   } catch (error) {
-    console.error('❌ خطا در جستجوی user_id:', error);
+    console.error('❌ [GATEWAY] خطا در جستجوی user_id:', error);
     return null;
   }
 }

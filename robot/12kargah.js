@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const { hasPermission } = require('./6mid');
+const { addCoachByPhone, removeCoachByPhone } = require('./3config.js');
 
 class KargahModule {
   constructor() {
@@ -580,8 +581,25 @@ class KargahModule {
     }
     
     const workshopName = this.workshops[workshopId].instructor_name || 'نامشخص';
+    const instructorPhone = this.workshops[workshopId].instructor_phone;
+    
+    // حذف کارگاه
     delete this.workshops[workshopId];
     this.saveWorkshops();
+    
+    // حذف مربی از لیست COACH اگر شماره تلفن داشته باشد
+    if (instructorPhone && instructorPhone.trim() !== '') {
+      try {
+        const result = removeCoachByPhone(instructorPhone);
+        if (result.success) {
+          console.log(`✅ [KARGAH] Coach with phone ${instructorPhone} removed from COACH role`);
+        } else {
+          console.log(`⚠️ [KARGAH] Failed to remove coach: ${result.message}`);
+        }
+      } catch (error) {
+        console.error('❌ [KARGAH] Error removing coach from COACH role:', error);
+      }
+    }
     
     const text = `🗑️ کارگاه ${workshopName} با موفقیت حذف شد!`;
     const replyMarkup = this.getWorkshopManagementKeyboard();
@@ -607,6 +625,20 @@ class KargahModule {
       const workshopData = { ...this.tempData[userId] };
       this.workshops[workshopId] = workshopData;
       this.saveWorkshops();
+      
+      // اضافه کردن مربی به لیست COACH اگر شماره تلفن داشته باشد
+      if (workshopData.instructor_phone && workshopData.instructor_phone.trim() !== '') {
+        try {
+          const result = addCoachByPhone(workshopData.instructor_phone, workshopData.instructor_name);
+          if (result.success) {
+            console.log(`✅ [KARGAH] Coach ${workshopData.instructor_name} with phone ${workshopData.instructor_phone} added to COACH role`);
+          } else {
+            console.log(`⚠️ [KARGAH] Failed to add coach: ${result.message}`);
+          }
+        } catch (error) {
+          console.error('❌ [KARGAH] Error adding coach to COACH role:', error);
+        }
+      }
       
       // نمایش پیام موفقیت
       const responseText = `✅ کارگاه *${workshopData.instructor_name}* با موفقیت اضافه شد!\n\n🆔 *کد کارگاه:* ${workshopId}\n👨‍🏫 *مربی:* ${workshopData.instructor_name}\n💰 *هزینه:* ${workshopData.cost}\n🔗 *لینک:* ${workshopData.link}`;
