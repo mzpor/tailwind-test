@@ -57,6 +57,17 @@ const USERS_BY_ROLE = {
   ]
 };
 
+// ===== سیستم مدیریت دائمی اعضا =====
+let permanentMemberManager = null;
+
+// تلاش برای بارگذاری سیستم مدیریت دائمی اعضا
+try {
+  permanentMemberManager = require('./permanent_member_manager');
+  console.log('✅ [CONFIG] Permanent Member Manager loaded successfully');
+} catch (error) {
+  console.warn('⚠️ [CONFIG] Permanent Member Manager not available, using legacy system');
+}
+
 // ===== فایل ذخیره‌سازی مربی‌ها =====
 const COACHES_FILE = path.join(__dirname, 'data', 'coaches.json');
 
@@ -142,13 +153,88 @@ Object.entries(USERS_BY_ROLE).forEach(([role, users]) => {
 });
 
 // ===== توابع کمکی جدید =====
+
+// تابع ثبت‌نام عضو در سیستم دائمی
+const registerMemberInPermanentSystem = (userId, memberData) => {
+  if (permanentMemberManager) {
+    try {
+      const result = permanentMemberManager.registerMember(userId, memberData);
+      console.log(`✅ [CONFIG] Member ${userId} registered in permanent system`);
+      return result;
+    } catch (error) {
+      console.error(`❌ [CONFIG] Error registering member ${userId} in permanent system:`, error);
+      return null;
+    }
+  }
+  return null;
+};
+
+// تابع تخصیص نقش در سیستم دائمی
+const assignRoleInPermanentSystem = (userId, role) => {
+  if (permanentMemberManager) {
+    try {
+      const result = permanentMemberManager.assignRole(userId, role);
+      console.log(`✅ [CONFIG] Role ${role} assigned to member ${userId} in permanent system`);
+      return result;
+    } catch (error) {
+      console.error(`❌ [CONFIG] Error assigning role ${role} to member ${userId}:`, error);
+      return false;
+    }
+  }
+  return false;
+};
+
 const getUserInfo = (userId) => {
+  // اول بررسی کن که آیا سیستم مدیریت دائمی اعضا در دسترس است
+  if (permanentMemberManager) {
+    try {
+      const memberInfo = permanentMemberManager.getMemberInfo(userId);
+      if (memberInfo) {
+        console.log(`✅ [CONFIG] User ${userId} found in permanent member system with role: ${memberInfo.role}`);
+        return {
+          name: memberInfo.fullName || memberInfo.firstName || `کاربر ${userId}`,
+          role: memberInfo.role,
+          phone: memberInfo.phone || null
+        };
+      }
+    } catch (error) {
+      console.error(`❌ [CONFIG] Error getting member info for user ${userId}:`, error);
+    }
+  }
+
   // اگر کاربر در USERS موجود است، آن را برگردان
   if (USERS[userId]) {
     return USERS[userId];
   }
   
-  // اگر کاربر در USERS نیست، نام را از USER_NAMES بگیر و نقش STUDENT بده
+  // بررسی اینکه آیا کاربر در registration_data.json ثبت‌نام شده و شماره تلفنش مربی است
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const registrationFile = path.join(__dirname, 'registration_data.json');
+    
+    if (fs.existsSync(registrationFile)) {
+      const registrationData = JSON.parse(fs.readFileSync(registrationFile, 'utf8'));
+      const userData = registrationData[userId];
+      
+      if (userData && userData.phone && userData.phone.trim() !== '') {
+        // بررسی اینکه آیا شماره تلفن مربی است یا نه
+        const isCoach = isPhoneCoach(userData.phone);
+        if (isCoach) {
+          console.log(`✅ [CONFIG] User ${userId} with phone ${userData.phone} is identified as COACH`);
+          return { 
+            name: userData.fullName || userData.firstName || `کاربر ${userId}`, 
+            role: "COACH",
+            phone: userData.phone
+          };
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`❌ [CONFIG] Error checking registration data for user ${userId}:`, error);
+  }
+  
+  // اگر کاربر در USERS نیست و مربی هم نیست، نام را از USER_NAMES بگیر و نقش STUDENT بده
   const userName = USER_NAMES[userId] || `کاربر ${userId}`;
   return { name: userName, role: "STUDENT" };
 };
@@ -770,5 +856,8 @@ module.exports = {
   // ===== توابع مدیریت وضعیت سیستم =====
   updateSystemStatus,
   getSystemStatus,
-  resetSystemStatus
+  resetSystemStatus,
+  // ===== توابع سیستم مدیریت دائمی اعضا =====
+  registerMemberInPermanentSystem,
+  assignRoleInPermanentSystem
 };
