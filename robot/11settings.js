@@ -227,19 +227,16 @@ class SettingsModule {
     let registrationButtonText = '📝 ثبت‌نام: ✅ فعال';
     try {
       const { readJson } = require('./server/utils/jsonStore');
-      const { getRegistrationMonthText } = require('./1time');
       const siteStatus = await readJson('data/site-status.json', {
         registration: { enabled: true }
       });
       registrationStatus = siteStatus.registration.enabled ? '✅ فعال' : '❌ غیرفعال';
       
-      // تولید متن دکمه بر اساس وضعیت و ماه
+      // تولید متن دکمه بر اساس وضعیت (بدون ماه در تنظیمات ادمین)
       if (siteStatus.registration.enabled) {
-        const buttonText = getRegistrationMonthText(true);
-        registrationButtonText = `${buttonText}: ✅ فعال`;
+        registrationButtonText = `📝 ثبت نام: ✅ فعال`;
       } else {
-        const nextMonthText = getRegistrationMonthText(false);
-        registrationButtonText = `${nextMonthText}: ❌ غیرفعال`;
+        registrationButtonText = `📝 ثبت نام: ❌ غیرفعال`;
       }
     } catch (error) {
       console.log('⚠️ [SETTINGS] Could not read registration status, using default');

@@ -266,22 +266,12 @@ class SmartRegistrationModule {
 
       // 🔄 بررسی وضعیت ثبت‌نام و نمایش کیبورد شیشه‌ای
       if (siteStatus.registration.enabled) {
-        // ✅ ثبت‌نام فعال - بررسی منطق ماه
-        if (currentMonth === 'مرداد') {
-          // در ماه مرداد، امکان ثبت‌نام برای شهریور
-          const inlineText = `📝 **ثبت‌نام شهریور**\nثبت‌نام برای ماه شهریور فعال است`;
-          
-          await sendMessageWithInlineKeyboard(chatId, inlineText, this.buildInlineKeyboard([
-            [{ text: '📝 ثبت‌نام شهریور', callback_data: 'start_registration' }]
-          ]));
-        } else {
-          // در سایر ماه‌ها، نمایش ماه آینده
-          const inlineText = `📝 **ثبت‌نام ماه آینده**\nثبت‌نام برای ماه آینده فعال است`;
-          
-          await sendMessageWithInlineKeyboard(chatId, inlineText, this.buildInlineKeyboard([
-            [{ text: `📝 ثبت‌نام ${nextMonth}`, callback_data: 'start_registration' }]
-          ]));
-        }
+        // ✅ ثبت‌نام فعال - نمایش ماه آینده
+        const inlineText = `📝 **ثبت‌نام ${nextMonth}**\nثبت‌نام برای ماه ${nextMonth} فعال است`;
+        
+        await sendMessageWithInlineKeyboard(chatId, inlineText, this.buildInlineKeyboard([
+          [{ text: `📝 ثبت‌نام ${nextMonth}`, callback_data: 'start_registration' }]
+        ]));
       } else {
         // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
         const nextMonthText = `📅 **ثبت‌نام**\nثبت‌نام به زودی فعال خواهد شد`;
@@ -392,9 +382,13 @@ class SmartRegistrationModule {
 • قیمت مناسب`;
 
       if (siteStatus.registration.enabled) {
-        // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای
+        // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای با ماه آینده
+        const currentMonth = this.getCurrentPersianMonth();
+        const nextMonth = this.getNextPersianMonth(currentMonth);
+        const buttonText = `📝 ثبت‌نام ${nextMonth}`;
+        
         await sendMessageWithInlineKeyboard(chatId, schoolText + '\n\nبرای ثبت‌نام روی دکمه زیر کلیک کنید:', this.buildInlineKeyboard([
-          [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
+          [{ text: buttonText, callback_data: 'start_registration' }]
         ]));
       } else {
         // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
@@ -462,9 +456,13 @@ class SmartRegistrationModule {
 • پشتیبانی از همه دستگاه‌ها`;
 
       if (siteStatus.registration.enabled) {
-        // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای
+        // ✅ ثبت‌نام فعال - نمایش کیبورد شیشه‌ای با ماه آینده
+        const currentMonth = this.getCurrentPersianMonth();
+        const nextMonth = this.getNextPersianMonth(currentMonth);
+        const buttonText = `📝 ثبت‌نام ${nextMonth}`;
+        
         await sendMessageWithInlineKeyboard(chatId, botText + '\n\nبرای شروع استفاده از ربات، ثبت‌نام کنید:', this.buildInlineKeyboard([
-          [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
+          [{ text: buttonText, callback_data: 'start_registration' }]
         ]));
       } else {
         // ❌ ثبت‌نام غیرفعال - نمایش پیام "به زودی"
