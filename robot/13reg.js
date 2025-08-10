@@ -151,6 +151,10 @@ class SmartRegistrationModule {
     switch (data) {
       case 'start_registration':
         return this.handleRegistrationStart(chatId, userIdStr);
+      case 'school_intro':
+        return this.handleSchoolIntro(chatId);
+      case 'intro_quran_bot':
+        return this.handleQuranBotIntro(chatId);
       case 'edit_name':
         return this.handleEditName(chatId, userIdStr);
       case 'edit_national_id':
@@ -190,17 +194,48 @@ class SmartRegistrationModule {
 
         const welcomeText = `⚠️ ${firstName} عزیز، ثبت‌نام شما ناقص است!\n\n📋 اطلاعات فعلی:\n*نام*: ${fullName}\n*کد ملی*: ${nationalId}\n*تلفن*: ${phone}\n\n❌ فیلدهای ناقص: ${missingText}`;
 
-        await sendMessage(chatId, welcomeText, this.buildInlineKeyboard([
+        await sendMessageWithInlineKeyboard(chatId, welcomeText, this.buildInlineKeyboard([
           [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
           [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }],
           [{ text: '📱 تصحیح تلفن', callback_data: 'edit_phone' }]
         ]));
       }
     } else {
-      const welcomeText = '_🌟 خوش آمدید! به مدرسه تلاوت خوش آمدید!_';
-      await sendMessage(chatId, welcomeText, this.buildReplyKeyboard([
-        ['شروع', 'خروج'],
-        ['معرفی مدرسه', 'ثبت‌نام']
+      const welcomeText = `🌟 *خوش آمدید به مدرسه تلاوت!*
+
+🏫 **معرفی مدرسه:**
+مدرسه تلاوت با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم، خدمات متنوعی ارائه می‌دهد.
+
+📚 **کلاس‌های موجود:**
+• تجوید قرآن کریم
+• صوت و لحن
+• حفظ قرآن کریم
+• تفسیر قرآن
+
+🤖 **قابلیت‌های ربات:**
+• 📖 آموزش تلاوت قرآن کریم
+• 🧠 حفظ آیات کریمه
+• 📝 تفسیر آیات
+• 📊 آزمون‌های قرآنی
+• 📈 گزارش پیشرفت
+• 👥 مدیریت گروه‌ها
+• 📋 حضور و غیاب
+
+💎 **مزایای ثبت‌نام:**
+• اساتید مجرب
+• کلاس‌های آنلاین و حضوری
+• گواهی پایان دوره
+• قیمت مناسب
+
+📝 **ثبت‌نام ماهانه:**
+ثبت‌نام به صورت ماهانه انجام می‌شود و مدیر مدرسه زمان آن را مشخص می‌کند.
+
+👆 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+      await sendMessageWithInlineKeyboard(chatId, welcomeText, this.buildInlineKeyboard([
+        [{ text: '🏫 معرفی مدرسه', callback_data: 'school_intro' }],
+        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
+        [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
       ]));
     }
     return true;
@@ -226,7 +261,37 @@ class SmartRegistrationModule {
 
 برای ثبت‌نام روی دکمه زیر کلیک کنید:`;
 
-    await sendMessage(chatId, introText, this.buildInlineKeyboard([
+    await sendMessageWithInlineKeyboard(chatId, introText, this.buildInlineKeyboard([
+      [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
+    ]));
+    return true;
+  }
+
+  // 🤖 معرفی ربات
+  async handleQuranBotIntro(chatId) {
+    const introText = `_🤖 *معرفی ربات مدرسه تلاوت*
+
+ربات مدرسه تلاوت با قابلیت‌های پیشرفته، تجربه‌ای منحصر به فرد در آموزش قرآن کریم ارائه می‌دهد:
+
+🚀 *قابلیت‌های اصلی:*
+• 📖 آموزش تلاوت قرآن کریم
+• 🧠 حفظ آیات کریمه
+• 📝 تفسیر آیات
+• 📊 آزمون‌های قرآنی
+• 📈 گزارش پیشرفت
+• 👥 مدیریت گروه‌ها
+• 📋 حضور و غیاب
+
+💡 *ویژگی‌های منحصر به فرد:*
+• رابط کاربری ساده و کاربردی
+• پشتیبانی از زبان فارسی
+• پاسخگویی ۲۴ ساعته
+• امنیت بالا
+• پشتیبانی از همه دستگاه‌ها
+
+برای شروع استفاده از ربات، ثبت‌نام کنید:`;
+
+    await sendMessageWithInlineKeyboard(chatId, introText, this.buildInlineKeyboard([
       [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
     ]));
     return true;
@@ -283,7 +348,7 @@ class SmartRegistrationModule {
     ]));
 
     // دکمه تصحیح نام
-    await sendMessage(chatId, 'می‌خواهید نام را ویرایش کنید؟', this.buildInlineKeyboard([
+    await sendMessageWithInlineKeyboard(chatId, 'می‌خواهید نام را ویرایش کنید؟', this.buildInlineKeyboard([
       [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }]
     ]));
 
@@ -312,10 +377,10 @@ class SmartRegistrationModule {
       });
 
       // دکمه‌های تصحیح نام و کد ملی
-      await sendMessage(chatId, 'یا می‌توانید اطلاعات را تصحیح کنید:', this.buildInlineKeyboard([
-        [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
-        [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }]
-      ]));
+          await sendMessageWithInlineKeyboard(chatId, 'یا می‌توانید اطلاعات را تصحیح کنید:', this.buildInlineKeyboard([
+      [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
+      [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }]
+    ]));
 
       this.userStates[userId].step = 'phone';
       return true;
@@ -341,7 +406,7 @@ class SmartRegistrationModule {
       const statusText = `_📋 ${firstName} عزیز، حساب کاربری شما:\nنام: ${fullName}\nکد ملی: ${nationalId}\nتلفن: ${phoneNumber}_`;
 
       // دکمه‌های تصحیح همه فیلدها + تأیید نهایی
-      await sendMessage(chatId, statusText, this.buildInlineKeyboard([
+      await sendMessageWithInlineKeyboard(chatId, statusText, this.buildInlineKeyboard([
         [{ text: '✅ تأیید نهایی', callback_data: 'final_confirm' }],
         [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
         [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }],
@@ -478,7 +543,7 @@ ${firstName} عزیز، ثبت‌نام شما کامل نیست!
 
 لطفاً ابتدا ثبت‌نام خود را تکمیل کنید.`;
 
-        await sendMessage(chatId, warningText, this.buildInlineKeyboard([
+        await sendMessageWithInlineKeyboard(chatId, warningText, this.buildInlineKeyboard([
           [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
           [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }],
           [{ text: '📱 تصحیح تلفن', callback_data: 'edit_phone' }]
@@ -565,10 +630,5 @@ ${firstName} عزیز، ثبت‌نام شما کامل نیست!
   }
 }
 
-// ایجاد نمونه سراسری
-const smartRegistrationModule = new SmartRegistrationModule();
-
-module.exports = {
-  SmartRegistrationModule,
-  smartRegistrationModule
-};
+// export کلاس
+module.exports = SmartRegistrationModule;

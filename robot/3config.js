@@ -62,8 +62,9 @@ let permanentMemberManager = null;
 
 // تلاش برای بارگذاری سیستم مدیریت دائمی اعضا
 try {
-  permanentMemberManager = require('./permanent_member_manager');
-  console.log('✅ [CONFIG] Permanent Member Manager loaded successfully');
+  const PermanentMemberManager = require('./permanent_member_manager');
+  permanentMemberManager = new PermanentMemberManager();
+  console.log('✅ [CONFIG] Permanent Member Manager loaded and instantiated successfully');
 } catch (error) {
   console.warn('⚠️ [CONFIG] Permanent Member Manager not available, using legacy system');
 }

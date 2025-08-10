@@ -27,7 +27,7 @@ const { logError, logConnectionStatus } = require('./8logs');
 const { BASE_URL } = require('./3config');
 const SettingsModule = require('./11settings');
 const KargahModule = require('./12kargah');
-const RegistrationModule = require('./registration_module').RegistrationModule;
+const SmartRegistrationModule = require('./13reg');
 const { roleManager } = require('./role_manager');
 
 let lastId = 0;
@@ -274,89 +274,28 @@ async function handleRoleMessage(msg, role) {
   let reply = '';
   let keyboard = null;
   
-  if (msg.text === 'شروع' || msg.text === '/start') {
-    // بررسی نقش کاربر با استفاده از ساختار مرکزی
-    const userRole = getUserRole(msg.from.id);
-    console.log(`🔍 [POLLING] User role determined: ${userRole}`);
-    
-    if (userRole === ROLES.STUDENT) {
-      // برای قرآن آموز - بررسی ثبت‌نام
-      const registrationModule = require('./registration_module');
-      const regModule = new registrationModule();
+      if (msg.text === 'شروع' || msg.text === '/start') {
+      // بررسی نقش کاربر با استفاده از ساختار مرکزی
+      const userRole = getUserRole(msg.from.id);
+      console.log(`🔍 [POLLING] User role determined: ${userRole}`);
       
-      if (regModule.isUserRegistered(msg.from.id.toString())) {
-        // کاربر ثبت‌نام شده - نشان دادن پنل قرآن آموز
-        const inlineKeyboard = [
-          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-          [{ text: '📝 ثبت نام', callback_data: 'student_registration' }]
-        ];
-        
-        reply = `📖 پنل قرآن آموز
-
-📋 گزینه‌های موجود:
-• 🤖 معرفی ربات
-• 📝 ثبت نام
-
-👆 لطفاً گزینه مورد نظر را انتخاب کنید:
-⏰ ${getTimeStamp()}`;
-        
-        await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+      if (userRole === ROLES.STUDENT) {
+        // برای قرآن آموز - استفاده از ماژول ثبت‌نام
+        const regModule = new SmartRegistrationModule();
+        await regModule.handleStartCommand(msg.chat.id, msg.from.id.toString());
         return; // ادامه حلقه بدون ارسال پیام معمولی
       } else {
-        // کاربر ثبت‌نام نشده - نشان دادن پیام خوش‌آمدگویی
-        const welcomeText = `🌟 *خوش آمدید به مدرسه تلاوت!*
-
-🏫 **معرفی مدرسه:**
-مدرسه تلاوت با بیش از ۱۰ سال سابقه در زمینه آموزش قرآن کریم، خدمات متنوعی ارائه می‌دهد.
-
-📚 **کلاس‌های موجود:**
-• تجوید قرآن کریم
-• صوت و لحن
-• حفظ قرآن کریم
-• تفسیر قرآن
-
-🤖 **قابلیت‌های ربات:**
-• 📖 آموزش تلاوت قرآن کریم
-• 🧠 حفظ آیات کریمه
-• 📝 تفسیر آیات
-• 📊 آزمون‌های قرآنی
-• 📈 گزارش پیشرفت
-• 👥 مدیریت گروه‌ها
-• 📋 حضور و غیاب
-
-💎 **مزایای ثبت‌نام:**
-• اساتید مجرب
-• کلاس‌های آنلاین و حضوری
-• گواهی پایان دوره
-• قیمت مناسب
-
-📝 **ثبت‌نام ماهانه:**
-ثبت‌نام به صورت ماهانه انجام می‌شود و مدیر مدرسه زمان آن را مشخص می‌کند.
-
-👆 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
-⏰ ${getTimeStamp()}`;
-
-        const inlineKeyboard = [
-          [{ text: '🏫 معرفی مدرسه', callback_data: 'school_intro' }],
-          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-          [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }]
-        ];
-        
-        await sendMessageWithInlineKeyboard(msg.chat.id, welcomeText, inlineKeyboard);
-        return; // ادامه حلقه بدون ارسال پیام معمولی
+        // برای سایر نقش‌ها - پنل معمولی با بررسی دسترسی
+        const hasAccess = hasPermission(msg.from.id, role);
+        if (hasAccess) {
+          reply = `${config.emoji} پنل ${config.name} فعال شد\n⏰ ${getTimeStamp()}`;
+          keyboard = config.keyboard;
+          console.log(`✅ [POLLING] Access granted for user ${msg.from.id} to role ${role}`);
+        } else {
+          reply = `❌ شما دسترسی لازم برای این پنل را ندارید.\nنقش شما: ${userRole}`;
+          console.log(`❌ [POLLING] Access denied for user ${msg.from.id} to role ${role}`);
+        }
       }
-    } else {
-      // برای سایر نقش‌ها - پنل معمولی با بررسی دسترسی
-      const hasAccess = hasPermission(msg.from.id, role);
-      if (hasAccess) {
-        reply = `${config.emoji} پنل ${config.name} فعال شد\n⏰ ${getTimeStamp()}`;
-        keyboard = config.keyboard;
-        console.log(`✅ [POLLING] Access granted for user ${msg.from.id} to role ${role}`);
-      } else {
-        reply = `❌ شما دسترسی لازم برای این پنل را ندارید.\nنقش شما: ${userRole}`;
-        console.log(`❌ [POLLING] Access denied for user ${msg.from.id} to role ${role}`);
-      }
-    }
   } else if (msg.text === 'خروج') {
     reply = `👋 پنل ${config.name} بسته شد\n⏰ ${getTimeStamp()}`;
     keyboard = config.keyboard;
@@ -796,9 +735,8 @@ function startPolling() {
           } else if (callback_query.data === 'start_registration') {
             
             console.log('🔄 [POLLING] Start registration callback detected');
-            // پردازش شروع ثبت‌نام با استفاده از ماژول ثبت‌نام
-            const registrationModule = require('./registration_module');
-            const regModule = new registrationModule();
+            // پردازش شروع ثبت‌نام با استفاده از ماژول ثبت‌نام هوشمند
+            const regModule = new SmartRegistrationModule();
             const success = await regModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
             
             if (!success) {
@@ -808,9 +746,8 @@ function startPolling() {
           } else if (callback_query.data === 'student_registration') {
             
             console.log('🔄 [POLLING] Student registration callback detected');
-            // پردازش ثبت‌نام قرآن آموز با استفاده از ماژول ثبت‌نام
-            const registrationModule = require('./registration_module');
-            const regModule = new registrationModule();
+            // پردازش ثبت‌نام قرآن آموز با استفاده از ماژول ثبت‌نام هوشمند
+            const regModule = new SmartRegistrationModule();
             const success = await regModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
             
             if (!success) {
@@ -898,11 +835,13 @@ function startPolling() {
                      callback_query.data.startsWith('edit_') || 
                      callback_query.data.startsWith('final_confirm') || 
                      callback_query.data.startsWith('quran_student_panel') || 
-                     callback_query.data.startsWith('complete_registration')) {
+                     callback_query.data.startsWith('complete_registration') ||
+                     callback_query.data === 'school_intro' ||
+                     callback_query.data === 'intro_quran_bot') {
             console.log('🔄 [POLLING] Registration callback detected');
             console.log(`🔄 [POLLING] Registration callback data: ${callback_query.data}`);
             // پردازش callback های ثبت‌نام
-            const regModule = new RegistrationModule();
+            const regModule = new SmartRegistrationModule();
             const success = await regModule.handleCallback(callback_query);
             
             if (!success) {
@@ -1017,9 +956,9 @@ function startPolling() {
               await handleRoleMessage(msg, userRole);
             }
           } else {
-            // برای قرآن‌آموز و ناشناس‌ها، از registration module استفاده کن
-            console.log(`🔄 [POLLING] Student/Unknown user detected, using registration module`);
-            const regModule = new RegistrationModule();
+            // برای قرآن‌آموز و ناشناس‌ها، از ماژول ثبت‌نام هوشمند استفاده کن
+            console.log(`🔄 [POLLING] Student/Unknown user detected, using smart registration module`);
+            const regModule = new SmartRegistrationModule();
             const success = await regModule.handleMessage(msg);
             
             if (!success) {
