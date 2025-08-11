@@ -15,7 +15,7 @@ const {
   getAvailableRoles,
   getAllUsersWithRoles
 } = require('./6mid');
-const { ROLES, USERS_BY_ROLE } = require('./3config');
+const { ROLES, USERS_BY_ROLE, isButtonVisible, setButtonVisibility, getButtonVisibilityConfig } = require('./3config');
 const { 
   getCurrentCoachId, 
   getCurrentAssistantId, 
@@ -62,7 +62,7 @@ const roleConfig = {
     name: 'مدیر مدرسه',
     emoji: '🛡️',
     panelText: 'مدیر',
-    keyboard: [['شروع', 'خروج'], ['ربات', 'مدیر', 'تنظیمات', 'نقش‌ها']],
+    get keyboard() { return generateDynamicKeyboard(ROLES.SCHOOL_ADMIN); },
     commands: ['/شروع', '/خروج', '/ربات', '/مدیر', '/تنظیمات', '/کارگاه', '/نقش‌ها']
   },
 
@@ -70,24 +70,52 @@ const roleConfig = {
     name: 'مربی',
     emoji: '🏋️',
     panelText: 'مربی',
-    keyboard: [['شروع', 'خروج'], ['ربات', 'مربی']],
+    get keyboard() { return generateDynamicKeyboard(ROLES.COACH); },
     commands: ['/شروع', '/خروج', '/ربات', '/مربی']
   },
   [ROLES.ASSISTANT]: {
     name: 'کمک مربی',
     emoji: '👨‍🏫',
     panelText: 'کمک مربی',
-    keyboard: [['شروع', 'خروج'], ['ربات', 'کمک مربی']],
+    get keyboard() { return generateDynamicKeyboard(ROLES.ASSISTANT); },
     commands: ['/شروع', '/خروج', '/ربات', '/کمک مربی']
   },
   [ROLES.STUDENT]: {
     name: 'قرآن آموز',
     emoji: '📖',
     panelText: 'قرآن آموز',
-    keyboard: [['شروع', 'خروج'], ['ربات', 'قرآن آموز']],
+    get keyboard() { return generateDynamicKeyboard(ROLES.STUDENT); },
     commands: ['/شروع', '/خروج', '/ربات', '/قرآن آموز']
   }
 };
+
+// تابع تولید keyboard بر اساس کانفیگ نمایش دکمه‌ها
+function generateDynamicKeyboard(role) {
+  const baseKeyboard = [['شروع', 'خروج']];
+  const secondRow = [];
+  
+  // اضافه کردن دکمه ربات بر اساس کانفیگ
+  if (isButtonVisible('ROBOT_BUTTON')) {
+    secondRow.push('ربات');
+  }
+  
+  // اضافه کردن سایر دکمه‌ها بر اساس نقش
+  if (role === ROLES.SCHOOL_ADMIN) {
+    secondRow.push('مدیر', 'تنظیمات', 'نقش‌ها');
+  } else if (role === ROLES.COACH) {
+    secondRow.push('مربی');
+  } else if (role === ROLES.ASSISTANT) {
+    secondRow.push('کمک مربی');
+  } else if (role === ROLES.STUDENT) {
+    secondRow.push('قرآن آموز');
+  }
+  
+  if (secondRow.length > 0) {
+    baseKeyboard.push(secondRow);
+  }
+  
+  return baseKeyboard;
+}
 
 console.log('🔧 [POLLING] roleConfig loaded:', JSON.stringify(roleConfig, null, 2));
 
@@ -299,6 +327,35 @@ async function handleRoleMessage(msg, role) {
   } else if (msg.text === 'خروج') {
     reply = `👋 پنل ${config.name} بسته شد\n⏰ ${getTimeStamp()}`;
     keyboard = config.keyboard;
+  } else if (msg.text === 'ربات') {
+    // دستور ربات - فقط برای مدیر مدرسه
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند از دستور ربات استفاده کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش وضعیت فعلی و امکان تغییر
+      const currentStatus = isButtonVisible('ROBOT_BUTTON');
+      const statusText = currentStatus ? 'نمایش داده می‌شود' : 'نمایش داده نمی‌شود';
+      const toggleText = currentStatus ? 'مخفی کردن' : 'نمایش دادن';
+      const toggleValue = currentStatus ? 0 : 1;
+      
+      const inlineKeyboard = [
+        [{ text: `🔄 ${toggleText} دکمه ربات`, callback_data: `toggle_robot_button_${toggleValue}` }],
+        [{ text: '📊 وضعیت فعلی', callback_data: 'robot_button_status' }],
+        [{ text: '🔙 بازگشت', callback_data: 'back_to_main' }]
+      ];
+      
+      reply = `🤖 کنترل دکمه ربات
+
+📋 وضعیت فعلی:
+• دکمه ربات: ${statusText}
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+      return; // ادامه حلقه بدون ارسال پیام معمولی
+    }
   } else if (msg.text === config.panelText) {
     // if (!canSendMessage(msg.chat.id, 'panel', 5000)) {
     //   return; // پیام را نادیده بگیر
@@ -726,6 +783,65 @@ function startPolling() {
 ⏰ ${getTimeStamp()}`;
             
             await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+          } else if (callback_query.data.startsWith('toggle_robot_button_')) {
+            // تغییر وضعیت نمایش دکمه ربات
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
+              return;
+            }
+            
+            const newValue = parseInt(callback_query.data.split('_')[3]);
+            const success = setButtonVisibility('ROBOT_BUTTON', newValue === 1);
+            
+            if (success) {
+              const statusText = newValue === 1 ? 'نمایش داده می‌شود' : 'نمایش داده نمی‌شود';
+              const reply = `✅ دکمه ربات با موفقیت تغییر کرد
+
+📊 وضعیت جدید:
+• دکمه ربات: ${statusText}
+
+🔄 تغییرات در پنل بعدی اعمال خواهد شد.
+
+⏰ ${getTimeStamp()}`;
+              
+              await safeSendMessage(callback_query.from.id, reply);
+            } else {
+              await answerCallbackQuery(callback_query.id, '❌ خطا در تغییر وضعیت دکمه ربات', true);
+            }
+          } else if (callback_query.data === 'robot_button_status') {
+            // نمایش وضعیت فعلی دکمه ربات
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
+              return;
+            }
+            
+            const currentStatus = isButtonVisible('ROBOT_BUTTON');
+            const statusText = currentStatus ? 'نمایش داده می‌شود' : 'نمایش داده نمی‌شود';
+            const config = getButtonVisibilityConfig();
+            
+            const reply = `📊 وضعیت دکمه ربات
+
+🔍 اطلاعات فعلی:
+• دکمه ربات: ${statusText}
+• مقدار کانفیگ: ${config.ROBOT_BUTTON}
+
+⚙️ برای تغییر وضعیت، از منوی ربات استفاده کنید.
+
+⏰ ${getTimeStamp()}`;
+            
+            await safeSendMessage(callback_query.from.id, reply);
+          } else if (callback_query.data === 'back_to_main') {
+            // بازگشت به منوی اصلی
+            const role = getUserRole(callback_query.from.id);
+            const config = roleConfig[role];
+            
+            if (config) {
+              const reply = `${config.emoji} پنل ${config.name} فعال شد\n⏰ ${getTimeStamp()}`;
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+            } else {
+              const reply = '❌ خطا در بارگذاری پنل. لطفاً دوباره تلاش کنید.';
+              await safeSendMessage(callback_query.from.id, reply);
+            }
           } else if (callback_query.data === 'school_intro') {
             
             console.log('🔄 [POLLING] School intro callback detected');

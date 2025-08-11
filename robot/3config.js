@@ -683,6 +683,36 @@ getGroupName(REPORT_GROUP_ID).then(name => {
   console.log('🔧 [CONFIG] REPORT_GROUP_NAME: Error fetching name');
 });
 
+// ===== کنترل نمایش دکمه‌ها در پنل مدیر =====
+const BUTTON_VISIBILITY_CONFIG = {
+  ROBOT_BUTTON: 1,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
+  // در آینده می‌توان دکمه‌های بیشتری اضافه کرد
+  // SETTINGS_BUTTON: 1,
+  // ROLES_BUTTON: 1,
+  // EXIT_BUTTON: 1
+};
+
+// تابع بررسی نمایش دکمه
+const isButtonVisible = (buttonName) => {
+  return BUTTON_VISIBILITY_CONFIG[buttonName] === 1;
+};
+
+// تابع تغییر وضعیت نمایش دکمه
+const setButtonVisibility = (buttonName, visible) => {
+  if (BUTTON_VISIBILITY_CONFIG.hasOwnProperty(buttonName)) {
+    BUTTON_VISIBILITY_CONFIG[buttonName] = visible ? 1 : 0;
+    console.log(`🔄 [BUTTON] Button ${buttonName} visibility set to: ${visible ? 'visible' : 'hidden'}`);
+    return true;
+  }
+  console.warn(`⚠️ [BUTTON] Button ${buttonName} not found in config`);
+  return false;
+};
+
+// تابع دریافت تمام تنظیمات نمایش دکمه‌ها
+const getButtonVisibilityConfig = () => {
+  return { ...BUTTON_VISIBILITY_CONFIG };
+};
+
 // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
 
 // اضافه کردن مربی بر اساس شماره تلفن
@@ -911,5 +941,10 @@ module.exports = {
   resetSystemStatus,
   // ===== توابع سیستم مدیریت دائمی اعضا =====
   registerMemberInPermanentSystem,
-  assignRoleInPermanentSystem
+  assignRoleInPermanentSystem,
+  // ===== توابع کنترل نمایش دکمه‌ها =====
+  isButtonVisible,
+  setButtonVisibility,
+  getButtonVisibilityConfig,
+  BUTTON_VISIBILITY_CONFIG
 };
