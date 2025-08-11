@@ -37,8 +37,8 @@ const USERS_BY_ROLE = {
   SCHOOL_ADMIN: [
   //  1638058362,
     1775811194,
-    //1114227010
-    574330749
+    1114227010
+  //574330749
  //  { id: 1638058362,   name: "لشگری"     }       ,
   // { id: 1775811194,       name: "محرابی"       }
    // { id: 1114227010, name: "محمد ۱" } - حذف شده توسط مدیر نقش‌ها
@@ -495,6 +495,23 @@ function updateSystemStatus(system, status) {
       };
       
       console.log(`🔄 [STATUS] ${system} ${status ? 'آنلاین' : 'آفلاین'} شد`);
+      
+      // ارسال event برای SSE clients
+      try {
+        const { reportEvents } = require('./gateway_bale');
+        if (reportEvents) {
+          reportEvents.emit('systemStatusChanged', {
+            system: system,
+            status: status,
+            timestamp: new Date().toISOString(),
+            action: status ? 'آنلاین شد' : 'آفلاین شد'
+          });
+          console.log(`📡 [STATUS] System status change event emitted for ${system}`);
+        }
+      } catch (error) {
+        console.log('⚠️ [STATUS] Could not emit system status change event:', error.message);
+      }
+      
       return saveReportsConfig(config);
     } else {
       console.log(`⚠️ [STATUS] ${system} وضعیت تغییری نکرده: ${status}`);
@@ -567,6 +584,24 @@ function setReportsEnabled(enabled, updatedBy = 'unknown', updatedFrom = 'unknow
   config.lastUpdate = new Date().toISOString();
   config.updatedBy = updatedBy;
   config.updatedFrom = updatedFrom;
+  
+  // ارسال event برای SSE clients
+  try {
+    const { reportEvents } = require('./gateway_bale');
+    if (reportEvents) {
+      reportEvents.emit('reportChanged', {
+        enabled: enabled,
+        lastUpdate: config.lastUpdate,
+        updatedBy: updatedBy,
+        updatedFrom: updatedFrom,
+        timestamp: Date.now()
+      });
+      console.log(`📡 [REPORTS] Report status change event emitted: ${enabled ? 'فعال' : 'غیرفعال'}`);
+    }
+  } catch (error) {
+    console.log('⚠️ [REPORTS] Could not emit report status change event:', error.message);
+  }
+  
   return saveReportsConfig(config);
 }
 
@@ -576,6 +611,21 @@ function updateRobotHeartbeat() {
     const config = loadReportsConfig();
     config.robotOnline = true;
     config.lastRobotPing = new Date().toISOString();
+    
+    // ارسال event برای SSE clients
+    try {
+      const { reportEvents } = require('./gateway_bale');
+      if (reportEvents) {
+        reportEvents.emit('robotHeartbeat', {
+          robotOnline: true,
+          lastRobotPing: config.lastRobotPing,
+          timestamp: Date.now()
+        });
+        console.log(`📡 [ROBOT] Robot heartbeat event emitted`);
+      }
+    } catch (error) {
+      console.log('⚠️ [ROBOT] Could not emit robot heartbeat event:', error.message);
+    }
     
     return saveReportsConfig(config);
   } catch (error) {

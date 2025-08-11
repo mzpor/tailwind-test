@@ -355,6 +355,167 @@ app.post('/api/toggle-reports', async (req, res) => {
 // اندپوینت وضعیت برای تست سریع
 app.get('/api/health', (req,res)=> res.json({ ok:true, ts: Date.now() }));
 
+// اندپوینت گزارش‌های ترکیبی برای صفحه AdminReports
+app.get('/api/reports/combined', async (req, res) => {
+  try {
+    console.log('📊 [API] /api/reports/combined requested');
+    
+    // دریافت وضعیت سیستم‌ها
+    const status = getSystemStatus();
+    const robotIcon = status.robot ? '🟢' : '🔴';
+    const gatewayIcon = status.gateway ? '🟢' : '🔴';
+    const websiteIcon = status.website ? '🟢' : '🔴';
+    
+    // دریافت لیست گروه‌ها
+    const groupsList = await getGroupsListForAPI();
+    
+    // دریافت تنظیمات گزارش‌ها
+    const config = loadReportsConfig();
+    
+    // دریافت وضعیت ثبت‌نام و نظرسنجی
+    let registrationEnabled = true;
+    let surveyEnabled = true;
+    let registrationUpdatedFrom = 'سیستم';
+    let surveyUpdatedFrom = 'سیستم';
+    
+    try {
+      const siteStatus = await readJson('data/site-status.json', {});
+      if (siteStatus.registration) {
+        registrationEnabled = siteStatus.registration.enabled;
+        registrationUpdatedFrom = siteStatus.registration.updatedFrom || 'سیستم';
+      }
+      if (siteStatus.survey) {
+        surveyEnabled = siteStatus.survey.enabled;
+        surveyUpdatedFrom = siteStatus.survey.updatedFrom || 'سیستم';
+      }
+    } catch (error) {
+      console.log('⚠️ [API] Could not read site status, using defaults');
+    }
+    
+    // آیکون‌های تنظیمات
+    const reportsIcon = config.enabled ? '🟢' : '🔴';
+    const registrationIcon = registrationEnabled ? '🟢' : '🔴';
+    const surveyIcon = surveyEnabled ? '🟢' : '🔴';
+    
+    // محاسبه آخرین تغییر از بین همه تنظیمات و وضعیت سیستم‌ها
+    let lastChangeInfo = 'نامشخص';
+    let latestTimestamp = null;
+    let lastChangedItem = '';
+    let lastChangedFrom = '';
+    let lastChangedStatus = true;
+    
+    // بررسی زمان تغییر گزارش‌ها
+    if (config.lastUpdate) {
+      latestTimestamp = new Date(config.lastUpdate);
+      lastChangedItem = 'گزارش‌ها';
+      lastChangedFrom = config.updatedFrom || 'سیستم';
+      lastChangedStatus = config.enabled;
+    }
+    
+    // بررسی زمان تغییر نظرسنجی و ثبت‌نام
+    try {
+      const siteStatus = await readJson('data/site-status.json', {});
+      
+      // بررسی نظرسنجی
+      if (siteStatus.survey?.lastUpdate) {
+        const surveyTime = new Date(siteStatus.survey.lastUpdate);
+        if (!latestTimestamp || surveyTime > latestTimestamp) {
+          latestTimestamp = surveyTime;
+          lastChangedItem = 'نظرسنجی';
+          lastChangedFrom = siteStatus.survey.updatedFrom || 'سیستم';
+          lastChangedStatus = surveyEnabled;
+        }
+      }
+      
+      // بررسی ثبت‌نام
+      if (siteStatus.registration?.lastUpdate) {
+        const registrationTime = new Date(siteStatus.registration.lastUpdate);
+        if (!latestTimestamp || registrationTime > latestTimestamp) {
+          latestTimestamp = registrationTime;
+          lastChangedItem = 'ثبت‌نام';
+          lastChangedFrom = siteStatus.registration.updatedFrom || 'سیستم';
+          lastChangedStatus = registrationEnabled;
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ [API] Could not read site status for latest change time');
+    }
+    
+    // بررسی زمان تغییر وضعیت سیستم‌ها (ربات، اتصال، سایت)
+    if (status.lastChange?.timestamp) {
+      const systemChangeTime = new Date(status.lastChange.timestamp);
+      if (!latestTimestamp || systemChangeTime > latestTimestamp) {
+        latestTimestamp = systemChangeTime;
+        
+        // تعیین نام و وضعیت سیستم
+        const systemNames = {
+          robot: 'ربات',
+          gateway: 'اتصال', 
+          website: 'سایت'
+        };
+        
+        lastChangedItem = systemNames[status.lastChange.system] || status.lastChange.system;
+        lastChangedFrom = 'سیستم';
+        lastChangedStatus = status.lastChange.status;
+      }
+    }
+    
+    // تشخیص آیکون و متن نهایی
+    if (lastChangedItem && lastChangedFrom) {
+      const statusIcon = lastChangedStatus ? '🟢' : '🔴';
+      const statusText = lastChangedStatus ? 'فعال' : 'غیرفعال';
+      
+      lastChangeInfo = `${statusIcon} ${lastChangedItem} ${statusText} (${lastChangedFrom})`;
+    }
+    
+    // فرمت زمان فارسی
+    const moment = require('moment-jalaali');
+    const now = moment();
+    const currentTime = now.format('HH:mm:ss - jD jMMMM jYYYY').replace(/^ا/, '');
+    
+    // ساخت پاسخ API
+    const response = {
+      systemStatus: {
+        robot: status.robot,
+        gateway: status.gateway,
+        website: status.website,
+        lastUpdate: currentTime
+      },
+      reports: {
+        enabled: config.enabled,
+        lastUpdate: config.lastUpdate || 'نامشخص'
+      },
+      lastRobotPing: config.lastRobotPing || 'نامشخص',
+      groups: groupsList.map(group => ({
+        id: group.id,
+        title: group.title,
+        memberCount: group.memberCount
+      })),
+      websiteLog: config.websiteLog || [],
+      lastChangeInfo: lastChangeInfo,
+      currentTime: currentTime,
+      statusIcons: {
+        robot: robotIcon,
+        gateway: gatewayIcon,
+        website: websiteIcon,
+        reports: reportsIcon,
+        registration: registrationIcon,
+        survey: surveyIcon
+      }
+    };
+    
+    console.log('✅ [API] /api/reports/combined response sent successfully');
+    res.json(response);
+    
+  } catch (error) {
+    console.error('❌ [API] Error in /api/reports/combined:', error);
+    res.status(500).json({ 
+      error: 'خطا در دریافت گزارش‌های ترکیبی',
+      details: error.message 
+    });
+  }
+});
+
 // اندپوینت ریست وضعیت سیستم‌ها (برای تست)
 app.post('/api/reset-system-status', async (req, res) => {
   try {
@@ -963,7 +1124,13 @@ ${registrationIcon} ثبت‌نام (${registrationUpdatedFrom})
 }
 
 // Export reportEvents و sendSystemStatusDashboard برای استفاده در سایر ماژول‌ها
-module.exports = { reportEvents, sendSystemStatusDashboard, sendSettingsDashboard, sendCombinedDashboard };
+module.exports = { 
+  reportEvents, 
+  sendSystemStatusDashboard, 
+  sendSettingsDashboard, 
+  sendCombinedDashboard,
+  getGroupsListForAPI 
+};
 
 // تابع announceRobotOnline حذف شد - ربات خودش وضعیتش را مدیریت می‌کند
 
@@ -971,6 +1138,68 @@ module.exports = { reportEvents, sendSystemStatusDashboard, sendSettingsDashboar
 let groupsCache = null;
 let groupsCacheTime = 0;
 const GROUPS_CACHE_DURATION = 5 * 60 * 1000; // 5 دقیقه
+
+// تابع جدید برای API endpoint که آرایه برمی‌گرداند
+async function getGroupsListForAPI() {
+  try {
+    const { GROUP_NAMES } = require('./3config');
+    const groups = [];
+    
+    for (const [groupId, groupName] of Object.entries(GROUP_NAMES)) {
+      try {
+        // دریافت اطلاعات گروه از API بله
+        const response = await axios.post(`${BASE_URL}/getChat`, {
+          chat_id: groupId
+        });
+        
+        if (response.data && response.data.ok) {
+          const chat = response.data.result;
+          let memberCount = 'نامشخص';
+          let adminCount = 'نامشخص';
+          
+          // تلاش برای دریافت تعداد اعضا
+          if (chat.members_count) {
+            memberCount = chat.members_count;
+          }
+          
+          // تلاش برای دریافت لیست ادمین‌ها
+          try {
+            const adminResponse = await axios.post(`${BASE_URL}/getChatAdministrators`, {
+              chat_id: groupId
+            });
+            
+            if (adminResponse.data && adminResponse.data.ok) {
+              adminCount = adminResponse.data.result.length;
+            }
+          } catch (adminError) {
+            console.log(`⚠️ [GROUPS-API] Could not get admin count for group ${groupId}`);
+          }
+          
+          groups.push({
+            id: groupId,
+            title: groupName,
+            memberCount: memberCount,
+            adminCount: adminCount
+          });
+        }
+      } catch (error) {
+        console.log(`⚠️ [GROUPS-API] Error getting info for group ${groupId}:`, error.message);
+        // اضافه کردن گروه با اطلاعات محدود
+        groups.push({
+          id: groupId,
+          title: groupName,
+          memberCount: 'نامشخص',
+          adminCount: 'نامشخص'
+        });
+      }
+    }
+    
+    return groups;
+  } catch (error) {
+    console.error('❌ [GROUPS-API] Error getting groups list for API:', error);
+    return [];
+  }
+}
 
 // شناسه پیام آخرین داشبورد جامع سیستم (برای حذف پیام قبلی)
 let lastCombinedDashboardMessageId = null;
@@ -1392,14 +1621,125 @@ app.get('/api/site-events', (req, res) => {
     res.write(`data: ${JSON.stringify({type: 'survey', ...data})}\n\n`);
   };
 
+  // گوش دادن به رویدادهای ربات
+  const onRobotHeartbeat = (data) => {
+    res.write(`data: ${JSON.stringify({type: 'robot_heartbeat', ...data})}\n\n`);
+  };
+
   reportEvents.on('registration-change', onRegistrationChange);
   reportEvents.on('survey-change', onSurveyChange);
+  reportEvents.on('robotHeartbeat', onRobotHeartbeat);
 
   // پاکسازی در هنگام قطع اتصال
   req.on('close', () => {
     clearInterval(heartbeat);
     reportEvents.removeListener('registration-change', onRegistrationChange);
     reportEvents.removeListener('survey-change', onSurveyChange);
+    reportEvents.removeListener('robotHeartbeat', onRobotHeartbeat);
+  });
+});
+
+// SSE endpoint برای گزارش‌های real-time
+app.get('/api/reports/stream', (req, res) => {
+  console.log('📡 [SSE] New client connected for reports stream');
+  
+  // تنظیمات SSE
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // ارسال وضعیت فعلی به کلاینت جدید
+  const sendCurrentStatus = async () => {
+    try {
+      // دریافت وضعیت فعلی
+      const status = getSystemStatus();
+      const config = loadReportsConfig();
+      
+      // دریافت وضعیت ثبت‌نام و نظرسنجی
+      let registrationEnabled = true;
+      let surveyEnabled = true;
+      
+      try {
+        const siteStatus = await readJson('data/site-status.json', {});
+        if (siteStatus.registration) {
+          registrationEnabled = siteStatus.registration.enabled;
+        }
+        if (siteStatus.survey) {
+          surveyEnabled = siteStatus.survey.enabled;
+        }
+      } catch (error) {
+        console.log('⚠️ [SSE] Could not read site status');
+      }
+      
+      const data = {
+        type: 'status_update',
+        systemStatus: {
+          robot: status.robot,
+          gateway: status.gateway,
+          website: status.website
+        },
+        reports: {
+          enabled: config.enabled,
+          lastUpdate: config.lastUpdate
+        },
+        registration: {
+          enabled: registrationEnabled
+        },
+        survey: {
+          enabled: surveyEnabled
+        },
+        timestamp: Date.now()
+      };
+      
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      console.log('📡 [SSE] Current status sent to new client');
+    } catch (error) {
+      console.error('❌ [SSE] Error sending current status:', error);
+    }
+  };
+
+  // ارسال وضعیت فعلی
+  sendCurrentStatus();
+
+  // listener برای تغییرات جدید
+  const onReportChange = (data) => {
+    console.log('📡 [SSE] Broadcasting report change:', data);
+    res.write(`data: ${JSON.stringify({type: 'report_change', ...data})}\n\n`);
+  };
+
+  const onSystemStatusChange = (data) => {
+    console.log('📡 [SSE] Broadcasting system status change:', data);
+    res.write(`data: ${JSON.stringify({type: 'system_status_change', ...data})}\n\n`);
+  };
+
+  const onRobotHeartbeat = (data) => {
+    console.log('📡 [SSE] Broadcasting robot heartbeat:', data);
+    res.write(`data: ${JSON.stringify({type: 'robot_heartbeat', ...data})}\n\n`);
+  };
+
+  reportEvents.on('reportChanged', onReportChange);
+  reportEvents.on('systemStatusChanged', onSystemStatusChange);
+  reportEvents.on('robotHeartbeat', onRobotHeartbeat);
+
+  // cleanup وقتی کلاینت قطع می‌شود
+  req.on('close', () => {
+    console.log('❌ [SSE] Reports client disconnected');
+    reportEvents.removeListener('reportChanged', onReportChange);
+    reportEvents.removeListener('systemStatusChanged', onSystemStatusChange);
+    reportEvents.removeListener('robotHeartbeat', onRobotHeartbeat);
+  });
+
+  // heartbeat هر 30 ثانیه
+  const heartbeat = setInterval(() => {
+    res.write(`: heartbeat\n\n`);
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
   });
 });
 
