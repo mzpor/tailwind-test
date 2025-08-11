@@ -103,7 +103,11 @@ function generateDynamicKeyboard(role) {
   // اضافه کردن سایر دکمه‌ها بر اساس نقش
   if (role === ROLES.SCHOOL_ADMIN) {
     secondRow.push('مدیر', 'تنظیمات');
-    // دکمه نقش‌ها غیرفعال شده
+    
+    // اضافه کردن دکمه نقش‌ها بر اساس کانفیگ
+    if (isButtonVisible('ROLES_BUTTON')) {
+      secondRow.push('نقش‌ها');
+    }
   } else if (role === ROLES.COACH) {
     secondRow.push('مربی');
   } else if (role === ROLES.ASSISTANT) {
@@ -511,9 +515,24 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
       }
     }
   } else if (msg.text === 'نقش‌ها' || msg.text === '/نقش‌ها') {
-    // مدیریت نقش‌ها غیرفعال شده
-    reply = '⚠️ مدیریت نقش‌ها در حال حاضر غیرفعال است.';
-    keyboard = config.keyboard;
+    // مدیریت نقش‌ها - فقط برای مدیر مدرسه
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند نقش‌ها را مدیریت کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش پنل مدیریت نقش‌ها
+      reply = `🎭 *پنل مدیریت نقش‌ها*
+
+👥 **کاربران فعلی:**
+${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n')}
+
+📝 **دستورات:**
+• /نقش [شماره تلفن] [نقش] - تخصیص نقش
+• /حذف_نقش [شماره تلفن] - حذف نقش
+
+⏰ ${getTimeStamp()}`;
+      keyboard = config.keyboard;
+    }
   } else if (msg.text === '/گروه') {
     // دستور /گروه - فقط در گروه گزارش و فقط برای مدیر مدرسه
     if (msg.chat.id !== REPORT_GROUP_ID) {
@@ -908,9 +927,20 @@ function startPolling() {
             }
           } else if (callback_query.data.startsWith('role_')) {
             
-            console.log('🔄 [POLLING] Role management callback detected - DISABLED');
-            // مدیریت نقش‌ها غیرفعال شده
-            await answerCallbackQuery(callback_query.id, '⚠️ مدیریت نقش‌ها غیرفعال است');
+            console.log('🔄 [POLLING] Role management callback detected');
+            // بررسی دسترسی کاربر - فقط ادمین‌ها می‌توانند نقش‌ها را مدیریت کنند
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند نقش‌ها را مدیریت کند.');
+            } else {
+              // پردازش callback های مدیریت نقش‌ها
+              const roleManager = require('./role_manager');
+              const success = await roleManager.handleCallback(callback_query);
+              
+              if (!success) {
+                console.error('❌ [POLLING] Error handling role management callback');
+                await answerCallbackQuery(callback_query.id, '❌ خطا در پردازش درخواست نقش‌ها');
+              }
+            }
           } else if (callback_query.data === 'kargah_management') {
             
             console.log('🔄 [POLLING] Kargah management callback detected');
