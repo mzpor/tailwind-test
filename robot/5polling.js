@@ -1099,14 +1099,17 @@ function startPolling() {
           if (userRole === ROLES.SCHOOL_ADMIN || userRole === ROLES.COACH || userRole === ROLES.ASSISTANT) {
             console.log(`🔄 [POLLING] Admin/Coach/Assistant detected, using role-based handling`);
             
-            // بررسی role manager برای پیام‌ها
-            const roleManagerResult = await roleManager.handleMessage(msg);
-            if (roleManagerResult) {
-              console.log('🔄 [POLLING] Role manager handled message');
-              await sendMessageWithInlineKeyboard(msg.chat.id, roleManagerResult.text, roleManagerResult.keyboard);
-            } else {
-              await handleRoleMessage(msg, userRole);
-            }
+            // بررسی role manager برای پیام‌ها - غیرفعال شده
+            // const roleManagerResult = await roleManager.handleMessage(msg);
+            // if (roleManagerResult) {
+            //   console.log('🔄 [POLLING] Role manager handled message');
+            //   await sendMessageWithInlineKeyboard(msg.chat.id, roleManagerResult.text, roleManagerResult.keyboard);
+            // } else {
+            //   await handleRoleMessage(msg, userRole);
+            // }
+            
+            // مستقیماً از handleRoleMessage استفاده کن
+            await handleRoleMessage(msg, userRole);
           } else {
             // برای قرآن‌آموز و ناشناس‌ها، از ماژول ثبت‌نام هوشمند استفاده کن
             console.log(`🔄 [POLLING] Student/Unknown user detected, using smart registration module`);
