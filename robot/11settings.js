@@ -8,7 +8,8 @@ const {
   loadReportsConfig, 
   saveReportsConfig, 
   getReportsEnabled, 
-  setReportsEnabled 
+  setReportsEnabled,
+  BUTTON_VISIBILITY_CONFIG
 } = require('./3config');
 const { hasPermission } = require('./6mid');
 
@@ -245,18 +246,34 @@ class SettingsModule {
     const keyboard = [
       [{ text: `📅 تمرین (${practiceDaysCount} روز)`, callback_data: 'practice_days_settings' }],
       [{ text: `📊 ارزیابی (${evaluationDaysCount} روز)`, callback_data: 'evaluation_days_settings' }],
-      [{ text: `👥 حضور و غیاب (${attendanceDaysCount} روز)`, callback_data: 'attendance_days_settings' }],
-      [{ text: `🎯 روزهای تمرین و ارزیابی`, callback_data: 'practice_evaluation_days_settings' }],
+      [{ text: `👥 حضور و غیاب (${attendanceDaysCount} روز)`, callback_data: 'attendance_days_settings' }]
+    ];
+    
+    // اضافه کردن دکمه روزهای تمرین و ارزیابی فقط اگر در کانفیگ فعال باشد
+    if (BUTTON_VISIBILITY_CONFIG.PRACTICE_EVALUATION_DAYS_BUTTON === 1) {
+      keyboard.push([{ text: `🎯 روزهای تمرین و ارزیابی`, callback_data: 'practice_evaluation_days_settings' }]);
+      console.log('🎯 [SETTINGS] Practice+Evaluation days button added to keyboard (enabled in config)');
+    } else {
+      console.log('🎯 [SETTINGS] Practice+Evaluation days button NOT added to keyboard (disabled in config)');
+    }
+    
+    keyboard.push(
       [{ text: `📝 نظرسنجی: ${satisfactionStatus}`, callback_data: 'toggle_satisfaction_survey' }],
       [{ text: `📋 گروه گزارش: ${reportsStatus}`, callback_data: 'toggle_bot_reports' }],
       [{ text: registrationButtonText, callback_data: 'toggle_registration' }]
-    ];
+    );
     
     console.log('🔧 [SETTINGS] Keyboard generated:', JSON.stringify(keyboard, null, 2));
     console.log('🔧 [SETTINGS] Practice days button callback_data:', keyboard[0][0].callback_data);
     console.log('🔧 [SETTINGS] Evaluation days button callback_data:', keyboard[1][0].callback_data);
-    console.log('🔧 [SETTINGS] Practice+Evaluation days button callback_data:', keyboard[2][0].callback_data);
-    console.log('🔧 [SETTINGS] PRACTICE+EVALUATION BUTTON CREATED WITH CALLBACK:', keyboard[2][0].callback_data);
+    console.log('🔧 [SETTINGS] Attendance days button callback_data:', keyboard[2][0].callback_data);
+    
+    // بررسی اینکه آیا دکمه روزهای تمرین و ارزیابی اضافه شده یا نه
+    if (BUTTON_VISIBILITY_CONFIG.PRACTICE_EVALUATION_DAYS_BUTTON === 1) {
+      console.log('🔧 [SETTINGS] Practice+Evaluation days button callback_data:', keyboard[3][0].callback_data);
+      console.log('🔧 [SETTINGS] PRACTICE+EVALUATION BUTTON CREATED WITH CALLBACK:', keyboard[3][0].callback_data);
+    }
+    
     console.log('🔧 [SETTINGS] getMainSettingsKeyboard COMPLETED');
     return { inline_keyboard: keyboard };
   }

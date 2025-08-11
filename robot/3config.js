@@ -32,6 +32,7 @@ const BUTTON_VISIBILITY_CONFIG = {
   // در آینده می‌توان دکمه‌های بیشتری اضافه کرد
   // SETTINGS_BUTTON: 1,
   ROLES_BUTTON: 0,  // مدیریت نقش‌ها غیرفعال شده
+  PRACTICE_EVALUATION_DAYS_BUTTON: 0,  // دکمه روزهای تمرین و ارزیابی: 1 = فعال، 0 = غیرفعال
   // EXIT_BUTTON: 1
 };
 // نگاشت نام کاربران
