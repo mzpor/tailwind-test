@@ -29,6 +29,7 @@ const GROUP_NAMES = {
 // ===== کنترل نمایش دکمه‌ها در پنل مدیر =====
 const BUTTON_VISIBILITY_CONFIG = {
   ROBOT_BUTTON: 1,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
+  REGISTRATION_BUTTON: 1,  // 1 = نمایش دکمه ثبت‌نام ماه آینده، 0 = عدم نمایش
   // در آینده می‌توان دکمه‌های بیشتری اضافه کرد
   // SETTINGS_BUTTON: 1,
   ROLES_BUTTON: 1,  // مدیریت نقش‌ها غیرفعال شده
