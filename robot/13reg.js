@@ -132,7 +132,7 @@ class SmartRegistrationModule {
     return this.buildReplyKeyboard([
       ['شروع'],
       ['مدرسه', 'ربات'],
-      ['مدرسه', 'مدرسه'],
+      ['خروج']
     ]);
   }
 
@@ -224,6 +224,16 @@ class SmartRegistrationModule {
         return this.handleEditPhone(chatId, userId);
       case 'final_confirm':
         return this.handleFinalConfirm(chatId, userId);
+      case 'next_month_registration':
+        return this.handleNextMonthRegistration(chatId, userId);
+      case 'back_to_main':
+        return this.handleBackToMainMenu(chatId, userId);
+      case 'quran_student_panel':
+        return this.handleQuranStudentPanel(chatId, userId);
+      case 'complete_registration':
+        return this.handleCompleteRegistration(chatId, userId);
+      case 'start_next_month_registration':
+        return this.handleRegistrationStart(chatId, userId);
       default:
         console.log(`⚠️ Unknown callback data: ${data}`);
         return false;
@@ -286,7 +296,12 @@ class SmartRegistrationModule {
 
   // 🏫 معرفی مدرسه
   async handleSchoolIntro(chatId) {
-    const schoolText = `🏫 **مدرسه تلاوت قرآن کریم**
+    try {
+      // بررسی تنظیمات مدیر
+      const { isButtonVisible } = require('./3config');
+      const isRegistrationEnabled = isButtonVisible('REGISTRATION_BUTTON');
+      
+      let schoolText = `🏫 **مدرسه تلاوت قرآن کریم**
 
 🌟 **درباره مدرسه:**
 مدرسه تلاوت قرآن کریم با بیش از ۱۰ سال سابقه در آموزش قرآن کریم، یکی از معتبرترین مراکز آموزشی در این حوزه است.
@@ -310,12 +325,39 @@ class SmartRegistrationModule {
 • قیمت مناسب و مقرون به صرفه
 
 📞 **اطلاعات تماس:**
-برای اطلاعات بیشتر با ما تماس بگیرید.
+برای اطلاعات بیشتر با ما تماس بگیرید.`;
+
+      if (isRegistrationEnabled) {
+        // اگر ثبت‌نام فعال باشد، دکمه ثبت‌نام ماه آینده را اضافه کن
+        schoolText += `\n\n📅 **ثبت‌نام ماه آینده باز است!**
+برای ثبت‌نام در کلاس‌های ماه آینده، لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+        const inlineKeyboard = [
+          [{ text: '📝 ثبت‌نام ماه آینده', callback_data: 'next_month_registration' }],
+          [{ text: '🏠 برگشت به منو', callback_data: 'back_to_main' }]
+        ];
+
+        await sendMessage(chatId, schoolText);
+        await sendMessageWithInlineKeyboard(chatId, 'لطفاً گزینه مورد نظر را انتخاب کنید:', inlineKeyboard);
+      } else {
+        // اگر ثبت‌نام غیرفعال باشد، منوی معمولی
+        schoolText += `\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+        await sendMessage(chatId, schoolText, this.buildMainKeyboard());
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error in handleSchoolIntro:', error);
+      // در صورت خطا، منوی معمولی نمایش بده
+      const fallbackText = `🏫 **مدرسه تلاوت قرآن کریم**
+
+به مدرسه تلاوت قرآن کریم خوش آمدید!
 
 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
-
-    await sendMessage(chatId, schoolText, this.buildMainKeyboard());
-    return true;
+      
+      await sendMessage(chatId, fallbackText, this.buildMainKeyboard());
+      return true;
+    }
   }
 
   // 🤖 معرفی ربات
@@ -755,6 +797,84 @@ _خداحافظ و موفق باشید!_ 🌟`;
     }
 
     return true;
+  }
+
+  // 📅 ثبت‌نام ماه آینده
+  async handleNextMonthRegistration(chatId, userId) {
+    try {
+      // بررسی اینکه آیا کاربر قبلاً ثبت‌نام کرده یا نه
+      if (this.isUserRegistered(userId)) {
+        if (this.isRegistrationComplete(userId)) {
+          // کاربر قبلاً ثبت‌نام کامل دارد
+          const userInfo = this.userData[userId];
+          const firstName = userInfo.first_name || 'کاربر';
+          
+          const alreadyRegisteredText = `🎉 **${firstName} عزیز، شما قبلاً ثبت‌نام کرده‌اید!**
+
+✅ **وضعیت ثبت‌نام:**
+• نام: ${userInfo.full_name}
+• کد ملی: ${userInfo.national_id}
+• تلفن: ${userInfo.phone}
+
+📅 **برای ثبت‌نام در ماه آینده:**
+لطفاً با شماره پشتیبانی تماس بگیرید یا از طریق پنل قرآن‌آموز اقدام کنید.`;
+
+          const inlineKeyboard = [
+            [{ text: '📚 پنل قرآن‌آموز', callback_data: 'quran_student_panel' }],
+            [{ text: '🏠 برگشت به منو', callback_data: 'back_to_main' }]
+          ];
+
+          await sendMessage(chatId, alreadyRegisteredText);
+          await sendMessageWithInlineKeyboard(chatId, 'لطفاً گزینه مورد نظر را انتخاب کنید:', inlineKeyboard);
+        } else {
+          // کاربر ثبت‌نام ناقص دارد
+          const missingFields = this.getMissingFields(userId);
+          const missingText = missingFields.join('، ');
+
+          const incompleteText = `⚠️ **ثبت‌نام ناقص**
+
+برای ثبت‌نام در ماه آینده، ابتدا باید ثبت‌نام فعلی خود را تکمیل کنید.
+
+❌ **فیلدهای ناقص:** ${missingText}
+
+لطفاً ابتدا ثبت‌نام خود را تکمیل کنید:`;
+
+          const inlineKeyboard = [
+            [{ text: '✏️ تکمیل ثبت‌نام', callback_data: 'complete_registration' }],
+            [{ text: '🏠 برگشت به منو', callback_data: 'back_to_main' }]
+          ];
+
+          await sendMessage(chatId, incompleteText);
+          await sendMessageWithInlineKeyboard(chatId, 'لطفاً گزینه مورد نظر را انتخاب کنید:', inlineKeyboard);
+        }
+      } else {
+        // کاربر جدید - شروع ثبت‌نام
+        const newUserText = `🎯 **ثبت‌نام ماه آینده**
+
+🌟 **خوش آمدید!** برای ثبت‌نام در کلاس‌های ماه آینده، لطفاً اطلاعات خود را وارد کنید.
+
+📋 **مراحل ثبت‌نام:**
+۱. نام و نام خانوادگی
+۲. کد ملی
+۳. شماره تلفن
+
+💡 **نکته:** ثبت‌نام شما برای ماه آینده ذخیره می‌شود.`;
+
+        const inlineKeyboard = [
+          [{ text: '🚀 شروع ثبت‌نام', callback_data: 'start_next_month_registration' }],
+          [{ text: '🏠 برگشت به منو', callback_data: 'back_to_main' }]
+        ];
+
+        await sendMessage(chatId, newUserText);
+        await sendMessageWithInlineKeyboard(chatId, 'لطفاً گزینه مورد نظر را انتخاب کنید:', inlineKeyboard);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error in handleNextMonthRegistration:', error);
+      await sendMessage(chatId, '❌ خطا در نمایش ثبت‌نام ماه آینده. لطفاً دوباره تلاش کنید.', this.buildMainKeyboard());
+      return false;
+    }
   }
 
   // 📊 آمار کاربران
