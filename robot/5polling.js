@@ -28,7 +28,7 @@ const { BASE_URL } = require('./3config');
 const SettingsModule = require('./11settings');
 const KargahModule = require('./12kargah');
 const SmartRegistrationModule = require('./13reg');
-const { roleManager } = require('./role_manager');
+// const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 let lastId = 0;
 
@@ -63,7 +63,8 @@ const roleConfig = {
     emoji: '🛡️',
     panelText: 'مدیر',
     get keyboard() { return generateDynamicKeyboard(ROLES.SCHOOL_ADMIN); },
-    commands: ['/شروع', '/خروج', '/ربات', '/مدیر', '/تنظیمات', '/کارگاه', '/نقش‌ها']
+    commands: ['/شروع', '/خروج', '/ربات', '/مدیر', '/تنظیمات', '/کارگاه']
+    // دستور /نقش‌ها غیرفعال شده
   },
 
   [ROLES.COACH]: {
@@ -101,7 +102,8 @@ function generateDynamicKeyboard(role) {
   
   // اضافه کردن سایر دکمه‌ها بر اساس نقش
   if (role === ROLES.SCHOOL_ADMIN) {
-    secondRow.push('مدیر', 'تنظیمات', 'نقش‌ها');
+    secondRow.push('مدیر', 'تنظیمات');
+    // دکمه نقش‌ها غیرفعال شده
   } else if (role === ROLES.COACH) {
     secondRow.push('مربی');
   } else if (role === ROLES.ASSISTANT) {
@@ -509,16 +511,9 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
       }
     }
   } else if (msg.text === 'نقش‌ها' || msg.text === '/نقش‌ها') {
-    // بررسی دسترسی کاربر برای مدیریت نقش‌ها - فقط مدیر مدرسه
-    if (!isAdmin(msg.from.id)) {
-      reply = '⚠️ فقط مدیر مدرسه می‌تواند از مدیریت نقش‌ها استفاده کند.';
-      keyboard = config.keyboard;
-    } else {
-      // نمایش منوی مدیریت نقش‌ها با استفاده از ماژول role manager
-      const menu = roleManager.getMainRoleMenu(msg.from.id);
-      await sendMessageWithInlineKeyboard(msg.chat.id, menu.text, menu.keyboard);
-      return; // ادامه حلقه بدون ارسال پیام معمولی
-    }
+    // مدیریت نقش‌ها غیرفعال شده
+    reply = '⚠️ مدیریت نقش‌ها در حال حاضر غیرفعال است.';
+    keyboard = config.keyboard;
   } else if (msg.text === '/گروه') {
     // دستور /گروه - فقط در گروه گزارش و فقط برای مدیر مدرسه
     if (msg.chat.id !== REPORT_GROUP_ID) {
@@ -913,9 +908,9 @@ function startPolling() {
             }
           } else if (callback_query.data.startsWith('role_')) {
             
-            console.log('🔄 [POLLING] Role management callback detected');
-            // پردازش مدیریت نقش‌ها با استفاده از ماژول role manager
-            await roleManager.handleCallback(callback_query);
+            console.log('🔄 [POLLING] Role management callback detected - DISABLED');
+            // مدیریت نقش‌ها غیرفعال شده
+            await answerCallbackQuery(callback_query.id, '⚠️ مدیریت نقش‌ها غیرفعال است');
           } else if (callback_query.data === 'kargah_management') {
             
             console.log('🔄 [POLLING] Kargah management callback detected');
