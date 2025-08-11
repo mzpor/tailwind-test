@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useState, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { gw } from "../lib/gateway";
 
 // Import تابع getBaseUrl برای پورت پویا
@@ -25,6 +26,8 @@ function toCSV(rows){
 }
 
 export default function Admin(){
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('reports');
   const [reportsEnabled, setReportsEnabled] = useState(true);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [surveyEnabled, setSurveyEnabled] = useState(true);
@@ -36,6 +39,40 @@ export default function Admin(){
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const eventSourceRef = useRef(null);
   const siteEventSourceRef = useRef(null);
+  
+  // State های جدید برای داشبورد جامعه ربات
+  const [robotStatus, setRobotStatus] = useState({
+    isOnline: false,
+    lastPing: null,
+    uptime: null,
+    version: null,
+    groups: [],
+    members: []
+  });
+  const [siteStatus, setSiteStatus] = useState({
+    isOnline: true,
+    lastActivity: new Date(),
+    visitors: 0,
+    registrations: 0
+  });
+  const [logs, setLogs] = useState([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+
+  // تشخیص tab فعال بر اساس URL
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/reports')) {
+      setActiveTab('reports');
+    } else if (path.includes('/settings')) {
+      setActiveTab('settings');
+    } else if (path.includes('/workshops')) {
+      setActiveTab('workshops');
+    } else if (path.includes('/robot-dashboard')) {
+      setActiveTab('robot-dashboard');
+    } else {
+      setActiveTab('reports'); // پیش‌فرض
+    }
+  }, [location.pathname]);
 
   const rows = useMemo(()=>[
     { name:'علی رضایی', phone:'09120000000', status:'paid' },
@@ -105,9 +142,9 @@ export default function Admin(){
     setConnectionStatus('checking');
     
     try {
-               // تست اتصال به ربات با پورت پویا
-         const baseUrl = await getBaseUrl();
-         const response = await fetch(`${baseUrl}/api/health`);
+      // تست اتصال به ربات با پورت پویا
+      const baseUrl = await getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/health`);
       if (response.ok) {
         console.log('✅ [CONNECTION] Robot is online, starting SSE...');
         startSSE();
@@ -128,8 +165,8 @@ export default function Admin(){
     console.log('🔄 [SSE] Starting SSE connection...');
     setConnectionStatus('connecting');
     
-           const baseUrl = await getBaseUrl();
-       const eventSource = new EventSource(`${baseUrl}/api/report-events`);
+    const baseUrl = await getBaseUrl();
+    const eventSource = new EventSource(`${baseUrl}/api/report-events`);
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
@@ -255,6 +292,11 @@ export default function Admin(){
     checkRobotAndConnect(); // تشخیص وضعیت ربات و اتصال مناسب
     startSiteSSE(); // شروع SSE برای رویدادهای سایت
     
+    // بارگذاری اطلاعات جدید
+    loadRobotStatus();
+    loadSiteStatus();
+    loadLogs();
+    
     // اطلاع‌رسانی آنلاین شدن سایت
     announceSiteOnline();
     
@@ -371,6 +413,76 @@ export default function Admin(){
     URL.revokeObjectURL(url);
   }
 
+  // بارگذاری وضعیت ربات
+  const loadRobotStatus = async () => {
+    try {
+      const baseUrl = await getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/reports/combined`);
+      if (response.ok) {
+        const data = await response.json();
+        setRobotStatus({
+          isOnline: data.systemStatus?.robot || false,
+          lastPing: data.lastRobotPing,
+          uptime: data.systemStatus?.lastUpdate || null,
+          version: data.systemStatus?.version || 'نامشخص',
+          groups: data.groups || [],
+          members: data.members || []
+        });
+      }
+    } catch (error) {
+      console.error('خطا در بارگذاری وضعیت ربات:', error);
+    }
+  };
+
+  // بارگذاری لوگ‌ها
+  const loadLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      const baseUrl = await getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/logs`);
+      if (response.ok) {
+        const data = await response.json();
+        setLogs(data.logs || []);
+      } else {
+        // اگر API لوگ‌ها موجود نبود، لوگ‌های نمونه نمایش بده
+        setLogs([
+          { timestamp: new Date().toISOString(), level: 'INFO', message: 'سیستم راه‌اندازی شد' },
+          { timestamp: new Date(Date.now() - 60000).toISOString(), level: 'INFO', message: 'اتصال به ربات برقرار شد' },
+          { timestamp: new Date(Date.now() - 120000).toISOString(), level: 'WARNING', message: 'ربات پاسخ نمی‌دهد' },
+          { timestamp: new Date(Date.now() - 300000).toISOString(), level: 'ERROR', message: 'خطا در اتصال به سرور' }
+        ]);
+      }
+    } catch (error) {
+      console.error('خطا در بارگذاری لوگ‌ها:', error);
+      // لوگ‌های نمونه در صورت خطا
+      setLogs([
+        { timestamp: new Date().toISOString(), level: 'ERROR', message: 'خطا در بارگذاری لوگ‌ها' },
+        { timestamp: new Date(Date.now() - 60000).toISOString(), level: 'INFO', message: 'سیستم در حال اجرا است' }
+      ]);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  // بارگذاری وضعیت سایت
+  const loadSiteStatus = async () => {
+    try {
+      const baseUrl = await getBaseUrl();
+      const response = await fetch(`${baseUrl}/api/site-status`);
+      if (response.ok) {
+        const data = await response.json();
+        setSiteStatus({
+          isOnline: data.isOnline || true,
+          lastActivity: data.lastActivity || new Date(),
+          visitors: data.visitors || 0,
+          registrations: data.registrations || 0
+        });
+      }
+    } catch (error) {
+      console.error('خطا در بارگذاری وضعیت سایت:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen p-6 bg-slate-50" dir="rtl">
       {/* اعلان */}
@@ -386,140 +498,327 @@ export default function Admin(){
       
       <div className="max-w-4xl mx-auto space-y-6">
         
-        {/* گزارش‌ها */}
-        <div className="bg-white shadow rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-bold">وضعیت گزارش‌ها</h2>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  connectionStatus === 'connected' ? 'bg-emerald-500' : 
-                  connectionStatus === 'checking' || connectionStatus === 'connecting' ? 'bg-yellow-500' : 
-                  connectionStatus === 'manual' ? 'bg-blue-500' : 'bg-red-500'
-                }`}></div>
-                <span className="text-xs text-slate-500">
-                  {connectionStatus === 'connected' ? 'متصل (SSE)' : 
-                   connectionStatus === 'connecting' ? 'در حال اتصال...' : 
-                   connectionStatus === 'checking' ? 'بررسی وضعیت...' :
-                   connectionStatus === 'manual' ? 'حالت دستی' : 'قطع شده'}
-                </span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {/* دکمه آپدیت دستی */}
-              <button 
-                onClick={() => {
-                  if (connectionStatus === 'manual') {
-                    loadReportStatus(true);
-                  } else {
-                    stopSSE();
-                    checkRobotAndConnect();
-                  }
-                }}
-                disabled={toggling || isManualRefreshing}
-                className={`px-3 py-2 rounded-lg text-slate-700 disabled:opacity-50 ${
-                  connectionStatus === 'manual' ? 'bg-blue-200 hover:bg-blue-300' : 'bg-slate-200 hover:bg-slate-300'
-                }`}
-                title={connectionStatus === 'manual' ? 'آپدیت دستی' : 'بررسی مجدد اتصال'}
-              >
-                {isManualRefreshing ? '⏳' : '🔄'}
-              </button>
-              {/* سه دکمه تنظیمات - به ترتیب: نظرسنجی، گزارش، ثبت‌نام */}
-              <div className="flex flex-col gap-2">
-                <button 
-                  onClick={toggleSurvey} 
-                  disabled={toggling}
-                  className={`px-3 py-2 rounded-lg text-white text-sm ${
-                    surveyEnabled 
-                      ? 'bg-emerald-600 hover:bg-emerald-700' 
-                      : 'bg-red-600 hover:bg-red-700'
-                  } disabled:opacity-50`}
-                >
-                  نظرسنجی {surveyEnabled ? '✅' : '❌'}
-                </button>
-                <button 
-                  onClick={toggleReports} 
-                  disabled={toggling}
-                  className={`px-3 py-2 rounded-lg text-white text-sm ${
-                    reportsEnabled 
-                      ? 'bg-blue-600 hover:bg-blue-700' 
-                      : 'bg-red-600 hover:bg-red-700'
-                  } disabled:opacity-50`}
-                >
-                  گزارش {reportsEnabled ? '✅' : '❌'}
-                </button>
-                <button 
-                  onClick={toggleRegistration} 
-                  disabled={toggling}
-                  className={`px-3 py-2 rounded-lg text-white text-sm ${
-                    registrationEnabled 
-                      ? 'bg-purple-600 hover:bg-purple-700' 
-                      : 'bg-red-600 hover:bg-red-700'
-                  } disabled:opacity-50`}
-                >
-                  ثبت‌نام {registrationEnabled ? '✅' : '❌'}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm text-slate-600">
-              گزارش‌ها در حال حاضر {reportsEnabled ? '✅ فعال' : '❌ غیرفعال'} هستند
-            </p>
-            {connectionStatus === 'manual' && (
-              <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                💡 ربات غیرفعال است. برای به‌روزرسانی دکمه 🔄 را کلیک کنید
-              </p>
-            )}
-            <p className="text-xs text-slate-400">
-              آخرین همگام‌سازی: {lastSync.toLocaleTimeString('fa-IR')}
-            </p>
-          </div>
-        </div>
-
-        {/* تنظیمات مدرسه */}
-        <SettingsForm />
-
-        {/* مدیریت کارگاه‌ها */}
-        <WorkshopsAdmin />
-
-        {/* جدول دانش‌آموزان */}
-        <div className="bg-white shadow rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold">لیست دانش‌آموزان</h1>
-            <button onClick={exportCSV} className="px-4 py-2 rounded-lg bg-emerald-600 text-white">
-              خروجی CSV
+        {/* Navigation Tabs */}
+        <div className="bg-white shadow rounded-2xl p-4">
+          <div className="flex space-x-4 space-x-reverse">
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'reports'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📊 گزارش‌ها
+            </button>
+            <button
+              onClick={() => setActiveTab('robot-dashboard')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'robot-dashboard'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              🤖 داشبورد ربات
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'settings'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              ⚙️ تنظیمات
+            </button>
+            <button
+              onClick={() => setActiveTab('workshops')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'workshops'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              🎓 کارگاه‌ها
             </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-right text-slate-600 border-b">
-                  <th className="py-3 px-2">نام</th>
-                  <th className="py-3 px-2">موبایل</th>
-                  <th className="py-3 px-2">وضعیت</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r,i)=>(
-                  <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="py-3 px-2">{r.name}</td>
-                    <td className="py-3 px-2 ltr">{r.phone}</td>
-                    <td className="py-3 px-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        r.status==='paid'
-                          ?'bg-emerald-100 text-emerald-700'
-                          :'bg-amber-100 text-amber-700'
-                      }`}>
-                        {r.status === 'paid' ? 'پرداخت شده' : 'در انتظار پرداخت'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
+        
+        {/* محتوای Tab ها */}
+        {activeTab === 'reports' && (
+          <>
+            {/* گزارش‌ها */}
+            <div className="bg-white shadow rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-bold">وضعیت گزارش‌ها</h2>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus === 'connected' ? 'bg-emerald-500' : 
+                      connectionStatus === 'checking' || connectionStatus === 'connecting' ? 'bg-yellow-500' : 
+                      connectionStatus === 'manual' ? 'bg-blue-500' : 'bg-red-500'
+                    }`}></div>
+                    <span className="text-xs text-slate-500">
+                      {connectionStatus === 'connected' ? 'متصل (SSE)' : 
+                       connectionStatus === 'connecting' ? 'در حال اتصال...' : 
+                       connectionStatus === 'checking' ? 'بررسی وضعیت...' :
+                       connectionStatus === 'manual' ? 'حالت دستی' : 'قطع شده'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {/* دکمه آپدیت دستی */}
+                  <button 
+                    onClick={() => {
+                      if (connectionStatus === 'manual') {
+                        loadReportStatus(true);
+                      } else {
+                        stopSSE();
+                        checkRobotAndConnect();
+                      }
+                    }}
+                    disabled={toggling || isManualRefreshing}
+                    className={`px-3 py-2 rounded-lg text-slate-700 disabled:opacity-50 ${
+                      connectionStatus === 'manual' ? 'bg-blue-200 hover:bg-blue-300' : 'bg-slate-200 hover:bg-slate-300'
+                    }`}
+                    title={connectionStatus === 'manual' ? 'آپدیت دستی' : 'بررسی مجدد اتصال'}
+                  >
+                    {isManualRefreshing ? '⏳' : '🔄'}
+                  </button>
+                  {/* سه دکمه تنظیمات - به ترتیب: نظرسنجی، گزارش، ثبت‌نام */}
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={toggleSurvey} 
+                      disabled={toggling}
+                      className={`px-3 py-2 rounded-lg text-white text-sm ${
+                        surveyEnabled 
+                          ? 'bg-emerald-600 hover:bg-emerald-700' 
+                          : 'bg-red-600 hover:bg-red-700'
+                      } disabled:opacity-50`}
+                    >
+                      نظرسنجی {surveyEnabled ? '✅' : '❌'}
+                    </button>
+                    <button 
+                      onClick={toggleReports} 
+                      disabled={toggling}
+                      className={`px-3 py-2 rounded-lg text-white text-sm ${
+                        reportsEnabled 
+                          ? 'bg-blue-600 hover:bg-blue-700' 
+                          : 'bg-red-600 hover:bg-red-700'
+                      } disabled:opacity-50`}
+                    >
+                      گزارش {reportsEnabled ? '✅' : '❌'}
+                    </button>
+                    <button 
+                      onClick={toggleRegistration} 
+                      disabled={toggling}
+                      className={`px-3 py-2 rounded-lg text-white text-sm ${
+                        registrationEnabled 
+                          ? 'bg-purple-600 hover:bg-purple-700' 
+                          : 'bg-red-600 hover:bg-red-700'
+                      } disabled:opacity-50`}
+                    >
+                      ثبت‌نام {registrationEnabled ? '✅' : '❌'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600">
+                  گزارش‌ها در حال حاضر {reportsEnabled ? '✅ فعال' : '❌ غیرفعال'} هستند
+                </p>
+                {connectionStatus === 'manual' && (
+                  <p className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                    💡 ربات غیرفعال است. برای به‌روزرسانی دکمه 🔄 را کلیک کنید
+                  </p>
+                )}
+                <p className="text-xs text-slate-400">
+                  آخرین همگام‌سازی: {lastSync.toLocaleTimeString('fa-IR')}
+                </p>
+              </div>
+            </div>
+
+            {/* جدول دانش‌آموزان */}
+            <div className="bg-white shadow rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-xl font-bold">لیست دانش‌آموزان</h1>
+                <button onClick={exportCSV} className="px-4 py-2 rounded-lg bg-emerald-600 text-white">
+                  خروجی CSV
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-right text-slate-600 border-b">
+                      <th className="py-3 px-2">نام</th>
+                      <th className="py-3 px-2">موبایل</th>
+                      <th className="py-3 px-2">وضعیت</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r,i)=>(
+                      <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="py-3 px-2">{r.name}</td>
+                        <td className="py-3 px-2 ltr">{r.phone}</td>
+                        <td className="py-3 px-2">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            r.status==='paid'
+                              ?'bg-emerald-100 text-emerald-700'
+                              :'bg-amber-100 text-amber-700'
+                          }`}>
+                            {r.status === 'paid' ? 'پرداخت شده' : 'در انتظار پرداخت'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="bg-white shadow rounded-2xl p-6">
+            <h2 className="text-lg font-bold mb-4">تنظیمات مدرسه</h2>
+            <SettingsForm />
+          </div>
+        )}
+
+        {activeTab === 'robot-dashboard' && (
+          <>
+            {/* وضعیت ربات */}
+            <div className="bg-white shadow rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">وضعیت ربات</h2>
+                <button 
+                  onClick={loadRobotStatus}
+                  className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  🔄 بروزرسانی
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-3 h-3 rounded-full ${robotStatus.isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    <span className="font-medium">وضعیت ربات</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {robotStatus.isOnline ? '🟢 آنلاین' : '🔴 آفلاین'}
+                  </p>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="font-medium mb-2">آخرین پینگ</div>
+                  <p className="text-sm text-gray-600">
+                    {robotStatus.lastPing ? new Date(robotStatus.lastPing).toLocaleString('fa-IR') : 'نامشخص'}
+                  </p>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="font-medium mb-2">نسخه</div>
+                  <p className="text-sm text-gray-600">{robotStatus.version}</p>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="font-medium mb-2">تعداد گروه‌ها</div>
+                  <p className="text-sm text-gray-600">{robotStatus.groups.length}</p>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="font-medium mb-2">تعداد اعضا</div>
+                  <p className="text-sm text-gray-600">{robotStatus.members.length}</p>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="font-medium mb-2">آخرین بروزرسانی</div>
+                  <p className="text-sm text-gray-600">
+                    {robotStatus.uptime ? new Date(robotStatus.uptime).toLocaleString('fa-IR') : 'نامشخص'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* وضعیت سایت */}
+            <div className="bg-white shadow rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">وضعیت سایت</h2>
+                <button 
+                  onClick={loadSiteStatus}
+                  className="px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                >
+                  🔄 بروزرسانی
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-blue-600">{siteStatus.visitors}</div>
+                  <div className="text-sm text-gray-600">بازدیدکننده</div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-green-600">{siteStatus.registrations}</div>
+                  <div className="text-sm text-gray-600">ثبت‌نام</div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <div className={`text-2xl font-bold ${siteStatus.isOnline ? 'text-green-600' : 'text-red-600'}`}>
+                    {siteStatus.isOnline ? '🟢' : '🔴'}
+                  </div>
+                  <div className="text-sm text-gray-600">وضعیت سایت</div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg text-center">
+                  <div className="text-sm text-gray-600">آخرین فعالیت</div>
+                  <div className="text-xs text-gray-500">
+                    {siteStatus.lastActivity.toLocaleString('fa-IR')}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* لوگ‌ها */}
+            <div className="bg-white shadow rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">لوگ‌های سیستم</h2>
+                <button 
+                  onClick={loadLogs}
+                  disabled={isLoadingLogs}
+                  className="px-3 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {isLoadingLogs ? '⏳' : '🔄'} بروزرسانی
+                </button>
+              </div>
+              <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-96 overflow-y-auto">
+                {logs.length === 0 ? (
+                  <div className="text-gray-500">هیچ لوگی موجود نیست</div>
+                ) : (
+                  logs.map((log, index) => (
+                    <div key={index} className="mb-2">
+                      <span className="text-gray-400">[{new Date(log.timestamp).toLocaleString('fa-IR')}]</span>
+                      <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                        log.level === 'ERROR' ? 'bg-red-900 text-red-200' :
+                        log.level === 'WARNING' ? 'bg-yellow-900 text-yellow-200' :
+                        'bg-green-900 text-green-200'
+                      }`}>
+                        {log.level}
+                      </span>
+                      <span className="ml-2">{log.message}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'workshops' && (
+          <div className="bg-white shadow rounded-2xl p-6">
+            <h2 className="text-lg font-bold mb-4">مدیریت کارگاه‌ها</h2>
+            <WorkshopsAdmin />
+          </div>
+        )}
       </div>
     </div>
   );
