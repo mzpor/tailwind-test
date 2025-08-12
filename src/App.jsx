@@ -4,6 +4,149 @@ const isIranMobile = (p) => /^09\d{9}$/.test(p);
 
 // Admin Panel Component
 function AdminPanel({ onBack }) {
+  const [activeTab, setActiveTab] = useState("reports");
+  
+  // Sample student data
+  const students = [
+    { id: 1, name: "علی رضایی", phone: "09120000000", status: "پرداخت شده", payment: "green" },
+    { id: 2, name: "سارا محمدی", phone: "09121111111", status: "در انتظار پرداخت", payment: "yellow" },
+    { id: 3, name: "حسین احمدی", phone: "09123333333", status: "پرداخت شده", payment: "green" },
+    { id: 4, name: "فاطمه کریمی", phone: "09124444444", status: "پرداخت شده", payment: "green" },
+    { id: 5, name: "محمد نوری", phone: "09125555555", status: "در انتظار پرداخت", payment: "yellow" }
+  ];
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "reports":
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-blue-700 mb-4">وضعیت گزارش‌ها متصل (SSE)</h2>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                  <div className="w-4 h-4 bg-green-500 rounded"></div>
+                  <span className="text-green-700">گزارش‌ها در حال حاضر فعال هستند</span>
+                </div>
+                <p className="text-slate-600">آخرین همگام‌سازی: {new Date().toLocaleTimeString('fa-IR')}</p>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-blue-700">لیست دانش‌آموزان</h2>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                  خروجی CSV
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-right py-3 px-4 text-slate-600">نام</th>
+                      <th className="text-right py-3 px-4 text-slate-600">موبایل</th>
+                      <th className="text-right py-3 px-4 text-slate-600">وضعیت</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map((student) => (
+                      <tr key={student.id} className="border-b border-gray-100">
+                        <td className="py-3 px-4">{student.name}</td>
+                        <td className="py-3 px-4">{student.phone}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-3 py-1 rounded-full text-sm ${
+                            student.payment === 'green' 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {student.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case "robot":
+        return (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-blue-700 mb-4">داشبورد ربات 🤖</h2>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-semibold text-blue-700 mb-2">وضعیت ربات</h3>
+                <p className="text-blue-600">ربات فعال و در حال کار</p>
+              </div>
+              <div className="p-4 bg-green-50 rounded-lg">
+                <h3 className="font-semibold text-green-700 mb-2">پیام‌های امروز</h3>
+                <p className="text-green-600">۱۵ پیام جدید</p>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case "settings":
+        return (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-blue-700 mb-4">تنظیمات ⚙️</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span>اعلان‌های ایمیل</span>
+                <button className="w-12 h-6 bg-blue-500 rounded-full relative">
+                  <div className="w-5 h-5 bg-white rounded-full absolute right-0.5 top-0.5"></div>
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <span>اعلان‌های موبایل</span>
+                <button className="w-12 h-6 bg-gray-300 rounded-full relative">
+                  <div className="w-5 h-5 bg-white rounded-full absolute left-0.5 top-0.5"></div>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case "workshops":
+        return (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-blue-700 mb-4">کارگاه‌ها 🎓</h2>
+            <div className="space-y-4">
+              <div className="p-4 border border-emerald-200 rounded-lg">
+                <h3 className="font-semibold text-emerald-700">کلاس قرآن مقدماتی</h3>
+                <p className="text-slate-600">شنبه و سه‌شنبه - ساعت 18:00</p>
+                <p className="text-sm text-emerald-600 mt-2">تعداد دانش‌آموز: ۱۲ نفر</p>
+              </div>
+              <div className="p-4 border border-blue-200 rounded-lg">
+                <h3 className="font-semibold text-blue-700">کلاس قرآن پیشرفته</h3>
+                <p className="text-slate-600">یکشنبه و چهارشنبه - ساعت 19:00</p>
+                <p className="text-sm text-blue-600 mt-2">تعداد دانش‌آموز: ۸ نفر</p>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case "registrations":
+        return (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h2 className="text-xl font-bold text-blue-700 mb-4">ثبت‌نام‌ها ✏️</h2>
+            <div className="space-y-3">
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-700">امروز: ۳ ثبت‌نام جدید</p>
+              </div>
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-700">این هفته: ۱۵ ثبت‌نام</p>
+              </div>
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
@@ -26,21 +169,25 @@ function AdminPanel({ onBack }) {
         {/* Navigation Tabs */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex flex-wrap gap-4 border-b border-gray-200 pb-4">
-            <button className="px-6 py-3 bg-blue-100 text-blue-700 rounded-lg font-medium">
-              گزارش‌ها
-            </button>
-            <button className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition">
-              داشبورد ربات 🤖
-            </button>
-            <button className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition">
-              تنظیمات ⚙️
-            </button>
-            <button className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition">
-              کارگاه‌ها 🎓
-            </button>
-            <button className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition">
-              ثبت‌نام‌ها ✏️
-            </button>
+            {[
+              { id: "reports", label: "گزارش‌ها", icon: "📊" },
+              { id: "robot", label: "داشبورد ربات", icon: "🤖" },
+              { id: "settings", label: "تنظیمات", icon: "⚙️" },
+              { id: "workshops", label: "کارگاه‌ها", icon: "🎓" },
+              { id: "registrations", label: "ثبت‌نام‌ها", icon: "✏️" }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 rounded-lg font-medium transition ${
+                  activeTab === tab.id
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {tab.icon} {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -71,68 +218,8 @@ function AdminPanel({ onBack }) {
           </div>
 
           {/* Main Content Area */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Report Status */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-blue-700 mb-4">وضعیت گزارش‌ها متصل (SSE)</h2>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                  <div className="w-4 h-4 bg-green-500 rounded"></div>
-                  <span className="text-green-700">گزارش‌ها در حال حاضر فعال هستند</span>
-                </div>
-                <p className="text-slate-600">آخرین همگام‌سازی: ۱:۱۲:۲۳</p>
-              </div>
-            </div>
-
-            {/* Student List */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-blue-700">لیست دانش‌آموزان</h2>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                  خروجی CSV
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-right py-3 px-4 text-slate-600">نام</th>
-                      <th className="text-right py-3 px-4 text-slate-600">موبایل</th>
-                      <th className="text-right py-3 px-4 text-slate-600">وضعیت</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-3 px-4">علی رضایی</td>
-                      <td className="py-3 px-4"></td>
-                      <td className="py-3 px-4">
-                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
-                          09120000000 پرداخت شده
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-3 px-4">سارا محمدی</td>
-                      <td className="py-3 px-4"></td>
-                      <td className="py-3 px-4">
-                        <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">
-                          09121111111 در انتظار پرداخت
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-gray-100">
-                      <td className="py-3 px-4">حسین احمدی</td>
-                      <td className="py-3 px-4"></td>
-                      <td className="py-3 px-4">
-                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
-                          09123333333 پرداخت شده
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <div className="md:col-span-2">
+            {renderContent()}
           </div>
         </div>
       </div>
@@ -147,7 +234,9 @@ function AdminAccess({ onAccessGranted, onBack }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log("Admin code entered:", adminCode); // Debug log
     if (adminCode === "0000") {
+      console.log("Access granted!"); // Debug log
       onAccessGranted();
     } else {
       setError("کد مدیریت نادرست است");
@@ -166,7 +255,7 @@ function AdminAccess({ onAccessGranted, onBack }) {
           <div className="flex flex-col gap-2">
             <label className="text-sm text-slate-600">کد مدیریت</label>
             <input
-              type="password"
+              type="text"
               value={adminCode}
               onChange={(e) => {
                 setAdminCode(e.target.value);
@@ -215,25 +304,34 @@ export default function App() {
 
   function submit(e) {
     e.preventDefault();
+    console.log("Form submitted:", form); // Debug log
+    
     const eObj = {};
     if (!form.firstName.trim()) eObj.firstName = "نام (یا نام خانوادگی) را وارد کنید";
     if (!isIranMobile(form.phone)) eObj.phone = "شماره موبایل ایران مثل 09123456789";
+    
     setErrors(eObj);
+    
     if (Object.keys(eObj).length === 0) {
       setMsg("ثبت موقتی انجام شد ✅ (بعداً به ربات بله وصل می‌کنیم)");
       setForm({ firstName: "", phone: "" });
+      console.log("Registration successful!"); // Debug log
     } else {
       setMsg("");
+      console.log("Validation errors:", eObj); // Debug log
     }
   }
 
   const handleAdminAccess = () => {
+    console.log("Admin access granted, switching to admin panel"); // Debug log
     setCurrentView("admin");
   };
 
   const handleBackToMain = () => {
     setCurrentView("main");
   };
+
+  console.log("Current view:", currentView); // Debug log
 
   if (currentView === "admin") {
     return <AdminPanel onBack={handleBackToMain} />;

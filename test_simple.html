@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تست ساده React</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Tahoma', sans-serif; 
+            direction: rtl; 
+            text-align: right; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f0f0f0; 
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        button { 
+            background: #3b82f6; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+        button:hover { background: #2563eb; }
+        input { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+            margin: 5px 0; 
+        }
+        .error { color: red; margin: 5px 0; }
+        .success { color: green; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [adminCode, setAdminCode] = React.useState("");
+            const [error, setError] = React.useState("");
+            const [isAdmin, setIsAdmin] = React.useState(false);
+            const [students] = React.useState([
+                { id: 1, name: "علی رضایی", phone: "09120000000", status: "پرداخت شده" },
+                { id: 2, name: "سارا محمدی", phone: "09121111111", status: "در انتظار پرداخت" },
+                { id: 3, name: "حسین احمدی", phone: "09123333333", status: "پرداخت شده" }
+            ]);
+
+            const handleAdminLogin = (e) => {
+                e.preventDefault();
+                console.log("کد وارد شده:", adminCode);
+                
+                if (adminCode === "0000") {
+                    console.log("ورود موفق!");
+                    setIsAdmin(true);
+                    setError("");
+                } else {
+                    setError("کد مدیریت نادرست است");
+                    console.log("کد نادرست");
+                }
+            };
+
+            if (isAdmin) {
+                return (
+                    <div className="container">
+                        <h1>پنل مدیریت</h1>
+                        <button onClick={() => setIsAdmin(false)}>خروج</button>
+                        
+                        <h2>لیست دانش‌آموزان</h2>
+                        <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                            <thead>
+                                <tr style={{borderBottom: '1px solid #ddd'}}>
+                                    <th style={{padding: '10px', textAlign: 'right'}}>نام</th>
+                                    <th style={{padding: '10px', textAlign: 'right'}}>موبایل</th>
+                                    <th style={{padding: '10px', textAlign: 'right'}}>وضعیت</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {students.map(student => (
+                                    <tr key={student.id} style={{borderBottom: '1px solid #eee'}}>
+                                        <td style={{padding: '10px'}}>{student.name}</td>
+                                        <td style={{padding: '10px'}}>{student.phone}</td>
+                                        <td style={{padding: '10px'}}>
+                                            <span style={{
+                                                padding: '5px 10px',
+                                                borderRadius: '15px',
+                                                fontSize: '12px',
+                                                backgroundColor: student.status === 'پرداخت شده' ? '#dcfce7' : '#fef3c7',
+                                                color: student.status === 'پرداخت شده' ? '#166534' : '#92400e'
+                                            }}>
+                                                {student.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="container">
+                    <h1>تست ساده React</h1>
+                    
+                    <form onSubmit={handleAdminLogin}>
+                        <h2>ورود به پنل مدیریت</h2>
+                        <input
+                            type="text"
+                            value={adminCode}
+                            onChange={(e) => setAdminCode(e.target.value)}
+                            placeholder="کد مدیریت (0000)"
+                            maxLength="4"
+                        />
+                        {error && <div className="error">{error}</div>}
+                        <button type="submit">ورود</button>
+                    </form>
+                    
+                    <div style={{marginTop: '20px'}}>
+                        <h3>دستورالعمل:</h3>
+                        <ol>
+                            <li>کد <strong>0000</strong> را وارد کنید</li>
+                            <li>روی دکمه "ورود" کلیک کنید</li>
+                            <li>لیست دانش‌آموز باید نمایش داده شود</li>
+                        </ol>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
