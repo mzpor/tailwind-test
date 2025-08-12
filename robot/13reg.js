@@ -156,12 +156,11 @@ class SmartRegistrationModule {
     return buttons; // برگرداندن مستقیم آرایه دکمه‌ها
   }
 
-  // 🎹 ساخت کیبورد اصلی (شروع، ربات، خروج)
+  // 🎹 ساخت کیبورد اصلی (شروع مجدد، معرفی مدرسه، معرفی ربات، خروج)
   buildMainKeyboard() {
     return this.buildReplyKeyboard([
-      ['شروع'],
-      ['مدرسه', 'ربات'],
-      ['خروج']
+      ['شروع مجدد', 'معرفی مدرسه'],
+      ['معرفی ربات', 'خروج']
     ]);
   }
 
@@ -207,8 +206,15 @@ class SmartRegistrationModule {
     // بررسی دستورات خاص
     if (text === '/start' || text === 'شروع' || text === 'شروع/' || text === 'شروع مجدد' || text === 'استارت' || text === '/استارت') {
       return this.handleStartCommand(chatId, userId);
-    } else if (text === 'مدرسه') {
-      return this.handleSchoolIntro(chatId);
+    } else if (text === 'مدرسه' || text === 'معرفی مدرسه') {
+      // بررسی وضعیت کاربر
+      if (this.isUserRegistered(userId)) {
+        // کاربر شناس: خوش‌آمدگویی + حساب کاربری
+        return this.handleRegisteredUserSchool(chatId, userId);
+      } else {
+        // کاربر ناشناس: معرفی مدرسه + ثبت‌نام
+        return this.handleSchoolIntro(chatId);
+      }
     } else if (text === 'ربات') {
       return this.handleQuranBotIntro(chatId);
     } else if (text === 'خروج') {
@@ -383,28 +389,23 @@ class SmartRegistrationModule {
       
       let schoolText = `🏫 **مدرسه تلاوت قرآن کریم**
 
-🌟 **درباره مدرسه:** مدرسه تلاوت قرآن کریم با بیش از ۱۰ سال سابقه، یکی از معتبرترین مراکز آموزشی است.
+🌟 مدرسه‌ای معتبر با ۱۰+ سال سابقه در آموزش قرآن کریم
 
-📚 **کلاس‌ها:** تجوید، صوت و لحن، حفظ، تفسیر
-
-👨‍🏫 **اساتید:** استاد محمد رشوند، استاد علی حتم خانی، استاد احمد حاجی زاده
-
-💎 **مزایا:** کلاس‌های آنلاین و حضوری، گواهی پایان دوره، پشتیبانی ۲۴ ساعته`;
+📅 **${getRegistrationMonthText(true)}**`;
 
       if (isRegistrationEnabled) {
         // استفاده از منطق ماه‌بندی موجود
         const buttonText = getRegistrationMonthText(true);
         const nextMonthText = getRegistrationMonthText(false);
         
-        schoolText += `\n\n📅 **${buttonText}**
-برای ثبت‌نام در کلاس‌های ماه آینده، لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
 
         const inlineKeyboard = [
           [{ text: buttonText, callback_data: 'next_month_registration' }]
         ];
 
         await sendMessage(chatId, schoolText);
-        await sendMessageWithInlineKeyboard(chatId, 'لطفاً گزینه مورد نظر را انتخاب کنید:', inlineKeyboard);
+        await sendMessageWithInlineKeyboard(chatId, '', inlineKeyboard);
       } else {
         // اگر ثبت‌نام غیرفعال باشد، متن ماه آینده را نمایش بده
         const nextMonthText = getRegistrationMonthText(false);
@@ -419,11 +420,34 @@ class SmartRegistrationModule {
       // در صورت خطا، منوی معمولی نمایش بده
       const fallbackText = `🏫 **مدرسه تلاوت قرآن کریم**
 
-به مدرسه تلاوت قرآن کریم خوش آمدید!
-
-لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+🌟 مدرسه‌ای معتبر با ۱۰+ سال سابقه در آموزش قرآن کریم`;
       
       await sendMessage(chatId, fallbackText, this.buildMainKeyboard());
+      return true;
+    }
+  }
+
+  // 🏫 معرفی مدرسه برای کاربر شناس
+  async handleRegisteredUserSchool(chatId, userId) {
+    try {
+      const userInfo = this.userData[userId];
+      const firstName = userInfo.first_name || 'کاربر';
+      
+      const welcomeText = `🏫 **مدرسه تلاوت قرآن کریم**
+
+سلام ${firstName} عزیز! 👋
+به مدرسه تلاوت قرآن کریم خوش آمدید.
+
+🌟 مدرسه‌ای معتبر با ۱۰+ سال سابقه در آموزش قرآن کریم
+
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+      await sendMessage(chatId, welcomeText, this.buildMainKeyboard());
+      return true;
+    } catch (error) {
+      console.error('❌ Error in handleRegisteredUserSchool:', error);
+      // در صورت خطا، منوی معمولی نمایش بده
+      await sendMessage(chatId, '_🏫 به مدرسه تلاوت قرآن کریم خوش آمدید!_', this.buildMainKeyboard());
       return true;
     }
   }
