@@ -1,7 +1,7 @@
-const SmartRegistrationModule = require('./robot/13reg.js');
+const UnifiedRegistrationManager = require('./robot/unified_registration_manager');
 
 // ایجاد نمونه از ماژول
-const registrationModule = new SmartRegistrationModule();
+const registrationModule = new UnifiedRegistrationManager();
 
 console.log('🧪 Testing Smart Registration Module...\n');
 

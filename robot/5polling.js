@@ -27,7 +27,7 @@ const { logError, logConnectionStatus } = require('./8logs');
 const { BASE_URL } = require('./3config');
 const SettingsModule = require('./11settings');
 const KargahModule = require('./12kargah');
-const SmartRegistrationModule = require('./13reg');
+const UnifiedRegistrationManager = require('./unified_registration_manager');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 let lastId = 0;
@@ -95,8 +95,7 @@ const roleConfig = {
 // تابع بررسی ثبت‌نام کاربر
 function isUserRegistered(userId) {
   try {
-    const SmartRegistrationModule = require('./13reg');
-    const registrationModule = new SmartRegistrationModule();
+    const registrationModule = new UnifiedRegistrationManager();
     return registrationModule.isUserRegistered(userId);
   } catch (error) {
     console.error('❌ [POLLING] Error checking user registration:', error.message);
@@ -330,7 +329,7 @@ async function handleRoleMessage(msg, role) {
       
       if (userRole === ROLES.STUDENT) {
         // برای قرآن آموز - استفاده از ماژول ثبت‌نام
-        const regModule = new SmartRegistrationModule();
+        const regModule = new UnifiedRegistrationManager();
         await regModule.handleStartCommand(msg.chat.id, msg.from.id.toString());
         return; // ادامه حلقه بدون ارسال پیام معمولی
       } else {
@@ -864,7 +863,7 @@ function startPolling() {
             
             console.log('🔄 [POLLING] Start registration callback detected');
             // پردازش شروع ثبت‌نام با استفاده از ماژول ثبت‌نام هوشمند
-            const regModule = new SmartRegistrationModule();
+            const regModule = new UnifiedRegistrationManager();
             const success = await regModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
             
             if (!success) {
@@ -892,7 +891,7 @@ function startPolling() {
             }
             
             // پردازش ثبت‌نام قرآن آموز با استفاده از ماژول ثبت‌نام هوشمند
-            const regModule = new SmartRegistrationModule();
+            const regModule = new UnifiedRegistrationManager();
             const success = await regModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
             
             if (!success) {
@@ -1000,7 +999,7 @@ function startPolling() {
             console.log('🔄 [POLLING] Registration callback detected');
             console.log(`🔄 [POLLING] Registration callback data: ${callback_query.data}`);
             // پردازش callback های ثبت‌نام
-            const regModule = new SmartRegistrationModule();
+            const regModule = new UnifiedRegistrationManager();
             const success = await regModule.handleCallback(callback_query);
             
             if (!success) {
@@ -1120,7 +1119,7 @@ function startPolling() {
           } else {
             // برای قرآن‌آموز و ناشناس‌ها، از ماژول ثبت‌نام هوشمند استفاده کن
             console.log(`🔄 [POLLING] Student/Unknown user detected, using smart registration module`);
-            const regModule = new SmartRegistrationModule();
+            const regModule = new UnifiedRegistrationManager();
             const success = await regModule.handleMessage(msg);
             
             if (!success) {

@@ -246,8 +246,9 @@ class SmartRegistrationModule {
     console.log(`🔍 [REG] userData keys:`, Object.keys(this.userData));
     
     // 🔧 اگر کاربر قبلاً ثبت‌نام شده ولی در userStates گیر کرده، پاکش کن
-    if (this.isUserRegistered(userId) && userId in this.userStates) {
-      console.log(`🧹 [REG] User ${userId} is already registered, cleaning up userStates`);
+    // اما فقط اگر در فرآیند ثبت‌نام نباشد
+    if (this.isUserRegistered(userId) && userId in this.userStates && !this.userStates[userId].step) {
+      console.log(`🧹 [REG] User ${userId} is already registered and has no active step, cleaning up userStates`);
       delete this.userStates[userId];
       this.saveData();
     }
@@ -268,6 +269,40 @@ class SmartRegistrationModule {
     } else {
       console.log(`❌ [REG] User ${userId} is NOT in registration step`);
       console.log(`❌ [REG] userStates[${userId}]:`, this.userStates[userId]);
+      console.log(`🔍 [REG] Checking if user should be in registration step...`);
+      
+      // اگر کاربر در userData وجود دارد ولی در userStates نیست، ممکن است در فرآیند ثبت‌نام باشد
+      if (userId in this.userData && Object.keys(this.userData[userId]).length > 0) {
+        console.log(`⚠️ [REG] User ${userId} has data but no state - possible registration in progress`);
+        console.log(`⚠️ [REG] User data:`, JSON.stringify(this.userData[userId]));
+        
+        // بررسی اینکه آیا کاربر در مرحله کد ملی است
+        if (this.userData[userId].full_name && !this.userData[userId].national_id) {
+          console.log(`🔄 [REG] User ${userId} appears to be in national_id step, restoring state`);
+          this.userStates[userId] = { step: 'national_id' };
+          this.saveData();
+          
+          // پردازش پیام به عنوان کد ملی
+          const result = await this.handleRegistrationStep(chatId, userId, text, contact);
+          if (result) {
+            console.log(`✅ [REG] Registration step completed successfully for user ${userId}`);
+            return true;
+          }
+        }
+        // بررسی اینکه آیا کاربر در مرحله تلفن است
+        else if (this.userData[userId].full_name && this.userData[userId].national_id && !this.userData[userId].phone) {
+          console.log(`🔄 [REG] User ${userId} appears to be in phone step, restoring state`);
+          this.userStates[userId] = { step: 'phone' };
+          this.saveData();
+          
+          // پردازش پیام به عنوان تلفن
+          const result = await this.handleRegistrationStep(chatId, userId, text, contact);
+          if (result) {
+            console.log(`✅ [REG] Registration step completed successfully for user ${userId}`);
+            return true;
+          }
+        }
+      }
     }
 
     // 🔇 اگر کاربر شناس است و کلمه معمولی زده، هیچ واکنشی نده
@@ -495,9 +530,29 @@ class SmartRegistrationModule {
     console.log(`🚀 [REG] handleRegistrationStart called for user ${userId}`);
     
     try {
+      // بررسی اینکه آیا کاربر قبلاً در فرآیند ثبت‌نام بوده
+      if (userId in this.userStates && this.userStates[userId].step) {
+        console.log(`🔄 [REG] User ${userId} already has registration state: ${this.userStates[userId].step}`);
+        // اگر کاربر در مرحله name است، دوباره شروع نکن
+        if (this.userStates[userId].step === 'name') {
+          console.log(`🔄 [REG] User ${userId} already in name step, continuing...`);
+          await sendMessage(chatId, '_لطفاً نام و نام خانوادگی خود را وارد کنید (مثال: علی رضایی)._', this.buildReplyKeyboard([
+            ['برگشت به قبل', 'خروج']
+          ]));
+          return true;
+        }
+      }
+      
+      // شروع جدید یا ادامه از مرحله name
       this.userStates[userId] = { step: 'name' };
-      this.userData[userId] = {};
+      // فقط اگر کاربر جدید باشد، userData را پاک کن
+      if (!(userId in this.userData) || Object.keys(this.userData[userId]).length === 0) {
+        this.userData[userId] = {};
+      }
       this.saveData();
+      
+      console.log(`✅ [REG] User ${userId} registration started/reset to name step`);
+      console.log(`✅ [REG] userStates[${userId}]:`, JSON.stringify(this.userStates[userId]));
       
       await sendMessage(chatId, '_لطفاً نام و نام خانوادگی خود را وارد کنید (مثال: علی رضایی)._', this.buildReplyKeyboard([
         ['برگشت به قبل', 'خروج']
@@ -578,12 +633,16 @@ class SmartRegistrationModule {
 
   // 🆔 مرحله کد ملی
   async handleNationalIdStep(chatId, userId, text) {
+    console.log(`🆔 [REG] Processing national ID step for user ${userId}: "${text}"`);
+    
     if (this.isValidNationalId(text)) {
       this.userData[userId].national_id = text;
       
       // تنظیم مرحله بعدی قبل از ارسال پیام‌ها
       this.userStates[userId].step = 'phone';
       console.log(`✅ [REG] User ${userId} moved from national_id step to phone step`);
+      console.log(`✅ [REG] userStates[${userId}]:`, JSON.stringify(this.userStates[userId]));
+      console.log(`✅ [REG] userData[${userId}]:`, JSON.stringify(this.userData[userId]));
       
       // ذخیره داده‌ها
       this.saveData();
@@ -606,6 +665,7 @@ class SmartRegistrationModule {
 
       return true;
     } else {
+      console.log(`❌ [REG] Invalid national ID for user ${userId}: "${text}"`);
       await sendMessage(chatId, '_❌ کد ملی نامعتبر است. لطفاً ۱۰ رقم وارد کنید._');
       return false;
     }

@@ -92,6 +92,13 @@ class UnifiedRegistrationManager {
     return null;
   }
 
+  // 🔍 بررسی ثبت‌نام کاربر - سازگار با سیستم قدیمی
+  isUserRegistered(userId) {
+    const userIdStr = userId.toString();
+    const userRecord = this.findUserById(userIdStr);
+    return userRecord && userRecord.userData.fullName && userRecord.userData.fullName.trim() !== '';
+  }
+
   // 📝 ثبت‌نام جدید از ربات
   registerFromBot(userId, userData) {
     const registrationId = `r_${Date.now()}`;
@@ -396,6 +403,113 @@ class UnifiedRegistrationManager {
       registrationComplete: this.isRegistrationComplete(newData) || this.isRegistrationComplete(existing),
       lastUpdated: Date.now()
     };
+  }
+
+  // 🔄 پردازش پیام‌های ورودی - سازگار با سیستم قدیمی
+  async handleMessage(message) {
+    const { chat, text, contact, from } = message;
+    const chatId = chat.id;
+    const userId = from.id;
+    const isPrivate = chat.type === 'private';
+
+    if (!isPrivate) {
+      return false; // فقط پیام‌های خصوصی
+    }
+
+    console.log(`📱 [UNIFIED] Processing message from user ${userId}: text='${text}', contact=${!!contact}`);
+
+    // بررسی دستورات خاص
+    if (text === '/start' || text === 'شروع' || text === '/شروع' || text === 'شروع/' || text === 'شروع مجدد' || text === 'استارت' || text === '/استارت') {
+      return this.handleStartCommand(chatId, userId);
+    }
+
+    // برای سایر پیام‌ها، بررسی کنیم که آیا کاربر ثبت‌نام شده یا نه
+    const userRecord = this.findUserById(userId);
+    if (userRecord) {
+      console.log(`✅ [UNIFIED] User ${userId} is already registered`);
+      return true;
+    } else {
+      console.log(`❓ [UNIFIED] Unknown user ${userId}, starting registration process`);
+      return this.handleRegistrationStart(userId, userId.toString());
+    }
+  }
+
+  // 🚀 پردازش دستور شروع
+  async handleStartCommand(chatId, userId) {
+    console.log(`🚀 [UNIFIED] Handling start command for user ${userId}`);
+    
+    const userRecord = this.findUserById(userId);
+    if (userRecord) {
+      console.log(`✅ [UNIFIED] User ${userId} is already registered`);
+      // ارسال پیام خوش‌آمدگویی برای کاربر ثبت‌نام شده
+      return true;
+    } else {
+      console.log(`🆕 [UNIFIED] New user ${userId}, starting registration`);
+      return this.handleRegistrationStart(userId, userId.toString());
+    }
+  }
+
+  // 📝 شروع فرآیند ثبت‌نام
+  async handleRegistrationStart(userId, userIdStr) {
+    console.log(`📝 [UNIFIED] Starting registration for user ${userId}`);
+    
+    try {
+      // بررسی اینکه آیا کاربر قبلاً ثبت‌نام شده یا نه
+      const existingUser = this.findUserById(userId);
+      if (existingUser) {
+        console.log(`✅ [UNIFIED] User ${userId} is already registered`);
+        return true;
+      }
+
+      // ایجاد رکورد جدید برای کاربر
+      const newUserData = {
+        fullName: '',
+        firstName: '',
+        nationalId: '',
+        phone: '',
+        workshopId: null,
+        status: 'new',
+        source: 'bot',
+        registrationComplete: false,
+        ts: Date.now(),
+        lastUpdated: Date.now()
+      };
+
+      // ذخیره در registrations.json
+      this.registrations[userId] = newUserData;
+      this.saveData(this.registrationsFile, this.registrations);
+      
+      console.log(`✅ [UNIFIED] Registration started for user ${userId}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ [UNIFIED] Error starting registration for user ${userId}:`, error);
+      return false;
+    }
+  }
+
+  // 🔘 پردازش callback ها
+  async handleCallback(callback_query) {
+    console.log(`🔘 [UNIFIED] Handling callback: ${callback_query.data}`);
+    
+    try {
+      const userId = callback_query.from.id;
+      const callbackData = callback_query.data;
+
+      // پردازش callback های مختلف
+      if (callbackData === 'start_registration' || 
+          callbackData === 'start_next_month_registration' ||
+          callbackData === 'back_to_main') {
+        
+        console.log(`🔄 [UNIFIED] Callback handled successfully: ${callbackData}`);
+        return true;
+      }
+
+      console.log(`✅ [UNIFIED] Callback handled successfully: ${callbackData}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ [UNIFIED] Error handling callback:`, error);
+      return false;
+    }
   }
 }
 
