@@ -190,6 +190,12 @@ class SmartRegistrationModule {
     return this.buildReplyKeyboard(buttons);
   }
 
+  // 🔍 بررسی دستورات خاص
+  isSpecialCommand(text) {
+    const specialCommands = ['شروع', 'مدرسه', 'ربات', 'معرفی ربات', 'خروج', 'برگشت به قبل', '🏠 برگشت به منو', '📚 انتخاب کلاس', 'پنل قرآن‌آموز'];
+    return specialCommands.includes(text);
+  }
+
   // 🔄 پردازش پیام‌های ورودی
   async handleMessage(message) {
     const { chat, text, contact, from } = message;
@@ -215,7 +221,7 @@ class SmartRegistrationModule {
         // کاربر ناشناس: معرفی مدرسه + ثبت‌نام
         return this.handleSchoolIntro(chatId);
       }
-    } else if (text === 'ربات') {
+    } else if (text === 'ربات' || text === 'معرفی ربات') {
       return this.handleQuranBotIntro(chatId);
     } else if (text === 'خروج') {
       return this.handleExitCommand(chatId);
@@ -573,11 +579,7 @@ class SmartRegistrationModule {
       const fullName = this.userData[userId].full_name;
       const statusText = `_${firstName} عزیز،\nنام: ${fullName}\nکد ملی: ${text}\nتلفن: هنوز مانده_\n\n📱 لطفاً شماره تلفن خود را با دکمه زیر ارسال کنید.`;
 
-      await sendMessage(chatId, statusText, this.buildReplyKeyboard([
-        ['برگشت به قبل', 'خروج']
-      ]));
-
-      // دکمه ارسال تلفن
+      // دکمه ارسال تلفن (بدون کیبورد معمولی)
       await sendMessage(chatId, '📱 لطفاً شماره تلفن خود را با دکمه زیر ارسال کنید.', {
         keyboard: [[{ text: '📱 ارسال شماره تلفن', request_contact: true }]],
         resize_keyboard: true
@@ -611,7 +613,7 @@ class SmartRegistrationModule {
 
       const statusText = `_📋 ${firstName} عزیز، حساب کاربری شما:\nنام: ${fullName}\nکد ملی: ${nationalId}\nتلفن: ${phoneNumber}_`;
 
-      // دکمه‌های تصحیح همه فیلدها + تأیید نهایی
+      // فقط دکمه‌های inline - بدون کیبورد معمولی
       await sendMessageWithInlineKeyboard(chatId, statusText, this.buildInlineKeyboard([
         [{ text: '✅ تأیید نهایی', callback_data: 'final_confirm' }],
         [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }],
