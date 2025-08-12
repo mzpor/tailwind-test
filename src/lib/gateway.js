@@ -42,6 +42,13 @@ export const gw = {
   setSettings: (settings) => post('/api/settings', settings),
   workshops: () => get('/api/workshops'),
   saveWorkshop: (payload) => post('/api/workshops', payload),
+  deleteWorkshop: (id) => fetch(`${getBaseUrl()}/api/workshops/${id}`, {
+    method: 'DELETE',
+    headers: { 'X-Shared-Key': SHARED }
+  }).then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }),
   register: (payload) => post('/api/register', payload),
   sendVerification: (payload) => post('/api/send-verification', payload),
   verifyAndRegister: (payload) => post('/api/verify-and-register', payload),

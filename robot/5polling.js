@@ -88,10 +88,7 @@ const roleConfig = {
     get keyboard() { return generateDynamicKeyboard(ROLES.STUDENT); },
     commands: ['/شروع', '/خروج', '/ربات', '/قرآن آموز'],
     // تابع جدید برای تولید keyboard با userId
-    getKeyboard: function(userId) { 
-      const userRole = getUserRole(userId);
-      return generateDynamicKeyboard(userRole, userId); 
-    }
+    getKeyboard: function(userId) { return generateDynamicKeyboard(ROLES.STUDENT, userId); }
   }
 };
 
@@ -130,10 +127,8 @@ function generateDynamicKeyboard(role, userId = null) {
   } else if (role === ROLES.ASSISTANT) {
     secondRow.push('کمک مربی');
   } else if (role === ROLES.STUDENT) {
-    // دکمه "قرآن آموز" فقط برای کاربران ثبت‌نام شده
-    if (userId && isUserRegistered(userId)) {
-      secondRow.push('قرآن آموز');
-    }
+    // دکمه "قرآن آموز" برای همه کاربران با نقش STUDENT
+    secondRow.push('قرآن آموز');
   }
   
   if (secondRow.length > 0) {
@@ -325,11 +320,367 @@ async function handleRoleMessage(msg, role) {
   console.log('✅ [POLLING] Config found for role:', role);
   console.log('✅ [POLLING] Config:', JSON.stringify(config, null, 2));
   
-  // حذف شده: این دستورات در handler اصلی پردازش می‌شوند
-  // برای جلوگیری از تداخل با handler اصلی
+  let reply = '';
+  let keyboard = null;
   
-  // اگر پیام پردازش نشد، false برگردان
-  return false;
+      if (msg.text === 'شروع' || msg.text === '/start') {
+      // بررسی نقش کاربر با استفاده از ساختار مرکزی
+      const userRole = getUserRole(msg.from.id);
+      console.log(`🔍 [POLLING] User role determined: ${userRole}`);
+      
+      if (userRole === ROLES.STUDENT) {
+        // برای قرآن آموز - استفاده از ماژول ثبت‌نام
+        const regModule = new SmartRegistrationModule();
+        await regModule.handleStartCommand(msg.chat.id, msg.from.id.toString());
+        return; // ادامه حلقه بدون ارسال پیام معمولی
+      } else {
+        // برای سایر نقش‌ها - پنل معمولی با بررسی دسترسی
+        const hasAccess = hasPermission(msg.from.id, role);
+        if (hasAccess) {
+          reply = `${config.emoji} پنل ${config.name} فعال شد\n⏰ ${getTimeStamp()}`;
+          keyboard = config.keyboard;
+          console.log(`✅ [POLLING] Access granted for user ${msg.from.id} to role ${role}`);
+        } else {
+          reply = `❌ شما دسترسی لازم برای این پنل را ندارید.\nنقش شما: ${userRole}`;
+          console.log(`❌ [POLLING] Access denied for user ${msg.from.id} to role ${role}`);
+        }
+      }
+  } else if (msg.text === 'خروج') {
+    reply = `👋 پنل ${config.name} بسته شد\n⏰ ${getTimeStamp()}`;
+    keyboard = config.keyboard;
+  } else if (msg.text === 'ربات') {
+    // دستور ربات - فقط برای مدیر مدرسه
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند از دستور ربات استفاده کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش وضعیت فعلی و امکان تغییر
+      const currentStatus = isButtonVisible('ROBOT_BUTTON');
+      const statusText = currentStatus ? 'نمایش داده می‌شود' : 'نمایش داده نمی‌شود';
+      const toggleText = currentStatus ? 'مخفی کردن' : 'نمایش دادن';
+      const toggleValue = currentStatus ? 0 : 1;
+      
+      const inlineKeyboard = [
+        [{ text: `🔄 ${toggleText} دکمه ربات`, callback_data: `toggle_robot_button_${toggleValue}` }],
+        [{ text: '📊 وضعیت فعلی', callback_data: 'robot_button_status' }],
+        [{ text: '🔙 بازگشت', callback_data: 'back_to_main' }]
+      ];
+      
+      reply = `🤖 کنترل دکمه ربات
+
+📋 وضعیت فعلی:
+• دکمه ربات: ${statusText}
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+      return; // ادامه حلقه بدون ارسال پیام معمولی
+    }
+  } else if (msg.text === config.panelText) {
+    // if (!canSendMessage(msg.chat.id, 'panel', 5000)) {
+    //   return; // پیام را نادیده بگیر
+    // }
+    
+    // بررسی نقش کاربر برای نمایش پنل مناسب
+    if (isCoach(msg.from.id)) {
+      // پنل مربی - فقط دو گزینه
+      const inlineKeyboard = [
+        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
+        [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'coach_groups' }]
+      ];
+      
+      reply = `👨‍🏫 پنل مربی
+
+📋 گزینه‌های موجود:
+• 🤖 معرفی ربات
+• 🏫 مدیریت گروه‌ها (حضور و غیاب)
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+      return; // ادامه حلقه بدون ارسال پیام معمولی
+    } else if (isAssistant(msg.from.id)) {
+      // پنل کمک مربی - فقط دو گزینه
+      const inlineKeyboard = [
+        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
+        [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'assistant_groups' }]
+      ];
+      
+      reply = `👨‍🏫 پنل کمک مربی
+
+📋 گزینه‌های موجود:
+• 🤖 معرفی ربات
+• 🏫 مدیریت گروه‌ها (حضور و غیاب)
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+      return; // ادامه حلقه بدون ارسال پیام معمولی
+    } else if (getUserRole(msg.from.id) === ROLES.STUDENT) {
+      // پنل قرآن آموز - نمایش ساده بدون Inline Keyboard
+      reply = `📖 **پنل قرآن آموز**
+
+📋 **گزینه‌های موجود:**
+• 🤖 معرفی ربات
+• 📝 ثبت نام
+
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**
+⏰ ${getTimeStamp()}`;
+      keyboard = config.keyboard;
+    } else {
+      // پنل مدیر - همه گزینه‌ها
+      const inlineKeyboard = [
+        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
+        [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }],
+        [{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]
+      ];
+      
+      reply = `🔧 پنل ${config.name}
+
+📋 گزینه‌های موجود:
+• 🤖 معرفی ربات
+• 🏫 مدیریت گروه‌ها (حضور و غیاب)
+• 🏭 کارگاه‌ها
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+      return; // ادامه حلقه بدون ارسال پیام معمولی
+    }
+  } else if (msg.text === '🏫 مدیریت گروه‌ها') {
+    // if (!canSendMessage(msg.chat.id, 'group_management', 5000)) {
+    //   return; // پیام را نادیده بگیر
+    // }
+    
+    // بررسی دسترسی کاربر - اصلاح شده
+    if (!isAdmin(msg.from.id) && !isGroupAdmin(msg.from.id)) {
+      reply = '⚠️ شما دسترسی لازم برای مدیریت گروه‌ها را ندارید.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش پنل مدیریت گروه‌ها با استفاده از ماژول جدید
+      const groups = await getGroupsList();
+      
+      if (groups.length === 0) {
+        reply = '📝 هیچ گروهی یافت نشد.\n\nبرای شروع، لطفاً قرآن آموزان در گروه‌ها /عضو شوند.';
+        keyboard = [[{ text: '🔙 بازگشت به منوی اصلی', callback_data: 'back_to_main' }]];
+      } else {
+        const keyboard = createGroupsKeyboard(groups);
+        reply = `🏫 مدیریت گروه‌ها
+
+📋 گروه‌های موجود:
+${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`).join('\n')}
+
+👆 لطفاً گروه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+        
+        await sendMessageWithInlineKeyboard(msg.chat.id, reply, keyboard);
+        return; // ادامه حلقه بدون ارسال پیام معمولی
+      }
+    }
+  } else if (msg.text === 'تنظیمات' || msg.text === '/تنظیمات') {
+    // بررسی دسترسی کاربر برای تنظیمات - فقط مدیر مدرسه
+    if (!isAdmin(msg.from.id)) {
+     // reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش منوی تنظیمات با استفاده از ماژول تنظیمات
+      const settingsModule = new SettingsModule();
+      const success = settingsModule.handleSettingsCommand(msg.chat.id, msg.from.id);
+      
+      if (success) {
+        return; // ادامه حلقه بدون ارسال پیام معمولی
+      } else {
+        reply = '❌ خطا در نمایش تنظیمات';
+        keyboard = config.keyboard;
+      }
+    }
+  } else if (msg.text === 'نقش‌ها' || msg.text === '/نقش‌ها') {
+    // مدیریت نقش‌ها - فقط برای مدیر مدرسه
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند نقش‌ها را مدیریت کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش پنل مدیریت نقش‌ها
+      reply = `🎭 *پنل مدیریت نقش‌ها*
+
+👥 **کاربران فعلی:**
+${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n')}
+
+📝 **دستورات:**
+• /نقش [شماره تلفن] [نقش] - تخصیص نقش
+• /حذف_نقش [شماره تلفن] - حذف نقش
+
+⏰ ${getTimeStamp()}`;
+      keyboard = config.keyboard;
+    }
+  } else if (msg.text === '/گروه') {
+    // دستور /گروه - فقط در گروه گزارش و فقط برای مدیر مدرسه
+    if (msg.chat.id !== REPORT_GROUP_ID) {
+      reply = '⚠️ این دستور فقط در گروه گزارش قابل استفاده است.';
+      keyboard = config.keyboard;
+    } else if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند از این دستور استفاده کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش لیست گروه‌ها برای مدیر مدرسه با Inline Keyboard
+      const { createGroupsInlineKeyboard } = require('./7group');
+      
+      try {
+        const inlineKeyboard = await createGroupsInlineKeyboard();
+        
+        if (inlineKeyboard.length <= 1) { // فقط دکمه بازگشت
+          reply = '📝 هیچ گروهی یافت نشد.\n\nبرای شروع، لطفاً قرآن آموزان در گروه‌ها /عضو شوند.';
+          keyboard = config.keyboard;
+        } else {
+          reply = `📋 لیست گروه‌های فعال:
+
+👆 لطفاً گروه مورد نظر را انتخاب کنید تا جزئیات آن را ببینید:
+⏰ ${getTimeStamp()}`;
+          
+          await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+          return; // ادامه حلقه بدون ارسال پیام معمولی
+        }
+      } catch (error) {
+        console.error('Error creating groups keyboard:', error.message);
+        reply = '❌ خطا در دریافت لیست گروه‌ها';
+        keyboard = config.keyboard;
+      }
+    }
+  } else if (msg.text === '/شروع') {
+    reply = `${config.emoji} پنل ${config.name} فعال شد\n⏰ ${getTimeStamp()}`;
+    keyboard = config.getKeyboard ? config.getKeyboard(msg.from.id) : config.keyboard;
+  } else if (msg.text === '/خروج') {
+    reply = `👋 پنل ${config.name} بسته شد\n⏰ ${getTimeStamp()}`;
+    keyboard = config.getKeyboard ? config.getKeyboard(msg.from.id) : config.keyboard;
+  } else if (msg.text === 'ربات' || msg.text === '/ربات' || msg.text === '🤖 ربات') {
+    // دستور معرفی ربات
+    reply = `🤖 *ربات قرآنی هوشمند*
+
+📚 **قابلیت‌های اصلی:**
+• 👥 مدیریت گروه‌ها
+• 📋 حضور و غیاب
+• 🏭 مدیریت کارگاه‌ها
+• ⚙️ تنظیمات پیشرفته
+
+🎯 **دستورات مهم:**
+• /لیست - مشاهده لیست اعضا
+• /گروه - مدیریت گروه‌ها (مدیر مدرسه)
+• /کارگاه - مدیریت کارگاه‌ها (مدیر مدرسه)
+• /تنظیمات - تنظیمات ربات (فقط مدیر مدرسه)
+
+⏰ ${getTimeStamp()}`;
+    keyboard = config.keyboard;
+  } else if (msg.text === 'قرآن آموز' || msg.text === '/قرآن آموز') {
+    // دستور قرآن آموز - نمایش پنل قرآن آموز
+    reply = `📖 **پنل قرآن آموز**
+
+📋 **گزینه‌های موجود:**
+• 🤖 معرفی ربات
+• 📝 ثبت نام
+
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**
+⏰ ${getTimeStamp()}`;
+    keyboard = config.keyboard;
+  } else if (msg.text === '/تنظیمات' || msg.text === '⚙️ تنظیمات' || msg.text === 'تنظیمات') {
+    console.log('🔍 [POLLING] Settings command detected:', msg.text);
+    console.log(`🔍 [POLLING] User ID: ${msg.from.id}, Chat ID: ${msg.chat.id}`);
+    // دستور تنظیمات - فقط برای مدیر مدرسه
+    if (!isAdmin(msg.from.id)) {
+      console.log('❌ [POLLING] User is not admin for settings command');
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش پنل تنظیمات
+      console.log('🔍 [POLLING] User is admin, calling handleSettingsCommand...');
+      const settingsModule = new SettingsModule();
+      console.log('🔍 [POLLING] SettingsModule created');
+      const success = settingsModule.handleSettingsCommand(msg.chat.id, msg.from.id);
+      console.log('🔍 [POLLING] handleSettingsCommand result:', success);
+      
+      if (success) {
+        console.log('✅ [POLLING] Settings command handled successfully, returning');
+        return; // ادامه حلقه بدون ارسال پیام معمولی
+      } else {
+        console.log('❌ [POLLING] Settings command failed, sending error message');
+        reply = '❌ خطا در نمایش تنظیمات';
+        keyboard = config.keyboard;
+      }
+    }
+  } else if (msg.text === '/کارگاه' || msg.text === '🏭 کارگاه‌ها') {
+    // دستور کارگاه‌ها - فقط برای مدیر مدرسه
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند از کارگاه‌ها استفاده کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش پنل کارگاه‌ها
+      const kargahModule = require('./12kargah');
+      // متصل کردن متدهای ارسال پیام
+      kargahModule.sendMessage = sendMessage;
+      kargahModule.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
+      kargahModule.editMessageWithInlineKeyboard = require('./4bale').editMessageWithInlineKeyboard;
+      const success = await kargahModule.handleKargahCommand(msg.chat.id, msg.from.id);
+      
+      if (success) {
+        return; // ادامه حلقه بدون ارسال پیام معمولی
+      } else {
+        reply = '❌ خطا در نمایش کارگاه‌ها';
+        keyboard = config.keyboard;
+      }
+    }
+  } else {
+    // بررسی وضعیت کاربر در ماژول‌های مختلف - اولویت با وضعیت‌ها
+    const settingsModule = new SettingsModule();
+    const kargahModule = require('./12kargah');
+    
+    // بررسی وضعیت در تنظیمات
+    if (settingsModule.isUserInState(msg.from.id)) {
+      const userState = settingsModule.getUserState(msg.from.id);
+      await settingsModule.handleSettingsStep(msg.chat.id, msg.from.id, msg.text, userState);
+      return;
+    }
+    
+    // بررسی وضعیت در کارگاه‌ها - اولویت بالا
+    console.log(`🔍 [POLLING] Checking kargah state for user ${msg.from.id}`);
+    
+    // متصل کردن متدهای ارسال پیام
+    kargahModule.sendMessage = sendMessage;
+    kargahModule.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
+    kargahModule.editMessageWithInlineKeyboard = require('./4bale').editMessageWithInlineKeyboard;
+    
+    console.log(`🔍 [POLLING] isUserInState result: ${kargahModule.isUserInState(msg.from.id)}`);
+    
+    if (kargahModule.isUserInState(msg.from.id)) {
+      console.log(`🔍 [POLLING] User ${msg.from.id} is in kargah state`);
+      const userState = kargahModule.getUserState(msg.from.id);
+      console.log(`🔍 [POLLING] User state: ${userState}`);
+      
+      // بررسی نوع وضعیت و پردازش مناسب
+      if (userState.startsWith('kargah_add_')) {
+        console.log(`🔍 [POLLING] Processing add workshop step: ${userState}`);
+        await kargahModule.handleAddWorkshopStep(msg.chat.id, msg.from.id, msg.text, userState);
+      } else if (userState.startsWith('kargah_edit_')) {
+        console.log(`🔍 [POLLING] Processing edit workshop step: ${userState}`);
+        await kargahModule.handleEditWorkshopStep(msg.chat.id, msg.from.id, msg.text, userState);
+      }
+      return;
+    }
+    
+    // کد مربوط به پردازش پیام‌های عادی
+    // نادیده گرفتن کلمات خاص
+    if (['ربات', 'bot', 'سلام', 'hi', 'hello', 'خداحافظ', 'bye'].includes(msg.text.toLowerCase())) {
+      return;
+    }
+    
+    reply = `❓ پیام شما قابل فهم نیست\n\nلطفاً از دکمه‌های منو استفاده کنید یا دستورات زیر را امتحان کنید:\n\n`;
+    reply += config.commands.map(cmd => `• ${cmd}`).join('\n');
+    keyboard = config.keyboard;
+  }
+  
+  await safeSendMessage(msg.chat.id, reply, keyboard);
 }
 
 function startPolling() {

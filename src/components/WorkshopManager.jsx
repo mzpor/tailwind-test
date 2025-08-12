@@ -74,6 +74,21 @@ export default function WorkshopManager() {
     }
   }
 
+  async function deleteWorkshop(workshopId) {
+    if (!confirm('آیا مطمئن هستید که می‌خواهید این کارگاه را حذف کنید؟')) {
+      return;
+    }
+
+    try {
+      await gw.deleteWorkshop(workshopId);
+      await loadWorkshops();
+      setMsg('کارگاه با موفقیت حذف شد ✅');
+    } catch (error) {
+      console.error('خطا در حذف کارگاه:', error);
+      setMsg('خطا در حذف کارگاه ❌');
+    }
+  }
+
   return (
     <div className="bg-white shadow rounded-2xl p-5 space-y-4">
       <h2 className="text-lg font-bold">مدیریت کارگاه‌ها</h2>
@@ -174,12 +189,20 @@ export default function WorkshopManager() {
                   <p className="text-sm text-slate-600">💰 {workshop.price.toLocaleString('fa-IR')} تومان</p>
                   <p className="text-xs text-slate-500 ltr">🔗 {workshop.baleLink}</p>
                 </div>
-                <button 
-                  onClick={() => startEdit(workshop)}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  ویرایش
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => startEdit(workshop)}
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    ویرایش
+                  </button>
+                  <button 
+                    onClick={() => deleteWorkshop(workshop.id)}
+                    className="px-3 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    حذف
+                  </button>
+                </div>
               </div>
             ))}
           </div>

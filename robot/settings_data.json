@@ -8,6 +8,6 @@
   "attendance_days": [
     6
   ],
-  "enable_satisfaction_survey": true,
+  "enable_satisfaction_survey": false,
   "enable_bot_reports": true
 }

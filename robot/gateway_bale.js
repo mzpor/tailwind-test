@@ -660,18 +660,41 @@ app.get('/api/report-events', (req, res) => {
 app.get('/api/workshops', async (req, res) => {
   try {
     const workshops = await readJson(WS_FILE, {});
+    
+    // بررسی اینکه آیا ربات فعال است یا نه
+    const botStatus = await checkBotStatus();
+    
+    // اگر ربات غیرفعال است، فقط کارگاه‌های فعال را برگردان
+    let filteredWorkshops = workshops;
+    if (!botStatus.isActive) {
+      filteredWorkshops = Object.fromEntries(
+        Object.entries(workshops).filter(([id, workshop]) => 
+          workshop.status !== 'inactive' && workshop.status !== 'deleted'
+        )
+      );
+    }
+    
     // تبدیل فرمت object به array برای سایت
-    const list = Object.entries(workshops).map(([id, workshop]) => ({
+    const list = Object.entries(filteredWorkshops).map(([id, workshop]) => ({
       id,
       title: workshop.description || `کارگاه ${workshop.instructor_name}`,
       coach: workshop.instructor_name,
       phone: workshop.instructor_phone,
       price: workshop.cost,
       baleLink: workshop.link,
+      status: workshop.status || 'active',
+      lastUpdated: workshop.lastUpdated || Date.now(),
       ...workshop
     }));
-    res.json(list);
+    
+    res.json({
+      workshops: list,
+      botStatus: botStatus.isActive,
+      totalCount: Object.keys(workshops).length,
+      activeCount: list.length
+    });
   } catch (error) {
+    console.error('Error loading workshops:', error);
     res.status(500).json({ error: 'خطا در لود کردن کارگاه‌ها' });
   }
 });
@@ -682,6 +705,18 @@ app.post('/api/workshops', async (req, res) => {
     let workshops = await readJson(WS_FILE, {});
     
     let workshopId = body.id;
+    
+    // تبدیل ID سایت به فرمت ربات
+    if (workshopId && workshopId.startsWith('w-')) {
+      // اگر ID سایت است (مثل w-1404-01)، آن را به فرمت ربات تبدیل کن
+      const siteIdParts = workshopId.split('-');
+      if (siteIdParts.length >= 3) {
+        const numericPart = siteIdParts[2]; // قسمت آخر (01, 02, ...)
+        if (!isNaN(numericPart)) {
+          workshopId = numericPart;
+        }
+      }
+    }
     
     if (!workshopId) {
       // ایجاد ID جدید
@@ -699,7 +734,9 @@ app.post('/api/workshops', async (req, res) => {
       description: body.title || body.description,
       capacity: body.capacity || 20,
       duration: body.duration || '3 ماه',
-      level: body.level || 'همه سطوح'
+      level: body.level || 'همه سطوح',
+      status: 'active',
+      lastUpdated: Date.now()
     };
     
     workshops[workshopId] = workshopData;
@@ -713,6 +750,8 @@ app.post('/api/workshops', async (req, res) => {
       phone: workshopData.instructor_phone,
       price: workshopData.cost,
       baleLink: workshopData.link,
+      status: workshopData.status,
+      lastUpdated: workshopData.lastUpdated,
       ...workshopData
     };
     
@@ -720,6 +759,42 @@ app.post('/api/workshops', async (req, res) => {
   } catch (error) {
     console.error('Error saving workshop:', error);
     res.status(500).json({ error: 'خطا در ذخیره کارگاه‌ها' });
+  }
+});
+
+// API برای حذف کارگاه
+app.delete('/api/workshops/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let workshops = await readJson(WS_FILE, {});
+    
+    // تبدیل ID سایت به فرمت ربات
+    let workshopId = id;
+    if (workshopId && workshopId.startsWith('w-')) {
+      const siteIdParts = workshopId.split('-');
+      if (siteIdParts.length >= 3) {
+        const numericPart = siteIdParts[2];
+        if (!isNaN(numericPart)) {
+          workshopId = numericPart;
+        }
+      }
+    }
+    
+    // بررسی وجود کارگاه
+    if (!workshops[workshopId]) {
+      return res.status(404).json({ ok: false, error: 'کارگاه یافت نشد' });
+    }
+    
+    // حذف کارگاه
+    delete workshops[workshopId];
+    await writeJson(WS_FILE, workshops);
+    
+    console.log(`✅ کارگاه ${workshopId} حذف شد`);
+    res.json({ ok: true, message: 'کارگاه با موفقیت حذف شد' });
+    
+  } catch (error) {
+    console.error('Error deleting workshop:', error);
+    res.status(500).json({ error: 'خطا در حذف کارگاه' });
   }
 });
 
