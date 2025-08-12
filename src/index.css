@@ -1,7 +1,57 @@
-/* فونت فارسی باید اولین خط باشد */
 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
 
-/* Tailwind v4 */
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-html { direction: rtl; }
+* {
+  font-family: 'Vazirmatn', 'Tahoma', 'Arial', sans-serif;
+}
+
+body {
+  direction: rtl;
+  text-align: right;
+  margin: 0;
+  padding: 0;
+  background-color: #f8fafc;
+}
+
+.ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #10b981;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #059669;
+}
+
+/* Ensure proper spacing and layout */
+.App {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Fix form styling */
+input, button {
+  font-family: inherit;
+}
+
+/* Ensure proper RTL support */
+[dir="rtl"] {
+  text-align: right;
+}
