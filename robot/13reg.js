@@ -210,7 +210,7 @@ class SmartRegistrationModule {
     console.log(`📱 Processing message from user ${userId}: text='${text}', contact=${!!contact}`);
 
     // بررسی دستورات خاص
-    if (text === '/start' || text === 'شروع' || text === 'شروع/' || text === 'شروع مجدد' || text === 'استارت' || text === '/استارت') {
+    if (text === '/start' || text === 'شروع' || text === '/شروع' || text === 'شروع/' || text === 'شروع مجدد' || text === 'استارت' || text === '/استارت') {
       return this.handleStartCommand(chatId, userId);
     } else if (text === 'مدرسه' || text === 'معرفی مدرسه') {
       // بررسی وضعیت کاربر
@@ -261,6 +261,12 @@ class SmartRegistrationModule {
     } else {
       console.log(`❌ [REG] User ${userId} is NOT in registration step`);
       console.log(`❌ [REG] userStates[${userId}]:`, this.userStates[userId]);
+    }
+
+    // 🔇 اگر کاربر شناس است و کلمه معمولی زده، هیچ واکنشی نده
+    if (this.isUserRegistered(userId) && !this.isSpecialCommand(text)) {
+      console.log(`📝 [REG] User ${userId} sent normal text: "${text}" - No response needed (silent ignore)`);
+      return true; // هیچ واکنشی نده، فقط true برگردان
     }
 
     // کاربر جدید - شروع ثبت‌نام
