@@ -398,14 +398,15 @@ class SmartRegistrationModule {
         const buttonText = getRegistrationMonthText(true);
         const nextMonthText = getRegistrationMonthText(false);
         
-
+        // اضافه کردن متن ماه آینده به پیام اصلی
+        schoolText += `\n\n${nextMonthText}`;
 
         const inlineKeyboard = [
           [{ text: buttonText, callback_data: 'next_month_registration' }]
         ];
 
-        await sendMessage(chatId, schoolText);
-        await sendMessageWithInlineKeyboard(chatId, '', inlineKeyboard);
+        // ارسال یک پیام واحد با متن کامل و inline keyboard
+        await sendMessageWithInlineKeyboard(chatId, schoolText, inlineKeyboard);
       } else {
         // اگر ثبت‌نام غیرفعال باشد، متن ماه آینده را نمایش بده
         const nextMonthText = getRegistrationMonthText(false);
