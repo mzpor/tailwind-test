@@ -86,12 +86,26 @@ const roleConfig = {
     emoji: '📖',
     panelText: 'قرآن آموز',
     get keyboard() { return generateDynamicKeyboard(ROLES.STUDENT); },
-    commands: ['/شروع', '/خروج', '/ربات', '/قرآن آموز']
+    commands: ['/شروع', '/خروج', '/ربات', '/قرآن آموز'],
+    // تابع جدید برای تولید keyboard با userId
+    getKeyboard: function(userId) { return generateDynamicKeyboard(ROLES.STUDENT, userId); }
   }
 };
 
+// تابع بررسی ثبت‌نام کاربر
+function isUserRegistered(userId) {
+  try {
+    const SmartRegistrationModule = require('./13reg');
+    const registrationModule = new SmartRegistrationModule();
+    return registrationModule.isUserRegistered(userId);
+  } catch (error) {
+    console.error('❌ [POLLING] Error checking user registration:', error.message);
+    return false;
+  }
+}
+
 // تابع تولید keyboard بر اساس کانفیگ نمایش دکمه‌ها
-function generateDynamicKeyboard(role) {
+function generateDynamicKeyboard(role, userId = null) {
   const baseKeyboard = [['شروع', 'خروج']];
   const secondRow = [];
   
@@ -113,7 +127,10 @@ function generateDynamicKeyboard(role) {
   } else if (role === ROLES.ASSISTANT) {
     secondRow.push('کمک مربی');
   } else if (role === ROLES.STUDENT) {
-    secondRow.push('قرآن آموز');
+    // دکمه "قرآن آموز" فقط برای کاربران ثبت‌نام شده
+    if (userId && isUserRegistered(userId)) {
+      secondRow.push('قرآن آموز');
+    }
   }
   
   if (secondRow.length > 0) {
@@ -568,10 +585,10 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
     }
   } else if (msg.text === '/شروع') {
     reply = `${config.emoji} پنل ${config.name} فعال شد\n⏰ ${getTimeStamp()}`;
-    keyboard = config.keyboard;
+    keyboard = config.getKeyboard ? config.getKeyboard(msg.from.id) : config.keyboard;
   } else if (msg.text === '/خروج') {
     reply = `👋 پنل ${config.name} بسته شد\n⏰ ${getTimeStamp()}`;
-    keyboard = config.keyboard;
+    keyboard = config.getKeyboard ? config.getKeyboard(msg.from.id) : config.keyboard;
   } else if (msg.text === 'ربات' || msg.text === '/ربات' || msg.text === '🤖 ربات') {
     // دستور معرفی ربات
     reply = `🤖 *ربات قرآنی هوشمند*
