@@ -127,10 +127,8 @@ function generateDynamicKeyboard(role, userId = null) {
   } else if (role === ROLES.ASSISTANT) {
     secondRow.push('کمک مربی');
   } else if (role === ROLES.STUDENT) {
-    // دکمه "قرآن آموز" فقط برای کاربران ثبت‌نام شده
-    if (userId && isUserRegistered(userId)) {
-      secondRow.push('قرآن آموز');
-    }
+    // دکمه "قرآن آموز" برای همه کاربران با نقش STUDENT
+    secondRow.push('قرآن آموز');
   }
   
   if (secondRow.length > 0) {
@@ -422,47 +420,16 @@ async function handleRoleMessage(msg, role) {
       await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
       return; // ادامه حلقه بدون ارسال پیام معمولی
     } else if (getUserRole(msg.from.id) === ROLES.STUDENT) {
-      // پنل قرآن آموز - بررسی وضعیت ثبت‌نام
-      let inlineKeyboard = [
-        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
-      ];
-      
-      let reply = `📖 پنل قرآن آموز
+      // پنل قرآن آموز - نمایش ساده بدون Inline Keyboard
+      reply = `📖 **پنل قرآن آموز**
 
-📋 گزینه‌های موجود:
-• 🤖 معرفی ربات`;
-      
-      // بررسی وضعیت ثبت‌نام
-      try {
-        const { readJson } = require('./server/utils/jsonStore');
-        const { getRegistrationMonthText } = require('./1time');
-        const siteStatus = await readJson('data/site-status.json', {
-          registration: { enabled: true }
-        });
-        
-        if (siteStatus.registration.enabled) {
-          const buttonText = getRegistrationMonthText(true);
-          inlineKeyboard.push([{ text: buttonText, callback_data: 'student_registration' }]);
-          reply += '\n• 📝 ثبت نام';
-        } else {
-          // وقتی ثبت‌نام غیرفعال است، دکمه کاملاً حذف می‌شود
-          // فقط پیام اطلاع‌رسانی نمایش داده می‌شود
-          const nextMonthText = getRegistrationMonthText(false);
-          reply += `\n• ${nextMonthText}`;
-        }
-      } catch (error) {
-        console.log('⚠️ [POLLING] Could not read registration status, registration button will not be shown');
-        // در صورت خطا، دکمه ثبت‌نام نمایش داده نمی‌شود
-        reply += '\n• 📝 ثبت نام (وضعیت نامشخص)';
-      }
-      
-      reply += `
+📋 **گزینه‌های موجود:**
+• 🤖 معرفی ربات
+• 📝 ثبت نام
 
-👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**
 ⏰ ${getTimeStamp()}`;
-      
-      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
-      return; // ادامه حلقه بدون ارسال پیام معمولی
+      keyboard = config.keyboard;
     } else {
       // پنل مدیر - همه گزینه‌ها
       const inlineKeyboard = [
@@ -605,6 +572,17 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
 • /کارگاه - مدیریت کارگاه‌ها (مدیر مدرسه)
 • /تنظیمات - تنظیمات ربات (فقط مدیر مدرسه)
 
+⏰ ${getTimeStamp()}`;
+    keyboard = config.keyboard;
+  } else if (msg.text === 'قرآن آموز' || msg.text === '/قرآن آموز') {
+    // دستور قرآن آموز - نمایش پنل قرآن آموز
+    reply = `📖 **پنل قرآن آموز**
+
+📋 **گزینه‌های موجود:**
+• 🤖 معرفی ربات
+• 📝 ثبت نام
+
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**
 ⏰ ${getTimeStamp()}`;
     keyboard = config.keyboard;
   } else if (msg.text === '/تنظیمات' || msg.text === '⚙️ تنظیمات' || msg.text === 'تنظیمات') {
