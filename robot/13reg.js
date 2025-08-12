@@ -7,8 +7,8 @@ const { sendMessage, sendMessageWithInlineKeyboard } = require('./4bale');
 
 class SmartRegistrationModule {
   constructor() {
-    this.dataFile = path.join(__dirname, '..', 'data', 'smart_registration.json');
-    this.workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
+    this.dataFile = path.join(__dirname, 'data', 'smart_registration.json');
+    this.workshopsFile = path.join(__dirname, 'data', 'workshops.json');
     this.userStates = {};
     this.userData = {};
     this.workshops = [];
@@ -21,6 +21,7 @@ class SmartRegistrationModule {
     
     console.log(`✅ SmartRegistrationModule initialized successfully with ${Object.keys(this.userData).length} users`);
     console.log(`📁 Data file path: ${this.dataFile}`);
+    console.log(`📚 Workshops file path: ${this.workshopsFile}`);
     console.log(`📊 User states loaded: ${Object.keys(this.userStates).length}`);
   }
 
@@ -62,12 +63,17 @@ class SmartRegistrationModule {
     try {
       if (fs.existsSync(this.workshopsFile)) {
         const data = fs.readFileSync(this.workshopsFile, 'utf8');
-        return JSON.parse(data);
+        this.workshops = JSON.parse(data);
+        console.log(`📚 [REG] Loaded ${Object.keys(this.workshops).length} workshops`);
+        return this.workshops;
       }
-      return {};
+      this.workshops = {};
+      console.log(`📚 [REG] No workshops file found, starting with empty workshops`);
+      return this.workshops;
     } catch (error) {
       console.error('❌ Error loading workshops data:', error);
-      return {};
+      this.workshops = {};
+      return this.workshops;
     }
   }
 
