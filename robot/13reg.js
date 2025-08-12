@@ -245,6 +245,13 @@ class SmartRegistrationModule {
     console.log(`🔍 [REG] userStates keys:`, Object.keys(this.userStates));
     console.log(`🔍 [REG] userData keys:`, Object.keys(this.userData));
     
+    // 🔧 اگر کاربر قبلاً ثبت‌نام شده ولی در userStates گیر کرده، پاکش کن
+    if (this.isUserRegistered(userId) && userId in this.userStates) {
+      console.log(`🧹 [REG] User ${userId} is already registered, cleaning up userStates`);
+      delete this.userStates[userId];
+      this.saveData();
+    }
+    
     if (userId in this.userStates && this.userStates[userId].step) {
       console.log(`🔄 [REG] User ${userId} is in registration step: ${this.userStates[userId].step}`);
       console.log(`🔄 [REG] User state:`, JSON.stringify(this.userStates[userId]));
