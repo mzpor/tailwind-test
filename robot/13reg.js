@@ -7,16 +7,21 @@ const { sendMessage, sendMessageWithInlineKeyboard } = require('./4bale');
 
 class SmartRegistrationModule {
   constructor() {
-    this.dataFile = 'data/smart_registration.json';
-    this.workshopsFile = 'data/workshops.json';
-    this.userStates = {}; // وضعیت کاربران برای ثبت‌نام
-    this.userData = this.loadData();
-    this.workshops = this.loadWorkshops();
+    this.dataFile = path.join(__dirname, '..', 'data', 'smart_registration.json');
+    this.workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
+    this.userStates = {};
+    this.userData = {};
+    this.workshops = [];
     
-    // ایجاد دایرکتوری data اگر وجود ندارد
     this.ensureDataDirectory();
+    const loadedData = this.loadData(); // داده‌ها را در userData ذخیره کن
+    this.userData = loadedData.userData || {};
+    this.userStates = loadedData.userStates || {};
+    this.loadWorkshops();
     
-    console.log('✅ SmartRegistrationModule initialized successfully');
+    console.log(`✅ SmartRegistrationModule initialized successfully with ${Object.keys(this.userData).length} users`);
+    console.log(`📁 Data file path: ${this.dataFile}`);
+    console.log(`📊 User states loaded: ${Object.keys(this.userStates).length}`);
   }
 
   ensureDataDirectory() {
@@ -31,12 +36,25 @@ class SmartRegistrationModule {
     try {
       if (fs.existsSync(this.dataFile)) {
         const data = fs.readFileSync(this.dataFile, 'utf8');
-        return JSON.parse(data);
+        const parsedData = JSON.parse(data);
+        console.log(`📁 [REG] Loaded data for ${Object.keys(parsedData.userData || parsedData).length} users`);
+        
+        // اگر فایل قدیمی باشد که فقط userData دارد
+        if (parsedData.userData && parsedData.userStates) {
+          return parsedData;
+        } else {
+          // تبدیل فایل قدیمی به فرمت جدید
+          return {
+            userData: parsedData,
+            userStates: {}
+          };
+        }
       }
-      return {};
+      console.log(`📁 [REG] No data file found, starting with empty data`);
+      return { userData: {}, userStates: {} };
     } catch (error) {
       console.error('❌ Error loading registration data:', error);
-      return {};
+      return { userData: {}, userStates: {} };
     }
   }
 
@@ -55,8 +73,13 @@ class SmartRegistrationModule {
 
   saveData() {
     try {
-      fs.writeFileSync(this.dataFile, JSON.stringify(this.userData, null, 2), 'utf8');
-      console.log('✅ Registration data saved successfully');
+      const dataToSave = {
+        userData: this.userData,
+        userStates: this.userStates,
+        lastUpdated: new Date().toISOString()
+      };
+      fs.writeFileSync(this.dataFile, JSON.stringify(dataToSave, null, 2), 'utf8');
+      console.log('✅ Registration data and states saved successfully');
       return true;
     } catch (error) {
       console.error('❌ Error saving registration data:', error);
@@ -177,6 +200,7 @@ class SmartRegistrationModule {
 
     // بررسی دستورات خاص
     if (text === '/start' || text === 'شروع' || text === 'شروع/' || text === 'شروع مجدد' || text === 'استارت' || text === '/استارت') {
+      return this.handleStartCommand(chatId, userId);
     } else if (text === 'مدرسه') {
       return this.handleSchoolIntro(chatId);
     } else if (text === 'ربات') {
@@ -198,12 +222,31 @@ class SmartRegistrationModule {
       return this.handleWorkshopSelection(chatId, userId, text);
     }
 
-    // پردازش مراحل ثبت‌نام
-    if (userId in this.userStates) {
-      return this.handleRegistrationStep(chatId, userId, text, contact);
+    // 🔍 بررسی اولویت: پردازش مراحل ثبت‌نام
+    console.log(`🔍 [REG] Checking if user ${userId} is in registration step...`);
+    console.log(`🔍 [REG] userStates keys:`, Object.keys(this.userStates));
+    console.log(`🔍 [REG] userData keys:`, Object.keys(this.userData));
+    
+    if (userId in this.userStates && this.userStates[userId].step) {
+      console.log(`🔄 [REG] User ${userId} is in registration step: ${this.userStates[userId].step}`);
+      console.log(`🔄 [REG] User state:`, JSON.stringify(this.userStates[userId]));
+      console.log(`🔄 [REG] User data:`, JSON.stringify(this.userData[userId]));
+      
+      const result = await this.handleRegistrationStep(chatId, userId, text, contact);
+      if (result) {
+        console.log(`✅ [REG] Registration step completed successfully for user ${userId}`);
+        return true; // اگر مرحله ثبت‌نام با موفقیت پردازش شد
+      }
+      // اگر مرحله ثبت‌نام شکست خورد، ادامه نده و false برگردان
+      console.log(`⚠️ [REG] Registration step failed for user ${userId}, not proceeding to unknown user flow`);
+      return false;
+    } else {
+      console.log(`❌ [REG] User ${userId} is NOT in registration step`);
+      console.log(`❌ [REG] userStates[${userId}]:`, this.userStates[userId]);
     }
 
     // کاربر جدید - شروع ثبت‌نام
+    console.log(`🆕 [REG] User ${userId} is new, starting unknown user flow`);
     return this.handleUnknownUserStart(chatId);
   }
 
@@ -213,30 +256,65 @@ class SmartRegistrationModule {
     const chatId = message.chat.id;
     const userId = from.id;
 
-    console.log(`🔄 [POLLING] Callback data: ${data}`);
+    console.log(`🔄 [REG] Callback data: ${data}`);
+    console.log(`🔄 [REG] Chat ID: ${chatId}, User ID: ${userId}`);
 
-    switch (data) {
-      case 'edit_name':
-        return this.handleEditName(chatId, userId);
-      case 'edit_national_id':
-        return this.handleEditNationalId(chatId, userId);
-      case 'edit_phone':
-        return this.handleEditPhone(chatId, userId);
-      case 'final_confirm':
-        return this.handleFinalConfirm(chatId, userId);
-      case 'next_month_registration':
-        return this.handleNextMonthRegistration(chatId, userId);
-      case 'back_to_main':
-        return this.handleBackToMainMenu(chatId, userId);
-      case 'quran_student_panel':
-        return this.handleQuranStudentPanel(chatId, userId);
-      case 'complete_registration':
-        return this.handleCompleteRegistration(chatId, userId);
-      case 'start_next_month_registration':
-        return this.handleRegistrationStart(chatId, userId);
-      default:
-        console.log(`⚠️ Unknown callback data: ${data}`);
-        return false;
+    try {
+      let result;
+      switch (data) {
+        case 'edit_name':
+          console.log(`🔄 [REG] Handling edit_name for user ${userId}`);
+          result = await this.handleEditName(chatId, userId);
+          break;
+        case 'edit_national_id':
+          console.log(`🔄 [REG] Handling edit_national_id for user ${userId}`);
+          result = await this.handleEditNationalId(chatId, userId);
+          break;
+        case 'edit_phone':
+          console.log(`🔄 [REG] Handling edit_phone for user ${userId}`);
+          result = await this.handleEditPhone(chatId, userId);
+          break;
+        case 'final_confirm':
+          console.log(`🔄 [REG] Handling final_confirm for user ${userId}`);
+          result = await this.handleFinalConfirm(chatId, userId);
+          break;
+        case 'next_month_registration':
+          console.log(`🔄 [REG] Handling next_month_registration for user ${userId}`);
+          result = await this.handleNextMonthRegistration(chatId, userId);
+          break;
+        case 'back_to_main':
+          console.log(`🔄 [REG] Handling back_to_main for user ${userId}`);
+          result = await this.handleBackToMainMenu(chatId, userId);
+          break;
+        case 'quran_student_panel':
+          console.log(`🔄 [REG] Handling quran_student_panel for user ${userId}`);
+          result = await this.handleQuranStudentPanel(chatId, userId);
+          break;
+        case 'complete_registration':
+          console.log(`🔄 [REG] Handling complete_registration for user ${userId}`);
+          result = await this.handleCompleteRegistration(chatId, userId);
+          break;
+        case 'start_next_month_registration':
+          console.log(`🔄 [REG] Handling start_next_month_registration for user ${userId}`);
+          console.log(`🔄 [REG] About to call handleRegistrationStart for user ${userId}`);
+          result = await this.handleRegistrationStart(chatId, userId);
+          console.log(`🔄 [REG] handleRegistrationStart result: ${result}`);
+          break;
+        default:
+          console.log(`⚠️ [REG] Unknown callback data: ${data}`);
+          result = false;
+      }
+
+      if (result) {
+        console.log(`✅ [REG] Callback ${data} handled successfully for user ${userId}`);
+      } else {
+        console.error(`❌ [REG] Callback ${data} failed for user ${userId}`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error(`❌ [REG] Error handling callback ${data} for user ${userId}:`, error);
+      return false;
     }
   }
 
@@ -278,15 +356,10 @@ class SmartRegistrationModule {
 به مدرسه تلاوت قرآن کریم خوش آمدید
 
 📚 **کلاس‌های موجود:**
-• تجوید قرآن کریم
-• صوت و لحن
-• حفظ قرآن کریم
-• تفسیر قرآن
+• تجوید قرآن کریم • صوت و لحن
+• حفظ قرآن کریم • تفسیر قرآن
 
-💎 **مزایای ثبت‌نام:**
-• اساتید مجرب
-• کلاس‌های آنلاین و حضوری
-• گواهی پایان دوره
+💎 **مزایا:** اساتید مجرب، کلاس‌های آنلاین و حضوری، گواهی پایان دوره
 
 برای شروع، لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
 
@@ -299,48 +372,37 @@ class SmartRegistrationModule {
     try {
       // بررسی تنظیمات مدیر
       const { isButtonVisible } = require('./3config');
+      const { getRegistrationMonthText } = require('./1time');
       const isRegistrationEnabled = isButtonVisible('REGISTRATION_BUTTON');
       
       let schoolText = `🏫 **مدرسه تلاوت قرآن کریم**
 
-🌟 **درباره مدرسه:**
-مدرسه تلاوت قرآن کریم با بیش از ۱۰ سال سابقه در آموزش قرآن کریم، یکی از معتبرترین مراکز آموزشی در این حوزه است.
+🌟 **درباره مدرسه:** مدرسه تلاوت قرآن کریم با بیش از ۱۰ سال سابقه، یکی از معتبرترین مراکز آموزشی است.
 
-📚 **کلاس‌های موجود:**
-• **تجوید قرآن کریم** - آموزش قواعد صحیح خوانی
-• **صوت و لحن** - آموزش آواز و لحن زیبا
-• **حفظ قرآن کریم** - حفظ آیات و سوره‌ها
-• **تفسیر قرآن** - درک معانی و مفاهیم
+📚 **کلاس‌ها:** تجوید، صوت و لحن، حفظ، تفسیر
 
-👨‍🏫 **اساتید مجرب:**
-• استاد محمد رشوند - متخصص حفظ قرآن
-• استاد علی حتم خانی - متخصص تجوید و صوت
-• استاد احمد حاجی زاده - متخصص تفسیر
-• و سایر اساتید مجرب
+👨‍🏫 **اساتید:** استاد محمد رشوند، استاد علی حتم خانی، استاد احمد حاجی زاده
 
-💎 **مزایای ثبت‌نام:**
-• کلاس‌های آنلاین و حضوری
-• گواهی پایان دوره معتبر
-• پشتیبانی ۲۴ ساعته
-• قیمت مناسب و مقرون به صرفه
-
-📞 **اطلاعات تماس:**
-برای اطلاعات بیشتر با ما تماس بگیرید.`;
+💎 **مزایا:** کلاس‌های آنلاین و حضوری، گواهی پایان دوره، پشتیبانی ۲۴ ساعته`;
 
       if (isRegistrationEnabled) {
-        // اگر ثبت‌نام فعال باشد، دکمه ثبت‌نام ماه آینده را اضافه کن
-        schoolText += `\n\n📅 **ثبت‌نام ماه آینده باز است!**
+        // استفاده از منطق ماه‌بندی موجود
+        const buttonText = getRegistrationMonthText(true);
+        const nextMonthText = getRegistrationMonthText(false);
+        
+        schoolText += `\n\n📅 **${buttonText}**
 برای ثبت‌نام در کلاس‌های ماه آینده، لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
 
         const inlineKeyboard = [
-          [{ text: '📝 ثبت‌نام ماه آینده', callback_data: 'next_month_registration' }],
-          [{ text: '🏠 برگشت به منو', callback_data: 'back_to_main' }]
+          [{ text: buttonText, callback_data: 'next_month_registration' }]
         ];
 
         await sendMessage(chatId, schoolText);
         await sendMessageWithInlineKeyboard(chatId, 'لطفاً گزینه مورد نظر را انتخاب کنید:', inlineKeyboard);
       } else {
-        // اگر ثبت‌نام غیرفعال باشد، منوی معمولی
+        // اگر ثبت‌نام غیرفعال باشد، متن ماه آینده را نمایش بده
+        const nextMonthText = getRegistrationMonthText(false);
+        schoolText += `\n\n${nextMonthText}`;
         schoolText += `\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
         await sendMessage(chatId, schoolText, this.buildMainKeyboard());
       }
@@ -364,27 +426,13 @@ class SmartRegistrationModule {
   async handleQuranBotIntro(chatId) {
     const botText = `🤖 **ربات مدرسه تلاوت قرآن**
 
-🌟 **قابلیت‌های ربات:**
-• ثبت‌نام آنلاین در کلاس‌ها
-• مشاهده برنامه کلاس‌ها
-• ارتباط مستقیم با اساتید
-• دریافت اخبار و اطلاعیه‌ها
-• پشتیبانی ۲۴ ساعته
+🌟 **قابلیت‌ها:** ثبت‌نام آنلاین، مشاهده برنامه کلاس‌ها، ارتباط با اساتید، اخبار و پشتیبانی
 
-📱 **نحوه استفاده:**
-۱. ثبت‌نام در ربات
-۲. انتخاب کلاس مورد نظر
-۳. پرداخت شهریه
-۴. دریافت لینک کلاس
-۵. شروع یادگیری
+📱 **نحوه استفاده:** ثبت‌نام → انتخاب کلاس → پرداخت → دریافت لینک → شروع یادگیری
 
-🔧 **دستورات موجود:**
-• /start - شروع کار
-• /help - راهنما
-• /register - ثبت‌نام
-• /workshops - مشاهده کارگاه‌ها
+🔧 **دستورات:** /start، /help، /register، /workshops
 
-💡 **نکته:** ربات همیشه در دسترس است و می‌توانید در هر زمان از خدمات آن استفاده کنید.
+💡 **نکته:** ربات همیشه در دسترس است.
 
 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
 
@@ -394,50 +442,77 @@ class SmartRegistrationModule {
 
   // 📝 شروع ثبت‌نام
   async handleRegistrationStart(chatId, userId) {
-    this.userStates[userId] = { step: 'name' };
-    this.userData[userId] = {};
-    this.saveData();
-
-    await sendMessage(chatId, '_لطفاً نام و نام خانوادگی خود را وارد کنید (مثال: علی رضایی)._', this.buildReplyKeyboard([
-      ['برگشت به قبل', 'خروج']
-    ]));
-    return true;
+    console.log(`🚀 [REG] handleRegistrationStart called for user ${userId}`);
+    
+    try {
+      this.userStates[userId] = { step: 'name' };
+      this.userData[userId] = {};
+      this.saveData();
+      
+      await sendMessage(chatId, '_لطفاً نام و نام خانوادگی خود را وارد کنید (مثال: علی رضایی)._', this.buildReplyKeyboard([
+        ['برگشت به قبل', 'خروج']
+      ]));
+      
+      return true;
+    } catch (error) {
+      console.error(`❌ [REG] Error in handleRegistrationStart for user ${userId}:`, error);
+      return false;
+    }
   }
 
   // 🔄 پردازش مراحل ثبت‌نام
   async handleRegistrationStep(chatId, userId, text, contact) {
+    console.log(`🔍 [REG] handleRegistrationStep called for user ${userId}`);
+    console.log(`🔍 [REG] userStates[${userId}]:`, JSON.stringify(this.userStates[userId]));
+    
     if (!(userId in this.userStates)) {
-      console.warn(`⚠️ User ${userId} not in user_states`);
+      console.warn(`⚠️ [REG] User ${userId} not in user_states`);
       return false;
     }
 
     const state = this.userStates[userId];
     const step = state.step;
 
-    console.log(`🔄 Processing registration step for user ${userId}: step=${step}, text='${text}', contact=${!!contact}`);
+    console.log(`🔄 [REG] Processing registration step for user ${userId}: step=${step}, text='${text}', contact=${!!contact}`);
 
     switch (step) {
       case 'name':
+        console.log(`🔄 [REG] Calling handleNameStep for user ${userId}`);
         return this.handleNameStep(chatId, userId, text);
       case 'national_id':
+        console.log(`🔄 [REG] Calling handleNationalIdStep for user ${userId}`);
         return this.handleNationalIdStep(chatId, userId, text);
       case 'phone':
+        console.log(`🔄 [REG] Calling handlePhoneStep for user ${userId}`);
         return this.handlePhoneStep(chatId, userId, contact);
       default:
-        console.warn(`⚠️ Unknown step '${step}' for user ${userId}`);
+        console.warn(`⚠️ [REG] Unknown step '${step}' for user ${userId}`);
         return false;
     }
   }
 
   // 📝 مرحله نام
   async handleNameStep(chatId, userId, text) {
-    // ذخیره نام کامل و نام کوچک
-    this.userData[userId].full_name = text;
-    this.userData[userId].first_name = text.split(' ')[0];
+    if (!text || text.trim().length < 2) {
+      await sendMessage(chatId, '❌ نام وارد شده خیلی کوتاه است. لطفاً نام کامل خود را وارد کنید.');
+      return false;
+    }
+
+    const trimmedName = text.trim();
+    this.userData[userId].full_name = trimmedName;
+    this.userData[userId].first_name = trimmedName.split(' ')[0];
+    
+    // تنظیم مرحله بعدی قبل از ارسال پیام‌ها
+    this.userStates[userId].step = 'national_id';
+    console.log(`✅ [REG] User ${userId} moved from name step to national_id step`);
+    console.log(`✅ [REG] userStates[${userId}]:`, JSON.stringify(this.userStates[userId]));
+    console.log(`✅ [REG] userData[${userId}]:`, JSON.stringify(this.userData[userId]));
+    
+    // ذخیره داده‌ها
     this.saveData();
 
     const firstName = this.userData[userId].first_name;
-    const statusText = `_${firstName} عزیز،\nنام شما: ${text}\nکد ملی: هنوز مانده\nتلفن: هنوز مانده_\n\nلطفاً کد ملی ۱۰ رقمی خود را وارد کنید.`;
+    const statusText = `_${firstName} عزیز،\nنام شما: ${trimmedName}\nکد ملی: هنوز مانده\nتلفن: هنوز مانده_\n\nلطفاً کد ملی ۱۰ رقمی خود را وارد کنید.`;
 
     await sendMessage(chatId, statusText, this.buildReplyKeyboard([
       ['برگشت به قبل', 'خروج']
@@ -448,7 +523,6 @@ class SmartRegistrationModule {
       [{ text: '✏️ تصحیح نام', callback_data: 'edit_name' }]
     ]));
 
-    this.userStates[userId].step = 'national_id';
     return true;
   }
 
@@ -456,6 +530,12 @@ class SmartRegistrationModule {
   async handleNationalIdStep(chatId, userId, text) {
     if (this.isValidNationalId(text)) {
       this.userData[userId].national_id = text;
+      
+      // تنظیم مرحله بعدی قبل از ارسال پیام‌ها
+      this.userStates[userId].step = 'phone';
+      console.log(`✅ [REG] User ${userId} moved from national_id step to phone step`);
+      
+      // ذخیره داده‌ها
       this.saveData();
 
       const firstName = this.userData[userId].first_name;
@@ -478,7 +558,6 @@ class SmartRegistrationModule {
         [{ text: '🆔 تصحیح کد ملی', callback_data: 'edit_national_id' }]
       ]));
 
-      this.userStates[userId].step = 'phone';
       return true;
     } else {
       await sendMessage(chatId, '_❌ کد ملی نامعتبر است. لطفاً ۱۰ رقم وارد کنید._');
@@ -718,6 +797,12 @@ ${firstName} عزیز، ثبت‌نام شما کامل نیست!
 
   // 🏠 برگشت به منوی اصلی
   async handleBackToMainMenu(chatId, userId) {
+    // پاک کردن state ثبت‌نام
+    if (userId in this.userStates) {
+      delete this.userStates[userId];
+      this.saveData();
+    }
+
     if (this.isRegistrationComplete(userId)) {
       const userInfo = this.userData[userId];
       const firstName = userInfo.first_name || 'کاربر';
@@ -848,7 +933,7 @@ _خداحافظ و موفق باشید!_ 🌟`;
           await sendMessageWithInlineKeyboard(chatId, 'لطفاً گزینه مورد نظر را انتخاب کنید:', inlineKeyboard);
         }
       } else {
-        // کاربر جدید - شروع ثبت‌نام
+        // کاربر جدید - شروع مستقیم ثبت‌نام
         const newUserText = `🎯 **ثبت‌نام ماه آینده**
 
 🌟 **خوش آمدید!** برای ثبت‌نام در کلاس‌های ماه آینده، لطفاً اطلاعات خود را وارد کنید.
@@ -858,15 +943,23 @@ _خداحافظ و موفق باشید!_ 🌟`;
 ۲. کد ملی
 ۳. شماره تلفن
 
-💡 **نکته:** ثبت‌نام شما برای ماه آینده ذخیره می‌شود.`;
+💡 **نکته:** ثبت‌نام شما برای ماه آینده ذخیره می‌شود.
 
-        const inlineKeyboard = [
-          [{ text: '🚀 شروع ثبت‌نام', callback_data: 'start_next_month_registration' }],
-          [{ text: '🏠 برگشت به منو', callback_data: 'back_to_main' }]
-        ];
+📝 **لطفاً نام و نام خانوادگی خود را وارد کنید:**`;
 
-        await sendMessage(chatId, newUserText);
-        await sendMessageWithInlineKeyboard(chatId, 'لطفاً گزینه مورد نظر را انتخاب کنید:', inlineKeyboard);
+        // شروع مستقیم ثبت‌نام بدون نیاز به کلیک اضافی
+        this.userStates[userId] = { step: 'name' };
+        this.userData[userId] = {};
+        
+        console.log(`✅ [REG] User ${userId} started registration directly to name step`);
+        console.log(`✅ [REG] userStates[${userId}]:`, JSON.stringify(this.userStates[userId]));
+        console.log(`✅ [REG] userData[${userId}]:`, JSON.stringify(this.userData[userId]));
+        
+        this.saveData();
+
+        await sendMessage(chatId, newUserText, this.buildReplyKeyboard([
+          ['برگشت به قبل', 'خروج']
+        ]));
       }
 
       return true;
@@ -894,6 +987,14 @@ _خداحافظ و موفق باشید!_ 🌟`;
     }
     return null;
   }
+
+
+
+
+
+
+
+
 }
 
 // export کلاس

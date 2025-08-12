@@ -31,7 +31,7 @@ export default function SettingsForm(){
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" name="registrationOpen" checked={form.registrationOpen} onChange={onChange}/>
-          <span>ثبت‌نام باز باشد</span>
+          <span>ثبت‌نام ماه آینده باز باشد</span>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm text-slate-600">حداکثر دانش‌آموز</span>

@@ -223,25 +223,13 @@ class SettingsModule {
     const satisfactionStatus = this.settings.enable_satisfaction_survey ? '✅ فعال' : '❌ غیرفعال';
     const reportsStatus = getReportsEnabled() ? '✅ فعال' : '❌ غیرفعال';
     
-    // دریافت وضعیت ثبت‌نام از فایل site-status.json
-    let registrationStatus = '✅ فعال'; // پیش‌فرض
-    let registrationButtonText = '📝 ثبت‌نام: ✅ فعال';
-    try {
-      const { readJson } = require('./server/utils/jsonStore');
-      const siteStatus = await readJson('data/site-status.json', {
-        registration: { enabled: true }
-      });
-      registrationStatus = siteStatus.registration.enabled ? '✅ فعال' : '❌ غیرفعال';
-      
-      // تولید متن دکمه بر اساس وضعیت (بدون ماه در تنظیمات ادمین)
-      if (siteStatus.registration.enabled) {
-        registrationButtonText = `📝 ثبت نام: ✅ فعال`;
-      } else {
-        registrationButtonText = `📝 ثبت نام: ❌ غیرفعال`;
-      }
-    } catch (error) {
-      console.log('⚠️ [SETTINGS] Could not read registration status, using default');
-    }
+    // دریافت وضعیت ثبت‌نام از کانفیگ اصلی
+    const { isButtonVisible } = require('./3config');
+    const registrationButtonEnabled = isButtonVisible('REGISTRATION_BUTTON');
+    const registrationStatus = registrationButtonEnabled ? '✅ فعال' : '❌ غیرفعال';
+    const registrationButtonText = `📝 ثبت‌نام ماه آینده: ${registrationStatus}`;
+    
+    console.log(`🔧 [SETTINGS] Registration button status from config: ${registrationButtonEnabled ? 'enabled' : 'disabled'}`);
     
     const keyboard = [
       [{ text: `📅 تمرین (${practiceDaysCount} روز)`, callback_data: 'practice_days_settings' }],
@@ -1018,32 +1006,47 @@ class SettingsModule {
   
   async handleToggleRegistration(chatId, messageId, callbackQueryId) {
     try {
-      // دریافت وضعیت فعلی ثبت‌نام
-      const { readJson, writeJson } = require('./server/utils/jsonStore');
-      const siteStatus = await readJson('data/site-status.json', {
-        registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' },
-        survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' }
-      });
+      // تغییر وضعیت در کانفیگ اصلی
+      const { setButtonVisibility, isButtonVisible } = require('./3config');
+      const currentStatus = isButtonVisible('REGISTRATION_BUTTON');
+      const newStatus = !currentStatus;
       
-      // تغییر وضعیت
-      const newStatus = !siteStatus.registration.enabled;
-      siteStatus.registration.enabled = newStatus;
-      siteStatus.registration.lastUpdate = Date.now();
-      siteStatus.registration.updatedFrom = 'ربات';
+      // تغییر وضعیت در کانفیگ
+      const success = setButtonVisibility('REGISTRATION_BUTTON', newStatus);
       
-      // ذخیره تغییرات
-      await writeJson('data/site-status.json', siteStatus);
+      if (!success) {
+        await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر تنظیمات ثبت‌نام');
+        return;
+      }
+      
+      // هماهنگ‌سازی با سایت
+      try {
+        const { readJson, writeJson } = require('./server/utils/jsonStore');
+        const siteStatus = await readJson('data/site-status.json', {
+          registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' },
+          survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' }
+        });
+        
+        // تغییر وضعیت سایت
+        siteStatus.registration.enabled = newStatus;
+        siteStatus.registration.lastUpdate = Date.now();
+        siteStatus.registration.updatedFrom = 'ربات';
+        
+        // ذخیره تغییرات سایت
+        await writeJson('data/site-status.json', siteStatus);
+        console.log(`✅ [SETTINGS] Site registration status synchronized: ${newStatus ? 'فعال' : 'غیرفعال'}`);
+      } catch (error) {
+        console.log('⚠️ [SETTINGS] Could not sync with site, but config updated successfully');
+      }
       
       const status = newStatus ? 'فعال' : 'غیرفعال';
-      
-      // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
-      console.log(`✅ [SETTINGS] Registration status changed to: ${status}`);
+      console.log(`✅ [SETTINGS] Registration button visibility changed to: ${status}`);
       
       // ارسال event برای SSE clients و داشبورد (اگر gateway فعال باشد)
       try {
         const gateway = require('./gateway_bale');
         if (gateway && gateway.reportEvents) {
-          gateway.reportEvents.emit('registration-change', siteStatus.registration);
+          gateway.reportEvents.emit('registration-change', { enabled: newStatus, updatedFrom: 'ربات' });
           console.log('📡 [SETTINGS] SSE event emitted for registration change');
         }
         if (gateway && gateway.sendCombinedDashboard) {
@@ -1060,7 +1063,7 @@ class SettingsModule {
       
       const replyMarkup = await this.getMainSettingsKeyboard();
       await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
-      await answerCallbackQuery(callbackQueryId, `📝 ثبت‌نام ${status} شد!`);
+      await answerCallbackQuery(callbackQueryId, `📝 ثبت‌نام ماه آینده ${status} شد!`);
       
     } catch (error) {
       console.error('❌ [SETTINGS] Error toggling registration:', error);

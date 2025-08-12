@@ -73,7 +73,7 @@ async function notifyBotSettingsChanged(settings) {
   const message = `⚙️ **تنظیمات تغییر کرد!**
 
 🏫 نام مدرسه: ${settings.schoolName}
-📝 ثبت‌نام: ${settings.registrationOpen ? 'باز' : 'بسته'}
+📝 ثبت‌نام ماه آینده: ${settings.registrationOpen ? 'باز' : 'بسته'}
 👥 حداکثر دانش‌آموز: ${settings.maxStudents}
 💬 پیام مدیر: ${settings.adminMessage}
 
@@ -100,7 +100,7 @@ bot.command('start', async (ctx) => {
 ${settings.adminMessage}
 
 📊 **وضعیت فعلی:**
-• ثبت‌نام: ${settings.registrationOpen ? '✅ باز' : '❌ بسته'}
+• ثبت‌نام ماه آینده: ${settings.registrationOpen ? '✅ باز' : '❌ بسته'}
 • حداکثر دانش‌آموز: ${settings.maxStudents}
 
 🔗 برای مدیریت: https://your-domain.com`;
@@ -117,7 +117,7 @@ bot.command('settings', async (ctx) => {
   const message = `⚙️ **تنظیمات فعلی:**
 
 🏫 نام مدرسه: ${settings.schoolName}
-📝 ثبت‌نام: ${settings.registrationOpen ? 'باز' : 'بسته'}
+📝 ثبت‌نام ماه آینده: ${settings.registrationOpen ? 'باز' : 'بسته'}
 👥 حداکثر دانش‌آموز: ${settings.maxStudents}
 💬 پیام مدیر: ${settings.adminMessage}
 
@@ -131,7 +131,7 @@ bot.command('status', async (ctx) => {
   const message = `📊 **وضعیت سیستم:**
 
 🏫 ${settings.schoolName}
-📝 ثبت‌نام: ${settings.registrationOpen ? '✅ باز' : '❌ بسته'}
+📝 ثبت‌نام ماه آینده: ${settings.registrationOpen ? '✅ باز' : '❌ بسته'}
 👥 حداکثر دانش‌آموز: ${settings.maxStudents}
 ⏰ آخرین بروزرسانی: ${new Date().toLocaleString('fa-IR')}`;
 
