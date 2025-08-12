@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { sendMessage, sendMessageWithInlineKeyboard } = require('./4bale');
 
 class UnifiedRegistrationManager {
   constructor() {
@@ -421,17 +422,46 @@ class UnifiedRegistrationManager {
     // بررسی دستورات خاص
     if (text === '/start' || text === 'شروع' || text === '/شروع' || text === 'شروع/' || text === 'شروع مجدد' || text === 'استارت' || text === '/استارت') {
       return this.handleStartCommand(chatId, userId);
+    } else if (text === 'مدرسه' || text === 'معرفی مدرسه') {
+      // بررسی وضعیت کاربر
+      if (this.isUserRegistered(userId)) {
+        // کاربر شناس: خوش‌آمدگویی + حساب کاربری
+        return this.handleRegisteredUserSchool(chatId, userId);
+      } else {
+        // کاربر ناشناس: معرفی مدرسه + ثبت‌نام
+        return this.handleSchoolIntro(chatId);
+      }
+    } else if (text === 'ربات' || text === 'معرفی ربات') {
+      return this.handleQuranBotIntro(chatId);
+    } else if (text === 'خروج') {
+      return this.handleExitCommand(chatId);
+    } else if (text === 'برگشت به قبل') {
+      return this.handleBackCommand(chatId, userId);
+    } else if (text === '🏠 برگشت به منو') {
+      return this.handleBackToMainMenu(chatId, userId);
+    } else if (text === '📚 انتخاب کلاس') {
+      return this.handleWorkshopSelection(chatId, userId);
+    } else if (text === 'پنل قرآن‌آموز') {
+      return this.handleQuranStudentPanel(chatId, userId);
     }
 
-    // برای سایر پیام‌ها، بررسی کنیم که آیا کاربر ثبت‌نام شده یا نه
-    const userRecord = this.findUserById(userId);
-    if (userRecord) {
-      console.log(`✅ [UNIFIED] User ${userId} is already registered`);
-      return true;
-    } else {
-      console.log(`❓ [UNIFIED] Unknown user ${userId}, starting registration process`);
-      return this.handleRegistrationStart(userId, userId.toString());
+    // بررسی انتخاب کارگاه
+    if (text && text.startsWith('📚 ')) {
+      return this.handleWorkshopSelection(chatId, userId, text);
     }
+
+    // 🔍 بررسی اولویت: پردازش مراحل ثبت‌نام
+    console.log(`🔍 [UNIFIED] Checking if user ${userId} is in registration step...`);
+    
+    // اگر کاربر شناس است و کلمه معمولی زده، هیچ واکنشی نده
+    if (this.isUserRegistered(userId) && !this.isSpecialCommand(text)) {
+      console.log(`📝 [UNIFIED] User ${userId} sent normal text: "${text}" - No response needed (silent ignore)`);
+      return true; // هیچ واکنشی نده، فقط true برگردان
+    }
+
+    // کاربر جدید - شروع ثبت‌نام
+    console.log(`🆕 [UNIFIED] User ${userId} is new, starting unknown user flow`);
+    return this.handleUnknownUserStart(chatId);
   }
 
   // 🚀 پردازش دستور شروع
@@ -439,25 +469,43 @@ class UnifiedRegistrationManager {
     console.log(`🚀 [UNIFIED] Handling start command for user ${userId}`);
     
     const userRecord = this.findUserById(userId);
-    if (userRecord) {
+    if (userRecord && userRecord.userData.fullName && userRecord.userData.fullName.trim() !== '') {
       console.log(`✅ [UNIFIED] User ${userId} is already registered`);
       // ارسال پیام خوش‌آمدگویی برای کاربر ثبت‌نام شده
-      return true;
+      return this.handleRegisteredUserSchool(chatId, userId);
     } else {
-      console.log(`🆕 [UNIFIED] New user ${userId}, starting registration`);
-      return this.handleRegistrationStart(userId, userId.toString());
+      console.log(`🆕 [UNIFIED] New user ${userId}, starting welcome flow`);
+      return this.handleUnknownUserStart(chatId);
     }
   }
 
-  // 📝 شروع فرآیند ثبت‌نام
+  // 📝 شروع فرآیند ثبت‌نام (فقط ایجاد رکورد)
   async handleRegistrationStart(userId, userIdStr) {
-    console.log(`📝 [UNIFIED] Starting registration for user ${userId}`);
+    console.log(`📝 [UNIFIED] Creating registration record for user ${userId}`);
     
     try {
       // بررسی اینکه آیا کاربر قبلاً ثبت‌نام شده یا نه
       const existingUser = this.findUserById(userId);
-      if (existingUser) {
-        console.log(`✅ [UNIFIED] User ${userId} is already registered`);
+      if (existingUser && existingUser.userData.fullName && existingUser.userData.fullName.trim() !== '') {
+        console.log(`✅ [UNIFIED] User ${userId} is already registered with complete data`);
+        return true;
+      }
+
+      // اگر کاربر وجود دارد ولی داده‌هایش ناقص است، آن را به‌روزرسانی کن
+      if (existingUser && (!existingUser.userData.fullName || existingUser.userData.fullName.trim() === '')) {
+        console.log(`🔄 [UNIFIED] User ${userId} exists but has incomplete data, updating...`);
+        
+        const updatedUserData = {
+          ...existingUser.userData,
+          status: 'new',
+          source: 'bot',
+          lastUpdated: Date.now()
+        };
+        
+        this.registrations[userId] = updatedUserData;
+        this.saveData(this.registrationsFile, this.registrations);
+        
+        console.log(`✅ [UNIFIED] User ${userId} data updated`);
         return true;
       }
 
@@ -479,10 +527,10 @@ class UnifiedRegistrationManager {
       this.registrations[userId] = newUserData;
       this.saveData(this.registrationsFile, this.registrations);
       
-      console.log(`✅ [UNIFIED] Registration started for user ${userId}`);
+      console.log(`✅ [UNIFIED] Registration record created for user ${userId}`);
       return true;
     } catch (error) {
-      console.error(`❌ [UNIFIED] Error starting registration for user ${userId}:`, error);
+      console.error(`❌ [UNIFIED] Error creating registration record for user ${userId}:`, error);
       return false;
     }
   }
@@ -510,6 +558,147 @@ class UnifiedRegistrationManager {
       console.error(`❌ [UNIFIED] Error handling callback:`, error);
       return false;
     }
+  }
+
+  // 🔍 بررسی دستورات خاص
+  isSpecialCommand(text) {
+    const specialCommands = ['شروع', 'مدرسه', 'ربات', 'معرفی ربات', 'خروج', 'برگشت به قبل', '🏠 برگشت به منو', '📚 انتخاب کلاس', 'پنل قرآن‌آموز'];
+    return specialCommands.includes(text);
+  }
+
+  // 🎹 ساخت کیبورد اصلی
+  buildMainKeyboard() {
+    return [
+      ['شروع مجدد', 'معرفی مدرسه'],
+      ['معرفی ربات', 'خروج']
+    ];
+  }
+
+  // 🆕 شروع برای کاربر جدید
+  async handleUnknownUserStart(chatId) {
+    const welcomeText = `🏫 **مدرسه تلاوت قرآن**
+
+به مدرسه تلاوت قرآن کریم خوش آمدید
+
+📚 **کلاس‌های موجود:**
+• تجوید قرآن کریم • صوت و لحن
+• حفظ قرآن کریم • تفسیر قرآن
+
+💎 **مزایا:** اساتید مجرب، کلاس‌های آنلاین و حضوری، گواهی پایان دوره
+
+برای شروع، لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+    try {
+      // ارسال پیام خوش‌آمدگویی با کیبورد
+      console.log(`📱 [UNIFIED] Sending welcome message to chat ${chatId}`);
+      await sendMessage(chatId, welcomeText, this.buildMainKeyboard());
+      console.log(`✅ [UNIFIED] Welcome message sent successfully to chat ${chatId}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ [UNIFIED] Error sending welcome message to chat ${chatId}:`, error);
+      return false;
+    }
+  }
+
+  // 🏫 معرفی مدرسه
+  async handleSchoolIntro(chatId) {
+    const schoolText = `🏫 **مدرسه تلاوت قرآن کریم**
+
+🌟 مدرسه‌ای معتبر با ۱۰+ سال سابقه در آموزش قرآن کریم
+
+📚 **کلاس‌های موجود:**
+• تجوید قرآن کریم • صوت و لحن
+• حفظ قرآن کریم • تفسیر قرآن
+
+💎 **مزایا:** اساتید مجرب، کلاس‌های آنلاین و حضوری، گواهی پایان دوره
+
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+    try {
+      console.log(`📱 [UNIFIED] Sending school intro to chat ${chatId}`);
+      await sendMessage(chatId, schoolText, this.buildMainKeyboard());
+      console.log(`✅ [UNIFIED] School intro sent successfully to chat ${chatId}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ [UNIFIED] Error sending school intro to chat ${chatId}:`, error);
+      return false;
+    }
+  }
+
+  // 🏫 معرفی مدرسه برای کاربر شناس
+  async handleRegisteredUserSchool(chatId, userId) {
+    const userInfo = this.findUserById(userId);
+    const firstName = userInfo?.userData?.fullName?.split(' ')[0] || 'کاربر';
+    
+    const welcomeText = `🏫 **مدرسه تلاوت قرآن کریم**
+
+سلام ${firstName} عزیز! 👋
+به مدرسه تلاوت قرآن کریم خوش آمدید.
+
+🌟 مدرسه‌ای معتبر با ۱۰+ سال سابقه در آموزش قرآن کریم
+
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+    try {
+      console.log(`📱 [UNIFIED] Sending registered user school intro to chat ${chatId}`);
+      await sendMessage(chatId, welcomeText, this.buildMainKeyboard());
+      console.log(`✅ [UNIFIED] Registered user school intro sent successfully to chat ${chatId}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ [UNIFIED] Error sending registered user school intro to chat ${chatId}:`, error);
+      return false;
+    }
+  }
+
+  // 🤖 معرفی ربات
+  async handleQuranBotIntro(chatId) {
+    const botText = `🤖 **ربات مدرسه تلاوت قرآن**
+
+🌟 **قابلیت‌ها:** ثبت‌نام آنلاین، مشاهده برنامه کلاس‌ها، ارتباط با اساتید، اخبار و پشتیبانی
+
+💡 **نحوه استفاده:** از دکمه‌های زیر استفاده کنید یا پیام خود را بنویسید
+
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:`;
+
+    try {
+      console.log(`📱 [UNIFIED] Sending bot intro to chat ${chatId}`);
+      await sendMessage(chatId, botText, this.buildMainKeyboard());
+      console.log(`✅ [UNIFIED] Bot intro sent successfully to chat ${chatId}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ [UNIFIED] Error sending bot intro to chat ${chatId}:`, error);
+      return false;
+    }
+  }
+
+  // 🚪 خروج
+  async handleExitCommand(chatId) {
+    console.log(`🚪 [UNIFIED] User requested exit from chat ${chatId}`);
+    return true;
+  }
+
+  // 🔙 برگشت به قبل
+  async handleBackCommand(chatId, userId) {
+    console.log(`🔙 [UNIFIED] User requested back from chat ${chatId}`);
+    return true;
+  }
+
+  // 🏠 برگشت به منو
+  async handleBackToMainMenu(chatId, userId) {
+    console.log(`🏠 [UNIFIED] User requested main menu from chat ${chatId}`);
+    return true;
+  }
+
+  // 📚 انتخاب کلاس
+  async handleWorkshopSelection(chatId, userId) {
+    console.log(`📚 [UNIFIED] User requested workshop selection from chat ${chatId}`);
+    return true;
+  }
+
+  // 👤 پنل قرآن‌آموز
+  async handleQuranStudentPanel(chatId, userId) {
+    console.log(`👤 [UNIFIED] User requested student panel from chat ${chatId}`);
+    return true;
   }
 }
 
