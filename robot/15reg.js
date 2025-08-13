@@ -83,7 +83,10 @@ class RegistrationModule {
             resize_keyboard: true
         };
         
-        ctx.reply("📱 لطفاً شماره تلفن خود را با دکمه زیر ارسال کنید:", contactKeyboard);
+        // ارسال با keyboard
+        ctx.reply("📱 لطفاً شماره تلفن خود را با دکمه زیر ارسال کنید:", { 
+            reply_markup: contactKeyboard 
+        });
     }
 
     // ادامه ثبت‌نام
@@ -212,11 +215,19 @@ class RegistrationModule {
         const ctx = {
             from: { id: parseInt(userId) },
             chat: { id: parseInt(chatId) },
-            reply: async (text) => {
+            reply: async (text, options = {}) => {
                 try {
                     console.log(`📤 [15REG] ارسال پیام به ${chatId}: ${text}`);
-                    await sendMessage(parseInt(chatId), text);
-                    console.log(`✅ [15REG] پیام با موفقیت ارسال شد`);
+                    
+                    if (options && options.reply_markup) {
+                        // ارسال با keyboard
+                        await sendMessage(parseInt(chatId), text, options.reply_markup);
+                        console.log(`✅ [15REG] پیام با keyboard ارسال شد`);
+                    } else {
+                        // ارسال بدون keyboard
+                        await sendMessage(parseInt(chatId), text);
+                        console.log(`✅ [15REG] پیام بدون keyboard ارسال شد`);
+                    }
                 } catch (error) {
                     console.error(`❌ [15REG] خطا در ارسال پیام:`, error.message);
                 }
