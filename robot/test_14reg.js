@@ -1,5 +1,5 @@
 // 🧪 تست ماژول 14reg.js
-const SmartRegistrationModule = require('./14reg');
+const SmartRegistrationModule = require('./14reg1');
 
 console.log('🚀 شروع تست ماژول 14reg.js...\n');
 

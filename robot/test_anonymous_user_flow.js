@@ -1,7 +1,7 @@
 // 🧪 تست جریان کاربر ناشناس برای 14reg.js
 // بررسی کامل جریان ثبت‌نام از ابتدا تا انتها
 
-const SmartRegistrationModule = require('./14reg');
+const SmartRegistrationModule = require('./14reg1');
 
 async function testAnonymousUserFlow() {
   console.log('🧪 [TEST] شروع تست جریان کاربر ناشناس...\n');

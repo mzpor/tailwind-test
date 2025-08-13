@@ -1,7 +1,7 @@
 // 🧪 تست منطق داخلی 14reg.js
 // بررسی عملکرد متدها بدون ارسال پیام واقعی
 
-const SmartRegistrationModule = require('./14reg');
+const SmartRegistrationModule = require('./14reg1');
 
 async function testInternalLogic() {
   console.log('🧪 [TEST] شروع تست منطق داخلی 14reg.js...\n');

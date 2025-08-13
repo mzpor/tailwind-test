@@ -1,7 +1,7 @@
 // 🧪 تست ساده جریان کاربر ناشناس
 // بررسی منطق بدون ارسال پیام واقعی
 
-const SmartRegistrationModule = require('./14reg');
+const SmartRegistrationModule = require('./14reg1');
 
 async function testAnonymousFlowLogic() {
   console.log('🧪 [TEST] شروع تست منطق جریان کاربر ناشناس...\n');
