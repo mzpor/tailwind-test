@@ -29,7 +29,11 @@ const GROUP_NAMES = {
 // ===== کنترل نمایش دکمه‌ها در پنل مدیر =====
 const BUTTON_VISIBILITY_CONFIG = {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   ROBOT_BUTTON:0,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
+=======
+  ROBOT_BUTTON: 0,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
+>>>>>>> Stashed changes
 =======
   ROBOT_BUTTON: 0,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
 >>>>>>> Stashed changes
