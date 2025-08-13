@@ -27,7 +27,7 @@ const { logError, logConnectionStatus } = require('./8logs');
 const { BASE_URL } = require('./3config');
 const SettingsModule = require('./11settings');
 const KargahModule = require('./12kargah');
-const SmartRegistrationModule = require('./13reg');
+const SmartRegistrationModule = require('./14reg');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 // ایجاد یک instance واحد از SmartRegistrationModule
