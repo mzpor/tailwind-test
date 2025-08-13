@@ -1,5 +1,9 @@
 {
   "gatewayPort": 3003,
   "gatewayUrl": "http://localhost:3003",
+<<<<<<< Updated upstream
   "lastUpdate": "2025-08-13T04:34:49.720Z"
+=======
+  "lastUpdate": "2025-08-13T05:16:05.172Z"
+>>>>>>> Stashed changes
 }
