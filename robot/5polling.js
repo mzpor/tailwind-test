@@ -1099,6 +1099,16 @@ function startPolling() {
           console.log('🔄 [POLLING] Private message detected');
           const userRole = getUserRole(msg.from.id);
           
+          // بررسی contact برای قرآن‌آموز
+          if (msg.contact && userRole === ROLES.STUDENT) {
+            console.log(`📱 [POLLING] Contact detected for student, processing with registration module`);
+            const success = await registrationModule.handleStartCommand(msg.chat.id, msg.from.id.toString(), msg.contact);
+            if (success) {
+              console.log('✅ [POLLING] Contact processed successfully by registration module');
+              continue;
+            }
+          }
+          
           // اولویت‌بندی: مدیر -> مربی -> کمک مربی -> قرآن‌آموز
           if (userRole === ROLES.SCHOOL_ADMIN || userRole === ROLES.COACH || userRole === ROLES.ASSISTANT) {
             console.log(`🔄 [POLLING] Admin/Coach/Assistant detected, using role-based handling`);
