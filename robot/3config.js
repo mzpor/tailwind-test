@@ -28,12 +28,12 @@ const GROUP_NAMES = {
 //"1790308237": {}  ایرانسل
 // ===== کنترل نمایش دکمه‌ها در پنل مدیر =====
 const BUTTON_VISIBILITY_CONFIG = {
-  ROBOT_BUTTON: 1,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
+  ROBOT_BUTTON: 0,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
   REGISTRATION_BUTTON: 1,  // 1 = نمایش دکمه ثبت‌نام ماه آینده، 0 = عدم نمایش
   // در آینده می‌توان دکمه‌های بیشتری اضافه کرد
   // SETTINGS_BUTTON: 1,
-  ROLES_BUTTON: 1,  // مدیریت نقش‌ها غیرفعال شده
-  PRACTICE_EVALUATION_DAYS_BUTTON: 1,  // دکمه روزهای تمرین و ارزیابی: 1 = فعال، 0 = غیرفعال
+  ROLES_BUTTON: 0,  // مدیریت نقش‌ها غیرفعال شده
+  PRACTICE_EVALUATION_DAYS_BUTTON: 0,  // دکمه روزهای تمرین و ارزیابی: 1 = فعال، 0 = غیرفعال
   // EXIT_BUTTON: 1
 };
 // نگاشت نام کاربران
