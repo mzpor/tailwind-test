@@ -459,9 +459,71 @@ class UnifiedRegistrationManager {
       return true; // هیچ واکنشی نده، فقط true برگردان
     }
 
-    // کاربر جدید - شروع ثبت‌نام
-    console.log(`🆕 [UNIFIED] User ${userId} is new, starting unknown user flow`);
-    return this.handleUnknownUserStart(chatId);
+    // 🔒 کاربر جدید - بررسی اینکه آیا قبلاً پیام خوش‌آمدگویی دریافت کرده یا نه
+    const userRecord = this.findUserById(userId);
+    if (userRecord && userRecord.userData.welcomeSent) {
+      console.log(`🔒 [UNIFIED] User ${userId} already received welcome message, ignoring: "${text}"`);
+      return true; // هیچ واکنشی نده
+    }
+
+    // 🆕 کاربر جدید - شروع ثبت‌نام (فقط یک بار)
+    console.log(`🆕 [UNIFIED] User ${userId} is new, starting welcome flow (first time)`);
+    const result = await this.handleUnknownUserStart(chatId);
+    
+    // علامت‌گذاری که کاربر پیام خوش‌آمدگویی دریافت کرده
+    if (result) {
+      this.markWelcomeSent(userId);
+    }
+    
+    return result;
+  }
+
+  // 🏷️ علامت‌گذاری ارسال پیام خوش‌آمدگویی
+  markWelcomeSent(userId) {
+    try {
+      const userRecord = this.findUserById(userId);
+      if (userRecord) {
+        // به‌روزرسانی در فایل اصلی
+        if (userRecord.source === 'bot') {
+          this.registrations[userId] = { 
+            ...this.registrations[userId], 
+            welcomeSent: true,
+            lastUpdated: Date.now()
+          };
+          this.saveData(this.registrationsFile, this.registrations);
+        } else {
+          this.registrationData[userId] = { 
+            ...this.registrationData[userId], 
+            welcomeSent: true,
+            lastUpdated: Date.now()
+          };
+          this.saveData(this.registrationDataFile, this.registrationData);
+        }
+        
+        console.log(`✅ [UNIFIED] Welcome message marked as sent for user ${userId}`);
+      } else {
+        // ایجاد رکورد جدید با علامت welcomeSent
+        const newUserData = {
+          fullName: '',
+          firstName: '',
+          nationalId: '',
+          phone: '',
+          workshopId: null,
+          status: 'new',
+          source: 'bot',
+          registrationComplete: false,
+          welcomeSent: true,
+          ts: Date.now(),
+          lastUpdated: Date.now()
+        };
+        
+        this.registrations[userId] = newUserData;
+        this.saveData(this.registrationsFile, this.registrations);
+        console.log(`✅ [UNIFIED] New user record created with welcome sent for user ${userId}`);
+      }
+    } catch (error) {
+      console.error(`❌ [UNIFIED] Error marking welcome sent for user ${userId}:`, error);
+    }
   }
 
   // 🚀 پردازش دستور شروع

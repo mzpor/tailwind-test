@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SSEConnection from "./components/SSEConnection";
 
 const isIranMobile = (p) => /^09\d{9}$/.test(p);
 
@@ -337,6 +338,10 @@ export default function App() {
     return <AdminPanel onBack={handleBackToMain} />;
   }
 
+  if (currentView === "sse") {
+    return <SSEConnection />;
+  }
+
   if (currentView === "admin_access") {
     return <AdminAccess onAccessGranted={handleAdminAccess} onBack={handleBackToMain} />;
   }
@@ -345,12 +350,18 @@ export default function App() {
     <div className="min-h-screen flex items-start sm:items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Admin Access Button */}
-        <div className="text-center mb-4">
+        <div className="text-center mb-4 space-x-2">
           <button
             onClick={() => setCurrentView("admin_access")}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
           >
             ورود به پنل مدیریت 🔐
+          </button>
+          <button
+            onClick={() => setCurrentView("sse")}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm"
+          >
+            اتصال SSE 🔗
           </button>
         </div>
 
