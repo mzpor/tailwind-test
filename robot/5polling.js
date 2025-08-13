@@ -1099,7 +1099,18 @@ function startPolling() {
           console.log('🔄 [POLLING] Private message detected');
           const userRole = getUserRole(msg.from.id);
           
-          // بررسی contact برای قرآن‌آموز
+          // 🔥 اولویت 1: بررسی دستورات شروع برای قرآن‌آموز
+          if (userRole === ROLES.STUDENT && 
+              (msg.text === '/start' || msg.text === 'شروع' || msg.text === '/شروع' || msg.text === 'استارت')) {
+            console.log(`🚀 [POLLING] Start command detected for student, using registration module`);
+            const success = await registrationModule.handleStartCommand(msg.chat.id, msg.from.id.toString());
+            if (success) {
+              console.log('✅ [POLLING] Start command processed successfully by registration module');
+              continue;
+            }
+          }
+          
+          // 🔥 اولویت 2: بررسی contact برای قرآن‌آموز
           if (msg.contact && userRole === ROLES.STUDENT) {
             console.log(`📱 [POLLING] Contact detected for student, processing with registration module`);
             const success = await registrationModule.handleStartCommand(msg.chat.id, msg.from.id.toString(), msg.contact);

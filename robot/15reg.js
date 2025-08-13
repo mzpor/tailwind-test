@@ -46,8 +46,8 @@ class RegistrationModule {
         console.log(`🔍 [15REG] شروع ماژول برای کاربر ${userId}`);
         
         // بررسی وضعیت کاربر
-        if (this.userStates[userId]) {
-            console.log(`🔄 [15REG] ادامه ثبت‌نام برای کاربر ${userId}`);
+        if (this.userStates[userId] && this.userStates[userId].step !== 'completed') {
+            console.log(`🔄 [15REG] ادامه ثبت‌نام برای کاربر ${userId} در مرحله: ${this.userStates[userId].step}`);
             this.continueRegistration(ctx);
         } else {
             console.log(`🎉 [15REG] شروع جدید برای کاربر ${userId}`);
@@ -109,36 +109,58 @@ class RegistrationModule {
         }
         
         const userId = ctx.from.id;
-        const messageText = ctx.message?.text;
-        const contact = ctx.message?.contact || null;
+        const messageText = ctx.text;  // مستقیماً از ctx.text بگیر
+        const contact = ctx.contact || null;  // مستقیماً از ctx.contact بگیر
         
-        console.log(`🔍 [15REG] پردازش پیام از کاربر ${userId}: ${messageText || 'contact'}`);
+        console.log(`🔍 [15REG] پردازش پیام از کاربر ${userId}: ${messageText || (contact ? 'contact' : 'unknown')}`);
         
-        // اگر دستور شروع
-        if (messageText === '/start' || messageText === 'شروع'|| messageText === '/شروع'|| messageText === 'استارت') {
-            console.log(`✅ [15REG] دستور شروع تشخیص داده شد`);
-            this.start(ctx);
-            return true;
-        }
+        // 🔥 دستورات شروع حالا در 5polling.js پردازش می‌شوند
+        // اینجا فقط پیام‌های عادی پردازش می‌شوند
+        
+        // ساخت ctx مصنوعی برای compatibility
+        const artificialCtx = {
+            from: { 
+                id: parseInt(userId),
+                first_name: ctx.first_name || 'کاربر'
+            },
+            chat: { id: parseInt(ctx.chat.id) },
+            reply: async (text, options = {}) => {
+                try {
+                    console.log(`📤 [15REG] ارسال پیام به ${ctx.chat.id}: ${text}`);
+                    
+                    if (options && options.reply_markup) {
+                        // ارسال با keyboard
+                        await sendMessage(parseInt(ctx.chat.id), text, options.reply_markup);
+                        console.log(`✅ [15REG] پیام با keyboard ارسال شد`);
+                    } else {
+                        // ارسال بدون keyboard
+                        await sendMessage(parseInt(ctx.chat.id), text);
+                        console.log(`✅ [15REG] پیام بدون keyboard ارسال شد`);
+                    }
+                } catch (error) {
+                    console.error(`❌ [15REG] خطا در ارسال پیام:`, error.message);
+                }
+            }
+        };
         
         // اگر contact دریافت شد (روش پیشرفته)
         if (contact && this.userStates[userId]?.step === 'phone') {
             console.log(`📱 [15REG] Contact دریافت شد`);
-            await this.handleContact(ctx, contact);
+            await this.handleContact(artificialCtx, contact);
             return true;
         }
         
         // اگر نام و فامیل وارد شد
         if (messageText && this.userStates[userId]?.step === 'full_name') {
             console.log(`👤 [15REG] نام و فامیل دریافت شد`);
-            await this.handleFullNameInput(ctx, messageText);
+            await this.handleFullNameInput(artificialCtx, messageText);
             return true;
         }
         
         // اگر شماره تلفن دستی وارد شد
         if (messageText && this.userStates[userId]?.step === 'phone') {
             console.log(`📱 [15REG] شماره تلفن دستی دریافت شد`);
-            await this.handlePhoneNumber(ctx, messageText);
+            await this.handlePhoneNumber(artificialCtx, messageText);
             return true;
         }
         
@@ -193,14 +215,31 @@ class RegistrationModule {
 
     // بررسی نقش کاربر با شماره تلفن
     async checkUserRole(phoneNumber) {
-        // اینجا باید با سیستم نقش‌های اصلی ادغام شود
-        // فعلاً شبیه‌سازی می‌کنیم
-        if (phoneNumber.includes('0912')) {
-            return 'coach';  // مربی
-        } else if (phoneNumber.includes('0913')) {
-            return 'assistant';  // کمک مربی
-        } else {
-            return 'quran_student';  // قرآن‌آموز
+        console.log(`🔍 [15REG] بررسی نقش برای شماره: ${phoneNumber}`);
+        
+        try {
+            // بارگذاری workshops.json
+            const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+            if (fs.existsSync(workshopsFile)) {
+                const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
+                
+                // بررسی اینکه آیا شماره در کارگاه‌ها وجود دارد
+                for (const [workshopId, workshop] of Object.entries(workshopsData)) {
+                    if (workshop.instructor_phone && phoneNumber.includes(workshop.instructor_phone)) {
+                        console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (کارگاه ${workshopId})`);
+                        return 'coach';  // مربی
+                    }
+                }
+                
+                console.log(`✅ [15REG] نقش تشخیص داده شد: قرآن‌آموز (شماره در کارگاه‌ها یافت نشد)`);
+                return 'quran_student';  // قرآن‌آموز
+            } else {
+                console.log(`⚠️ [15REG] فایل workshops.json یافت نشد`);
+                return 'quran_student';  // پیش‌فرض
+            }
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در بررسی نقش:`, error.message);
+            return 'quran_student';  // پیش‌فرض در صورت خطا
         }
     }
 
@@ -259,11 +298,23 @@ class RegistrationModule {
         this.userStates[userId].step = 'completed';
         this.saveData();
         
-        const welcomeText = `📖 قرآن‌آموز ${firstName} خوش‌آمدی`;
+        // بررسی نقش کاربر بر اساس شماره تلفن
+        const phoneNumber = this.userStates[userId].data.phone;
+        const userRole = await this.checkUserRole(phoneNumber);
+        
+        // تعیین متن نقش
+        let roleText = 'قرآن‌آموز';
+        if (userRole === 'coach') {
+            roleText = 'مربی';
+        } else if (userRole === 'assistant') {
+            roleText = 'کمک مربی';
+        }
+        
+        const welcomeText = `📖 ${roleText} ${firstName} خوش‌آمدی`;
         
         const keyboard = {
             keyboard: [
-                ['شروع', 'قرآن‌آموز', 'ربات', 'خروج']
+                ['شروع', 'نقش', 'ربات', 'خروج']
             ],
             resize_keyboard: true
         };
@@ -278,7 +329,10 @@ class RegistrationModule {
         
         // ساخت ctx مصنوعی برای compatibility
         const ctx = {
-            from: { id: parseInt(userId) },
+            from: { 
+                id: parseInt(userId),
+                first_name: 'کاربر'  // اضافه کردن first_name پیش‌فرض
+            },
             chat: { id: parseInt(chatId) },
             message: contact ? { contact } : {},  // اضافه کردن contact اگر وجود دارد
             reply: async (text, options = {}) => {
