@@ -30,6 +30,9 @@ const KargahModule = require('./12kargah');
 const SmartRegistrationModule = require('./13reg');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
+// ایجاد یک instance واحد از SmartRegistrationModule
+const registrationModule = new SmartRegistrationModule();
+
 let lastId = 0;
 
 // بررسی وضعیت ادمین ربات
@@ -95,8 +98,6 @@ const roleConfig = {
 // تابع بررسی ثبت‌نام کاربر
 function isUserRegistered(userId) {
   try {
-    const SmartRegistrationModule = require('./13reg');
-    const registrationModule = new SmartRegistrationModule();
     return registrationModule.isUserRegistered(userId);
   } catch (error) {
     console.error('❌ [POLLING] Error checking user registration:', error.message);
@@ -330,8 +331,7 @@ async function handleRoleMessage(msg, role) {
       
       if (userRole === ROLES.STUDENT) {
         // برای قرآن آموز - استفاده از ماژول ثبت‌نام
-        const regModule = new SmartRegistrationModule();
-        await regModule.handleStartCommand(msg.chat.id, msg.from.id.toString());
+        await registrationModule.handleStartCommand(msg.chat.id, msg.from.id.toString());
         return; // ادامه حلقه بدون ارسال پیام معمولی
       } else {
         // برای سایر نقش‌ها - پنل معمولی با بررسی دسترسی
@@ -864,8 +864,7 @@ function startPolling() {
             
             console.log('🔄 [POLLING] Start registration callback detected');
             // پردازش شروع ثبت‌نام با استفاده از ماژول ثبت‌نام هوشمند
-            const regModule = new SmartRegistrationModule();
-            const success = await regModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
+            const success = await registrationModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
             
             if (!success) {
               const reply = '❌ خطا در شروع فرآیند ثبت‌نام. لطفاً دوباره تلاش کنید.';
@@ -892,8 +891,7 @@ function startPolling() {
             }
             
             // پردازش ثبت‌نام قرآن آموز با استفاده از ماژول ثبت‌نام هوشمند
-            const regModule = new SmartRegistrationModule();
-            const success = await regModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
+            const success = await registrationModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
             
             if (!success) {
               const reply = '❌ خطا در شروع فرآیند ثبت‌نام. لطفاً دوباره تلاش کنید.';
@@ -1000,8 +998,7 @@ function startPolling() {
             console.log('🔄 [POLLING] Registration callback detected');
             console.log(`🔄 [POLLING] Registration callback data: ${callback_query.data}`);
             // پردازش callback های ثبت‌نام
-            const regModule = new SmartRegistrationModule();
-            const success = await regModule.handleCallback(callback_query);
+            const success = await registrationModule.handleCallback(callback_query);
             
             if (!success) {
               console.error('❌ [POLLING] Error handling registration callback');
@@ -1120,8 +1117,7 @@ function startPolling() {
           } else {
             // برای قرآن‌آموز و ناشناس‌ها، از ماژول ثبت‌نام هوشمند استفاده کن
             console.log(`🔄 [POLLING] Student/Unknown user detected, using smart registration module`);
-            const regModule = new SmartRegistrationModule();
-            const success = await regModule.handleMessage(msg);
+            const success = await registrationModule.handleMessage(msg);
             
             if (!success) {
               console.log('🔄 [POLLING] Registration module did not handle message, falling back to role-based handling');
