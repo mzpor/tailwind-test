@@ -47,10 +47,16 @@ class RegistrationModule {
         console.log(`🔍 [15REG] شروع ماژول برای کاربر ${userId}`);
         
         // بررسی وضعیت کاربر
-        if (this.userStates[userId] && this.userStates[userId].step !== 'completed') {
+        if (this.userStates[userId] && this.userStates[userId].step === 'completed') {
+            // کاربر قبلاً ثبت‌نام شده - نمایش کیبرد متناسب با نقش
+            console.log(`✅ [15REG] کاربر ${userId} قبلاً ثبت‌نام شده، نمایش کیبرد نقش`);
+            this.showRoleBasedKeyboard(ctx);
+        } else if (this.userStates[userId] && this.userStates[userId].step !== 'completed') {
+            // کاربر در حال ثبت‌نام است
             console.log(`🔄 [15REG] ادامه ثبت‌نام برای کاربر ${userId} در مرحله: ${this.userStates[userId].step}`);
             this.continueRegistration(ctx);
         } else {
+            // کاربر جدید
             console.log(`🎉 [15REG] شروع جدید برای کاربر ${userId}`);
             this.showWelcome(ctx);
         }
@@ -67,7 +73,7 @@ class RegistrationModule {
         // نمایش دکمه request_contact
         this.showContactButton(ctx);
         
-          // تنظیم وضعیت کاربر
+        // تنظیم وضعیت کاربر
         const userId = ctx.from.id;
         this.userStates[userId] = {
             step: 'phone',
@@ -283,10 +289,13 @@ class RegistrationModule {
         const welcomeText = `👨‍🏫 خوش‌آمدی ${roleText} ${firstName}
 پنل ${roleText} فعال شد`;
         
-        // ساخت کیبرد با توجه به تنظیمات
-        const keyboardRows = [
-            ['شروع', 'ربات','مدرسه', 'خروج']
-        ];
+        // ساخت کیبرد متناسب با نقش
+        let keyboardRows;
+        if (role === 'coach') {
+            keyboardRows = [['شروع', 'مربی', 'ربات', 'خروج']];
+        } else {
+            keyboardRows = [['شروع', 'کمک مربی', 'ربات', 'خروج']];
+        }
         
         // اضافه کردن دکمه ریست اگر مجاز باشد
         if (USER_ACCESS_CONFIG.allowUserReset === 1) {
@@ -343,10 +352,8 @@ class RegistrationModule {
         
         const welcomeText = `📖 ${roleText} ${firstName} خوش‌آمدی`;
         
-        // ساخت کیبرد با توجه به تنظیمات
-        const keyboardRows = [
-            ['شروع', 'نقش', 'ربات', 'خروج']
-        ];
+        // ساخت کیبرد متناسب با نقش
+        const keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
         
         // اضافه کردن دکمه ریست اگر مجاز باشد
         if (USER_ACCESS_CONFIG.allowUserReset === 1) {
@@ -422,6 +429,54 @@ class RegistrationModule {
         
         // شروع مجدد
         this.start(ctx);
+    }
+    
+    // نمایش کیبرد متناسب با نقش کاربر
+    async showRoleBasedKeyboard(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            console.log(`❌ [15REG] اطلاعات کاربر ${userId} ناقص است`);
+            this.showWelcome(ctx);
+            return;
+        }
+        
+        // بررسی نقش کاربر
+        const userRole = await this.checkUserRole(userData.phone);
+        const firstName = userData.firstName || 'کاربر';
+        
+        // تعیین متن نقش و کیبرد
+        let roleText, keyboardRows;
+        
+        if (userRole === 'coach') {
+            roleText = 'مربی';
+            keyboardRows = [['شروع', 'مربی', 'ربات', 'خروج']];
+        } else if (userRole === 'assistant') {
+            roleText = 'کمک مربی';
+            keyboardRows = [['شروع', 'کمک مربی', 'ربات', 'خروج']];
+        } else {
+            roleText = 'قرآن‌آموز';
+            keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
+        }
+        
+        // اضافه کردن دکمه ریست اگر مجاز باشد
+        if (USER_ACCESS_CONFIG.allowUserReset === 1) {
+            keyboardRows.push(['ریست']);
+            console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
+        } else {
+            console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+        }
+        
+        const keyboard = {
+            keyboard: keyboardRows,
+            resize_keyboard: true
+        };
+        
+        const welcomeText = `🎉 ${roleText} ${firstName} خوش‌آمدی!`;
+        ctx.reply(welcomeText, { reply_markup: keyboard });
+        
+        console.log(`✅ [15REG] کیبرد نقش ${roleText} برای کاربر ${userId} نمایش داده شد`);
     }
 }
 
