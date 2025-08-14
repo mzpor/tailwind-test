@@ -11,6 +11,10 @@ class RegistrationModule {
         this.dataFile = path.join(__dirname, 'data', 'smart_registration.json');
         this.userStates = {};
         this.loadData();
+        
+        // اضافه کردن ماژول مدیریت کمک مربی
+        const AssistantManagerModule = require('./assistant_manager');
+        this.assistantManager = new AssistantManagerModule();
     }
 
     // بارگذاری داده‌ها
@@ -406,6 +410,15 @@ class RegistrationModule {
             console.log(`👋 [15REG] دکمه خروج فشرده شد`);
             await this.handleExitButton(artificialCtx);
             return true;
+        }
+        
+        // پردازش پیام‌های متنی برای مدیریت کمک مربی
+        if (this.assistantManager) {
+            const assistantResult = await this.assistantManager.handleMessage(ctx);
+            if (assistantResult) {
+                console.log(`✅ [15REG] پیام در ماژول مدیریت کمک مربی پردازش شد`);
+                return true;
+            }
         }
         
         console.log(`❌ [15REG] پیام پردازش نشد: ${messageText}`);
@@ -950,16 +963,98 @@ class RegistrationModule {
 • 🎯 مدیریت کارگاه
 • 👥 مدیریت دانش‌آموزان
 • 📊 گزارش‌گیری
+• 👨‍🏫 مدیریت کمک مربی
 
 👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
         
+        // کیبرد معمولی (موجود)
         const keyboard = {
             keyboard: [['شروع', 'مربی', 'ربات', 'خروج']],
             resize_keyboard: true
         };
         
+        // ارسال پیام با کیبرد معمولی
         ctx.reply(welcomeText, { reply_markup: keyboard });
+        
+        // کیبرد اینلاین برای گزینه‌های اضافی
+        const { sendMessageWithInlineKeyboard } = require('./4bale');
+        
+        // ارسال پیام با کیبرد اینلاین
+        await sendMessageWithInlineKeyboard(
+            ctx.chat.id,
+            '👆 **گزینه‌های اضافی:**',
+            [
+                [{ text: '👨‍🏫 مدیریت کمک مربی', callback_data: 'manage_assistant' }],
+                [{ text: '🔙 بازگشت', callback_data: 'back' }]
+            ]
+        );
+        
+        // اضافه کردن ماژول مدیریت کمک مربی
+        const AssistantManagerModule = require('./assistant_manager');
+        this.assistantManager = new AssistantManagerModule();
         console.log(`✅ [15REG] پنل مربی برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // پردازش callback های کیبرد اینلاین
+    async handleCallback(callback) {
+        const chatId = callback.message.chat.id;
+        const userId = callback.from.id;
+        const messageId = callback.message.message_id;
+        const data = callback.data;
+        const callbackQueryId = callback.id;
+        
+        console.log(`🔍 [15REG] Callback received: ${data}`);
+        
+        // پردازش callback های مدیریت کمک مربی
+        if (data === 'manage_assistant') {
+            console.log(`👨‍🏫 [15REG] مدیریت کمک مربی درخواست شد`);
+            return await this.handleManageAssistant(chatId, userId, callbackQueryId);
+        } else if (data === 'back') {
+            console.log(`🔙 [15REG] بازگشت درخواست شد`);
+            return await this.handleBackToMain(chatId, userId, callbackQueryId);
+        } else if (data.startsWith('assistant_')) {
+            // ارسال callback به ماژول مدیریت کمک مربی
+            console.log(`👨‍🏫 [15REG] Callback مدیریت کمک مربی: ${data}`);
+            return await this.assistantManager.handleCallback(callback);
+        }
+        
+        return false;
+    }
+    
+    // مدیریت کمک مربی
+    async handleManageAssistant(chatId, userId, callbackQueryId) {
+        console.log(`👨‍🏫 [15REG] نمایش پنل مدیریت کمک مربی`);
+        
+        try {
+            const result = await this.assistantManager.showAssistantManagement(chatId, userId);
+            if (result && result.text && result.keyboard) {
+                const { sendMessageWithInlineKeyboard } = require('./4bale');
+                await sendMessageWithInlineKeyboard(chatId, result.text, result.keyboard);
+                return true;
+            }
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در نمایش مدیریت کمک مربی:`, error);
+        }
+        
+        return false;
+    }
+    
+    // بازگشت به منوی اصلی
+    async handleBackToMain(chatId, userId, callbackQueryId) {
+        console.log(`🔙 [15REG] بازگشت به منوی اصلی`);
+        
+        // پاک کردن وضعیت کاربر در ماژول مدیریت کمک مربی
+        if (this.assistantManager) {
+            delete this.assistantManager.userStates[userId];
+        }
+        
+        const text = '🔙 بازگشت به منوی اصلی';
+        const keyboard = [[{ text: '🔙 بازگشت', callback_data: 'back' }]];
+        
+        const { sendMessageWithInlineKeyboard } = require('./4bale');
+        await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+        
+        return true;
     }
     
     // پردازش دکمه کمک مربی
