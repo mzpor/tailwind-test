@@ -275,23 +275,40 @@ class AssistantManagerModule {
             const tempData = this.tempData[userId] || {};
             const name = tempData.name || 'نامشخص';
             
+            // تقسیم نام به بخش‌های مختلف
+            const nameParts = name.split(/[\s\u200C\u200D]+/).filter(part => part.length > 0);
+            const firstName = nameParts.length > 0 ? nameParts[0] : name;
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+            const fullName = name;
+            
             // ایجاد ID منحصر به فرد
             const assistantId = Date.now().toString();
             
-            // ذخیره کمک مربی
+            // ذخیره کمک مربی در فایل assistants.json
             this.assistants[assistantId] = {
-                name: name,
+                name: fullName,
+                firstName: firstName,
+                lastName: lastName,
                 phone: text,
                 created_at: new Date().toISOString()
             };
             
             this.saveAssistants();
             
+            // ذخیره کمک مربی در smart_registration.json
+            await this.saveAssistantToRegistration(userId, {
+                phone: text,
+                fullName: fullName,
+                firstName: firstName,
+                lastName: lastName,
+                userRole: 'assistant'
+            });
+            
             // پاک کردن داده‌های موقت
             delete this.tempData[userId];
             delete this.userStates[userId];
             
-            const responseText = `✅ *کمک مربی اضافه شد*\n\n👤 **نام:** ${name}\n📱 **تلفن:** ${text}\n\n🎉 کمک مربی جدید با موفقیت ثبت شد.`;
+            const responseText = `✅ *کمک مربی اضافه شد*\n\n👤 **نام کامل:** ${fullName}\n👤 **اسم کوچک:** ${firstName}\n📱 **تلفن:** ${text}\n🎭 **نقش:** کمک مربی\n\n🎉 کمک مربی جدید با موفقیت ثبت شد.`;
             const keyboard = [
                 [{ text: '📝 کمک مربی دیگر', callback_data: 'assistant_add' }],
                 [{ text: '🔙 بازگشت به لیست', callback_data: 'assistant_list' }]
@@ -340,6 +357,46 @@ class AssistantManagerModule {
         }
         
         return false;
+    }
+    
+    // ذخیره کمک مربی در smart_registration.json
+    async saveAssistantToRegistration(userId, assistantData) {
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const registrationFile = path.join(__dirname, 'data', 'smart_registration.json');
+            
+            // بارگذاری فایل موجود
+            let registrationData = {};
+            if (fs.existsSync(registrationFile)) {
+                const data = fs.readFileSync(registrationFile, 'utf8');
+                registrationData = JSON.parse(data);
+            }
+            
+            // اضافه کردن کمک مربی جدید
+            const newUserId = Date.now().toString();
+            registrationData.userStates[newUserId] = {
+                step: 'completed',
+                data: {
+                    phone: assistantData.phone,
+                    fullName: assistantData.fullName,
+                    firstName: assistantData.firstName,
+                    lastName: assistantData.lastName,
+                    userRole: assistantData.userRole
+                },
+                timestamp: Date.now()
+            };
+            
+            // به‌روزرسانی lastUpdated
+            registrationData.lastUpdated = new Date().toISOString();
+            
+            // ذخیره فایل
+            fs.writeFileSync(registrationFile, JSON.stringify(registrationData, null, 2), 'utf8');
+            console.log(`✅ کمک مربی در smart_registration.json ذخیره شد: ${assistantData.fullName}`);
+            
+        } catch (error) {
+            console.error('❌ خطا در ذخیره کمک مربی در smart_registration.json:', error.message);
+        }
     }
 }
 
