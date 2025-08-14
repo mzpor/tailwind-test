@@ -438,6 +438,13 @@ class RegistrationModule {
         
         console.log(`📱 [15REG] پردازش شماره تلفن: ${phoneNumber}`);
         
+        // 🔥 بررسی معتبر بودن شماره تلفن
+        if (!this.isValidPhoneNumber(phoneNumber)) {
+            console.log(`❌ [15REG] شماره تلفن نامعتبر: ${phoneNumber}`);
+            ctx.reply('❌ شماره تلفن نامعتبر است. لطفاً شماره موبایل ایران (مثل 09123456789) وارد کنید:');
+            return;
+        }
+        
         // 🔥 بررسی وجود شماره تلفن در رکوردهای دیگر
         let existingUserId = null;
         for (const [uid, userData] of Object.entries(this.userStates)) {
@@ -492,6 +499,13 @@ class RegistrationModule {
         const phoneNumber = contact.phone_number;
         
         console.log(`📱 [15REG] Contact دریافت شد: ${phoneNumber}`);
+        
+        // 🔥 بررسی معتبر بودن شماره تلفن
+        if (!this.isValidPhoneNumber(phoneNumber)) {
+            console.log(`❌ [15REG] شماره تلفن نامعتبر: ${phoneNumber}`);
+            ctx.reply('❌ شماره تلفن نامعتبر است. لطفاً شماره موبایل معتبر وارد کنید');
+            return;
+        }
         
         // 🔥 بررسی وجود شماره تلفن در رکوردهای دیگر
         let existingUserId = null;
@@ -1306,6 +1320,31 @@ class RegistrationModule {
         
         ctx.reply(exitText, { reply_markup: keyboard });
         console.log(`✅ [15REG] پنل خروج برای کاربر ${userId} با نقش ${roleText} نمایش داده شد`);
+    }
+    
+    // 🔥 متد جدید: بررسی معتبر بودن شماره تلفن
+    isValidPhoneNumber(phone) {
+        if (!phone) return false;
+        
+        // حذف کاراکترهای اضافی
+        const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+        
+        // بررسی شماره موبایل ایران (09xxxxxxxxx)
+        if (/^09\d{9}$/.test(cleanPhone)) {
+            return true;
+        }
+        
+        // بررسی شماره بین‌المللی ایران (+989xxxxxxxxx)
+        if (/^\+989\d{9}$/.test(cleanPhone)) {
+            return true;
+        }
+        
+        // بررسی شماره بین‌المللی ایران (989xxxxxxxxx)
+        if (/^989\d{9}$/.test(cleanPhone)) {
+            return true;
+        }
+        
+        return false;
     }
 }
 
