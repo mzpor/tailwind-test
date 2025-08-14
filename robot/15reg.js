@@ -22,6 +22,11 @@ class RegistrationModule {
         }
     }
 
+    // بررسی وضعیت ثبت‌نام کاربر
+    isUserRegistered(userId) {
+        return this.userStates[userId] && this.userStates[userId].step === 'completed';
+    }
+
     // ذخیره داده‌ها
     saveData() {
         try {
@@ -178,7 +183,46 @@ class RegistrationModule {
             return true;
         }
         
-        console.log(`❌ [15REG] پیام پردازش نشد`);
+        // 🔥 کنترل نقش‌ها - اولویت با این ماژول
+        if (messageText === 'ربات' || messageText === '/ربات') {
+            console.log(`🤖 [15REG] دکمه ربات فشرده شد`);
+            await this.handleRobotButton(artificialCtx);
+            return true;
+        }
+        
+        if (messageText === 'قرآن‌آموز' || messageText === 'قرآن آموز') {
+            console.log(`📖 [15REG] دکمه قرآن‌آموز فشرده شد`);
+            await this.handleQuranStudentButton(artificialCtx);
+            return true;
+        }
+        
+        if (messageText === 'مربی') {
+            console.log(`👨‍🏫 [15REG] دکمه مربی فشرده شد`);
+            await this.handleCoachButton(artificialCtx);
+            return true;
+        }
+        
+        if (messageText === 'کمک مربی') {
+            console.log(`👨‍🏫 [15REG] دکمه کمک مربی فشرده شد`);
+            await this.handleAssistantButton(artificialCtx);
+            return true;
+        }
+        
+        // اگر دکمه شروع فشرده شد
+        if (messageText === 'شروع' || messageText === '/start' || messageText === '/شروع') {
+            console.log(`🚀 [15REG] دکمه شروع فشرده شد`);
+            await this.handleStartButton(artificialCtx);
+            return true;
+        }
+        
+        // اگر دکمه خروج فشرده شد
+        if (messageText === 'خروج' || messageText === '/خروج') {
+            console.log(`👋 [15REG] دکمه خروج فشرده شد`);
+            await this.handleExitButton(artificialCtx);
+            return true;
+        }
+        
+        console.log(`❌ [15REG] پیام پردازش نشد: ${messageText}`);
         return false;
     }
 
@@ -484,6 +528,218 @@ class RegistrationModule {
         ctx.reply(welcomeText, { reply_markup: keyboard });
         
         console.log(`✅ [15REG] کیبرد نقش ${roleText} برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // پردازش دکمه قرآن‌آموز
+    async handleQuranStudentButton(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            return;
+        }
+        
+        const welcomeText = `📖 **پنل قرآن‌آموز**
+
+📋 **گزینه‌های موجود:**
+• 🤖 معرفی ربات
+• 📝 ثبت نام
+
+💡 **نکات مهم:**
+• می‌توانید هر ماه ثبت‌نام کنید
+• در نظر سنجی مدرسه شرکت کنید
+• از قابلیت‌های ربات استفاده کنید
+
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
+        
+        const keyboard = {
+            keyboard: [['شروع', 'ربات', 'مدرسه', 'خروج']],
+            resize_keyboard: true
+        };
+        
+        ctx.reply(welcomeText, { reply_markup: keyboard });
+        console.log(`✅ [15REG] پنل قرآن‌آموز برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // پردازش دکمه مربی
+    async handleCoachButton(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            return;
+        }
+        
+        const welcomeText = `👨‍🏫 **پنل مربی**
+
+📋 **گزینه‌های موجود:**
+• 🎯 مدیریت کارگاه
+• 👥 مدیریت دانش‌آموزان
+• 📊 گزارش‌گیری
+
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
+        
+        const keyboard = {
+            keyboard: [['شروع', 'مربی', 'ربات', 'خروج']],
+            resize_keyboard: true
+        };
+        
+        ctx.reply(welcomeText, { reply_markup: keyboard });
+        console.log(`✅ [15REG] پنل مربی برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // پردازش دکمه کمک مربی
+    async handleAssistantButton(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            return;
+        }
+        
+        const welcomeText = `👨‍🏫 **پنل کمک مربی**
+
+📋 **گزینه‌های موجود:**
+• 🎯 کمک در کارگاه
+• 👥 پشتیبانی دانش‌آموزان
+• 📊 گزارش‌گیری
+
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
+        
+        const keyboard = {
+            keyboard: [['شروع', 'کمک مربی', 'ربات', 'خروج']],
+            resize_keyboard: true
+        };
+        
+        ctx.reply(welcomeText, { reply_markup: keyboard });
+        console.log(`✅ [15REG] پنل کمک مربی برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // 🔥 متد جدید: پردازش دکمه ربات
+    async handleRobotButton(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            return;
+        }
+        
+        const robotText = `🤖 **معرفی ربات قرآنی هوشمند**
+
+📚 **قابلیت‌های اصلی:**
+• 👥 حضور و غیاب
+• 📊 ارزیابی و نظر سنجی
+• 🏫 مدیریت گروه‌ها
+• 📝 ثبت‌نام ماهانه
+
+🎯 **این ربات برای کمک به آموزش قرآن کریم طراحی شده است**
+
+⏰ ${new Date().toLocaleDateString('fa-IR')}`;
+        
+        // نمایش کیبرد متناسب با نقش کاربر
+        const userRole = await this.checkUserRole(userData.phone);
+        let keyboardRows;
+        
+        if (userRole === 'coach') {
+            keyboardRows = [['شروع', 'مربی', 'ربات', 'خروج']];
+        } else if (userRole === 'assistant') {
+            keyboardRows = [['شروع', 'کمک مربی', 'ربات', 'خروج']];
+        } else {
+            keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
+        }
+        
+        // اضافه کردن دکمه ریست اگر مجاز باشد
+        if (USER_ACCESS_CONFIG.allowUserReset === 1) {
+            keyboardRows.push(['ریست']);
+        }
+        
+        const keyboard = {
+            keyboard: keyboardRows,
+            resize_keyboard: true
+        };
+        
+        ctx.reply(robotText, { reply_markup: keyboard });
+        console.log(`✅ [15REG] معرفی ربات برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // 🔥 متد جدید: پردازش دکمه شروع
+    async handleStartButton(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            return;
+        }
+        
+        // بررسی نقش کاربر
+        const userRole = await this.checkUserRole(userData.phone);
+        const firstName = userData.firstName || 'کاربر';
+        
+        let roleText, keyboardRows;
+        
+        if (userRole === 'coach') {
+            roleText = 'مربی';
+            keyboardRows = [['شروع', 'مربی', 'ربات', 'خروج']];
+        } else if (userRole === 'assistant') {
+            roleText = 'کمک مربی';
+            keyboardRows = [['شروع', 'کمک مربی', 'ربات', 'خروج']];
+        } else {
+            roleText = 'قرآن‌آموز';
+            keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
+        }
+        
+        // اضافه کردن دکمه ریست اگر مجاز باشد
+        if (USER_ACCESS_CONFIG.allowUserReset === 1) {
+            keyboardRows.push(['ریست']);
+        }
+        
+        const keyboard = {
+            keyboard: keyboardRows,
+            resize_keyboard: true
+        };
+        
+        const welcomeText = `🎉 ${roleText} ${firstName} خوش‌آمدی!
+
+📱 پنل ${roleText} فعال شد
+⏰ ${new Date().toLocaleDateString('fa-IR')}`;
+        
+        ctx.reply(welcomeText, { reply_markup: keyboard });
+        console.log(`✅ [15REG] پنل شروع برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // 🔥 متد جدید: پردازش دکمه خروج
+    async handleExitButton(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            return;
+        }
+        
+        // بررسی نقش کاربر
+        const userRole = await this.checkUserRole(userData.phone);
+        const roleText = userRole === 'coach' ? 'مربی' : 
+                        userRole === 'assistant' ? 'کمک مربی' : 'قرآن‌آموز';
+        
+        const exitText = `👋 پنل ${roleText} بسته شد
+
+برای شروع مجدد، دکمه "شروع" را فشار دهید
+⏰ ${new Date().toLocaleDateString('fa-IR')}`;
+        
+        // نمایش کیبرد ساده
+        const keyboard = {
+            keyboard: [['شروع']],
+            resize_keyboard: true
+        };
+        
+        ctx.reply(exitText, { reply_markup: keyboard });
+        console.log(`✅ [15REG] پنل خروج برای کاربر ${userId} نمایش داده شد`);
     }
 }
 
