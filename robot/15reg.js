@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./4bale');
-const { USER_ACCESS_CONFIG } = require('./3config');
+const { USER_ACCESS_CONFIG, addUserToRole } = require('./3config');
 
 class RegistrationModule {
     constructor() {
@@ -205,6 +205,16 @@ class RegistrationModule {
             
             console.log(`✅ [15REG] تکمیل خودکار ثبت‌نام برای ${userRole} با نام: ${firstName}`);
             
+            // 🔥 اضافه کردن خودکار به کانفیگ
+            if (userRole === 'assistant') {
+                try {
+                    addUserToRole('ASSISTANT', userId, firstName, userData.phone);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
+                } catch (error) {
+                    console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
+                }
+            }
+            
             // تکمیل اطلاعات
             this.userStates[userId].data.firstName = firstName;
             this.userStates[userId].data.fullName = workshopName || 'مربی';
@@ -230,6 +240,12 @@ class RegistrationModule {
                 console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
             } else {
                 console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+            }
+            
+            // 🔥 اضافه کردن دکمه "تمایل به ثبت‌نام" برای کمک مربی
+            if (userRole === 'assistant') {
+                keyboardRows.push(['📝 تمایل به ثبت‌نام']);
+                console.log(`✅ [15REG] دکمه "تمایل به ثبت‌نام" برای کمک مربی اضافه شد`);
             }
             
             const keyboard = {
@@ -291,6 +307,12 @@ class RegistrationModule {
                 console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
             } else {
                 console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+            }
+            
+            // 🔥 اضافه کردن دکمه "تمایل به ثبت‌نام" برای کمک مربی
+            if (userRole === 'assistant') {
+                keyboardRows.push(['📝 تمایل به ثبت‌نام']);
+                console.log(`✅ [15REG] دکمه "تمایل به ثبت‌نام" برای کمک مربی اضافه شد`);
             }
             
             const keyboard = {
@@ -402,6 +424,13 @@ class RegistrationModule {
         if (messageText === 'کمک مربی') {
             console.log(`👨‍🏫 [15REG] دکمه کمک مربی فشرده شد`);
             await this.handleAssistantButton(artificialCtx);
+            return true;
+        }
+        
+        // 🔥 پردازش دکمه "تمایل به ثبت‌نام" برای کمک مربی
+        if (messageText === '📝 تمایل به ثبت‌نام') {
+            console.log(`📝 [15REG] دکمه "تمایل به ثبت‌نام" فشرده شد`);
+            await this.handleAssistantRegistrationRequest(artificialCtx);
             return true;
         }
         
@@ -555,6 +584,16 @@ class RegistrationModule {
             console.log(`👤 [15REG] نام ورکشاپ: "${workshopName}"`);
             console.log(`👤 [15REG] اسم کوچک: "${firstName}"`);
             
+            // 🔥 اضافه کردن خودکار به کانفیگ
+            if (userRole === 'assistant') {
+                try {
+                    addUserToRole('ASSISTANT', userId, firstName, phoneNumber);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
+                } catch (error) {
+                    console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
+                }
+            }
+            
             // ذخیره کامل اطلاعات کاربر
             this.userStates[userId].data = {
                 phone: phoneNumber,  // شماره تلفن واقعی
@@ -605,6 +644,11 @@ class RegistrationModule {
         console.log(`🔍 [15REG] بررسی نقش برای شماره: ${phoneNumber}`);
         
         try {
+            // 🔥 نرمال‌سازی شماره تلفن
+            const normalizePhone = (phone) => phone.replace(/^(98\+?|0)/, '');
+            const normalizedPhone = normalizePhone(phoneNumber);
+            console.log(`🔧 [15REG] شماره نرمال‌سازی شده: ${normalizedPhone}`);
+            
             // بارگذاری workshops.json
             const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
             if (fs.existsSync(workshopsFile)) {
@@ -613,9 +657,12 @@ class RegistrationModule {
                 // بررسی مربی‌ها
                 if (workshopsData.coach) {
                     for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
-                        if (coach.phone && phoneNumber.includes(coach.phone)) {
-                            console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (کارگاه ${coachId})`);
-                            return 'coach';  // مربی
+                        if (coach.phone && coach.phone !== "0" && coach.phone.trim() !== "") {
+                            const normalizedCoachPhone = normalizePhone(coach.phone);
+                            if (normalizedPhone.includes(normalizedCoachPhone)) {
+                                console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (کارگاه ${coachId})`);
+                                return 'coach';  // مربی
+                            }
                         }
                     }
                 }
@@ -623,9 +670,12 @@ class RegistrationModule {
                 // بررسی کمک مربی‌ها
                 if (workshopsData.assistant) {
                     for (const [assistantId, assistant] of Object.entries(workshopsData.assistant)) {
-                        if (assistant.phone && phoneNumber.includes(assistant.phone)) {
-                            console.log(`✅ [15REG] نقش تشخیص داده شد: کمک مربی (کمک مربی ${assistantId})`);
-                            return 'assistant';  // کمک مربی
+                        if (assistant.phone) {
+                            const normalizedAssistantPhone = normalizePhone(assistant.phone);
+                            if (normalizedPhone.includes(normalizedAssistantPhone)) {
+                                console.log(`✅ [15REG] نقش تشخیص داده شد: کمک مربی (کمک مربی ${assistantId})`);
+                                return 'assistant';  // کمک مربی
+                            }
                         }
                     }
                 }
@@ -742,6 +792,12 @@ class RegistrationModule {
             console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
         } else {
             console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+        }
+        
+        // 🔥 اضافه کردن دکمه "تمایل به ثبت‌نام" برای کمک مربی
+        if (role === 'assistant') {
+            keyboardRows.push(['📝 تمایل به ثبت‌نام']);
+            console.log(`✅ [15REG] دکمه "تمایل به ثبت‌نام" برای کمک مربی اضافه شد`);
         }
         
         const keyboard = {
@@ -931,6 +987,16 @@ class RegistrationModule {
             
             console.log(`✅ [15REG] تکمیل خودکار ثبت‌نام برای ${userRole} با نام: ${firstName}`);
             
+            // 🔥 اضافه کردن خودکار به کانفیگ
+            if (userRole === 'assistant') {
+                try {
+                    addUserToRole('ASSISTANT', userId, firstName, userData.phone);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
+                } catch (error) {
+                    console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
+                }
+            }
+            
             // تکمیل اطلاعات
             this.userStates[userId].data.firstName = firstName;
             this.userStates[userId].data.fullName = workshopName || 'مربی';
@@ -956,6 +1022,12 @@ class RegistrationModule {
                 console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
             } else {
                 console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+            }
+            
+            // 🔥 اضافه کردن دکمه "تمایل به ثبت‌نام" برای کمک مربی
+            if (userRole === 'assistant') {
+                keyboardRows.push(['📝 تمایل به ثبت‌نام']);
+                console.log(`✅ [15REG] دکمه "تمایل به ثبت‌نام" برای کمک مربی اضافه شد`);
             }
             
             const keyboard = {
@@ -1033,6 +1105,12 @@ class RegistrationModule {
             console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
         } else {
             console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+        }
+        
+        // 🔥 اضافه کردن دکمه "تمایل به ثبت‌نام" برای کمک مربی
+        if (userRole === 'assistant') {
+            keyboardRows.push(['📝 تمایل به ثبت‌نام']);
+            console.log(`✅ [15REG] دکمه "تمایل به ثبت‌نام" برای کمک مربی اضافه شد`);
         }
         
         const keyboard = {
@@ -1452,6 +1530,72 @@ class RegistrationModule {
         
         ctx.reply(exitText, { reply_markup: keyboard });
         console.log(`✅ [15REG] پنل خروج برای کاربر ${userId} با نقش ${roleText} نمایش داده شد`);
+    }
+    
+    // 🔥 متد جدید: پردازش درخواست ثبت‌نام کمک مربی
+    async handleAssistantRegistrationRequest(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            return;
+        }
+        
+        // 🔥 استفاده از نقش ذخیره شده
+        const userRole = userData.userRole;
+        if (!userRole || userRole !== 'assistant') {
+            ctx.reply('❌ این گزینه فقط برای کمک مربی‌ها قابل استفاده است');
+            return;
+        }
+        
+        console.log(`📝 [15REG] کمک مربی ${userId} درخواست ثبت‌نام کرده است`);
+        
+        // 🔥 اضافه کردن نقش STUDENT به کمک مربی
+        try {
+            const { addUserToRole } = require('./3config');
+            addUserToRole('STUDENT', userId, userData.firstName || 'کمک مربی', userData.phone);
+            console.log(`✅ [15REG] نقش STUDENT به کمک مربی ${userId} اضافه شد`);
+            
+            // به‌روزرسانی userStates
+            if (!this.userStates[userId].data.roles) {
+                this.userStates[userId].data.roles = [];
+            }
+            if (!this.userStates[userId].data.roles.includes('STUDENT')) {
+                this.userStates[userId].data.roles.push('STUDENT');
+            }
+            this.saveData();
+            
+            const successText = `🎉 **ثبت‌نام موفق!**
+
+👨‍🏫 **نقش فعلی:** کمک مربی + قرآن‌آموز
+📱 **شماره تلفن:** ${userData.phone}
+👤 **نام:** ${userData.firstName || 'کمک مربی'}
+
+✅ **حالا می‌توانید:**
+• در کلاس‌ها ثبت‌نام کنید
+• از قابلیت‌های قرآن‌آموز استفاده کنید
+• همچنان به عنوان کمک مربی فعالیت کنید
+
+🎯 **برای شروع ثبت‌نام، دکمه "قرآن‌آموز" را فشار دهید**`;
+            
+            // کیبرد جدید با نقش‌های چندگانه
+            const keyboard = {
+                keyboard: [
+                    ['شروع', 'کمک مربی', 'ربات', 'خروج'],
+                    ['📖 قرآن‌آموز'],  // دکمه جدید برای قرآن‌آموز
+                    ['ریست']
+                ],
+                resize_keyboard: true
+            };
+            
+            ctx.reply(successText, { reply_markup: keyboard });
+            console.log(`✅ [15REG] ثبت‌نام کمک مربی ${userId} تکمیل شد`);
+            
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در اضافه کردن نقش STUDENT:`, error.message);
+            ctx.reply('❌ خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.');
+        }
     }
     
     // 🔥 متد جدید: بررسی معتبر بودن شماره تلفن

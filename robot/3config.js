@@ -160,14 +160,100 @@ const USERS = {};
 Object.entries(USERS_BY_ROLE).forEach(([role, users]) => {
   users.forEach(user => {
     if (typeof user === 'object' && user && user.id && user.name) {
-      USERS[user.id] = { name: user.name, role: role };
+      // اگر کاربر قبلاً وجود دارد، نقش‌های جدید را اضافه کن
+      if (USERS[user.id]) {
+        if (!USERS[user.id].roles) {
+          USERS[user.id].roles = [USERS[user.id].role];
+        }
+        if (!USERS[user.id].roles.includes(role)) {
+          USERS[user.id].roles.push(role);
+        }
+        USERS[user.id].role = USERS[user.id].roles[0]; // نقش اول به عنوان نقش اصلی
+      } else {
+        USERS[user.id] = { name: user.name, role: role, roles: [role] };
+      }
     } else if (typeof user === 'number') {
       // اگر user فقط یک عدد است، از USER_NAMES استفاده کن
       const userName = USER_NAMES[user] || `کاربر ${user}`;
-      USERS[user] = { name: userName, role: role };
+      if (USERS[user]) {
+        if (!USERS[user].roles) {
+          USERS[user].roles = [USERS[user].role];
+        }
+        if (!USERS[user].roles.includes(role)) {
+          USERS[user].roles.push(role);
+        }
+        USERS[user].role = USERS[user].roles[0];
+      } else {
+        USERS[user] = { name: userName, role: role, roles: [role] };
+      }
     }
   });
 });
+
+// ===== توابع جدید برای مدیریت نقش‌های چندگانه =====
+
+// بررسی اینکه آیا کاربر نقش خاصی دارد
+const hasRole = (userId, role) => {
+  const userInfo = USERS[userId];
+  if (!userInfo) return false;
+  
+  if (userInfo.roles) {
+    return userInfo.roles.includes(role);
+  }
+  
+  return userInfo.role === role;
+};
+
+// بررسی اینکه آیا کاربر کمک مربی است
+const isPhoneAssistant = (phoneNumber) => {
+  try {
+    // نرمال‌سازی شماره تلفن
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    
+    // جستجو در لیست کمک مربی‌ها
+    const isAssistant = USERS_BY_ROLE.ASSISTANT.some(user => {
+      if (typeof user === 'object' && user.phone) {
+        return normalizePhoneNumber(user.phone) === normalizedPhone;
+      }
+      return false;
+    });
+    
+    console.log(`🔍 [CONFIG] Phone ${normalizedPhone} isAssistant: ${isAssistant}`);
+    return isAssistant;
+    
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking if phone is assistant:', error);
+    return false;
+  }
+};
+
+// دریافت اطلاعات کمک مربی بر اساس شماره تلفن
+const getAssistantByPhone = (phoneNumber) => {
+  try {
+    // نرمال‌سازی شماره تلفن
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    
+    // جستجو در لیست کمک مربی‌ها
+    const assistant = USERS_BY_ROLE.ASSISTANT.find(user => {
+      if (typeof user === 'object' && user.phone) {
+        return normalizePhoneNumber(user.phone) === normalizedPhone;
+      }
+      return false;
+    });
+    
+    if (assistant) {
+      console.log(`✅ [CONFIG] Found assistant for phone ${normalizedPhone}:`, assistant);
+      return assistant;
+    } else {
+      console.log(`⚠️ [CONFIG] No assistant found for phone ${normalizedPhone}`);
+      return null;
+    }
+    
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting assistant by phone:', error);
+    return null;
+  }
+};
 
 // ===== توابع کمکی جدید =====
 
@@ -275,15 +361,82 @@ const getAllUsersByRole = () => {
   return USERS_BY_ROLE;
 };
 
-const addUserToRole = (role, userId, userName) => {
+const addUserToRole = (role, userId, userName, phone = null) => {
   if (!USERS_BY_ROLE[role]) {
     USERS_BY_ROLE[role] = [];
   }
-  USERS_BY_ROLE[role].push({ id: userId, name: userName });
-  // به‌روزرسانی USERS
-  USERS[userId] = { name: userName, role: role };
   
-  console.log(`🔄 [CONFIG] User ${userId} added to role ${role}`);
+  // بررسی اینکه آیا کاربر قبلاً در این نقش وجود دارد
+  const existingUserIndex = USERS_BY_ROLE[role].findIndex(user => 
+    (typeof user === 'object' ? user.id : user) === userId
+  );
+  
+  if (existingUserIndex === -1) {
+    // اضافه کردن کاربر جدید به نقش
+    USERS_BY_ROLE[role].push({ id: userId, name: userName, phone: phone });
+    console.log(`🔄 [CONFIG] User ${userId} added to role ${role}`);
+  } else {
+    // به‌روزرسانی کاربر موجود
+    if (typeof USERS_BY_ROLE[role][existingUserIndex] === 'object') {
+      USERS_BY_ROLE[role][existingUserIndex].name = userName;
+      if (phone) USERS_BY_ROLE[role][existingUserIndex].phone = phone;
+    } else {
+      USERS_BY_ROLE[role][existingUserIndex] = { id: userId, name: userName, phone: phone };
+    }
+    console.log(`🔄 [CONFIG] User ${userId} updated in role ${role}`);
+  }
+  
+  // به‌روزرسانی USERS
+  if (!USERS[userId]) {
+    USERS[userId] = { name: userName, role: role, roles: [role] };
+  } else {
+    // اگر کاربر قبلاً وجود دارد، نقش جدید را اضافه کن
+    if (!USERS[userId].roles) {
+      USERS[userId].roles = [USERS[userId].role];
+    }
+    if (!USERS[userId].roles.includes(role)) {
+      USERS[userId].roles.push(role);
+    }
+    // نقش اول به عنوان نقش اصلی باقی بماند
+    if (USERS[userId].role !== role && USERS[userId].roles.length === 1) {
+      USERS[userId].role = role;
+    }
+  }
+  
+  // به‌روزرسانی آرایه‌های مشتق شده
+  updateDerivedArrays();
+  
+  console.log(`✅ [CONFIG] User ${userId} successfully added/updated in role ${role}`);
+  console.log(`📊 [CONFIG] User ${userId} now has roles: ${USERS[userId].roles.join(', ')}`);
+};
+
+// تابع جدید برای به‌روزرسانی آرایه‌های مشتق شده
+const updateDerivedArrays = () => {
+  // به‌روزرسانی ADMIN_IDS
+  ADMIN_IDS.length = 0;
+  ADMIN_IDS.push(...USERS_BY_ROLE.SCHOOL_ADMIN.map(user => 
+    typeof user === 'object' ? user.id : user
+  ));
+  
+  // به‌روزرسانی GROUP_ADMIN_IDS
+  GROUP_ADMIN_IDS.length = 0;
+  GROUP_ADMIN_IDS.push(
+    ...USERS_BY_ROLE.SCHOOL_ADMIN.map(user => typeof user === 'object' ? user.id : user),
+    ...USERS_BY_ROLE.COACH.map(user => typeof user === 'object' ? user.id : user),
+    ...USERS_BY_ROLE.ASSISTANT.map(user => typeof user === 'object' ? user.id : user)
+  );
+  
+  // به‌روزرسانی AUTHORIZED_USER_IDS
+  AUTHORIZED_USER_IDS.length = 0;
+  AUTHORIZED_USER_IDS.push(...GROUP_ADMIN_IDS);
+  
+  // به‌روزرسانی HELPER_COACH_USER_IDS
+  HELPER_COACH_USER_IDS.length = 0;
+  HELPER_COACH_USER_IDS.push(...USERS_BY_ROLE.ASSISTANT.map(user => 
+    typeof user === 'object' ? user.id : user
+  ));
+  
+  console.log(`🔄 [CONFIG] Derived arrays updated successfully`);
 };
 
 // توابع برای دریافت آرایه‌های به‌روزرسانی شده
@@ -915,6 +1068,11 @@ module.exports = {
   getAllUsersByRole,
   addUserToRole,
   removeUserFromRole,
+  // ===== توابع جدید برای مدیریت نقش‌های چندگانه =====
+  hasRole,
+  isPhoneAssistant,
+  getAssistantByPhone,
+  updateDerivedArrays,
   // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
   addCoachByPhone,
   removeCoachByPhone,

@@ -16,7 +16,9 @@ const {
   getCurrentAssistantId,
   // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
   isPhoneCoach,
-  getCoachByPhone
+  getCoachByPhone,
+  // ===== توابع جدید برای مدیریت نقش‌های چندگانه =====
+  hasRole
 } = require('./3config');
 const { ROLES } = require('./3config');
 
@@ -78,21 +80,33 @@ function isAssistant(userId) {
   
   // از ساختار مرکزی استفاده کن
   const userInfo = getUserInfo(userId);
-  const result = userInfo.role === 'ASSISTANT';
+  const result = hasRole(userId, 'ASSISTANT');
   
   console.log(`✅ [MID] isAssistant result for ${userId}: ${result}`);
   return result;
 }
 
-// بررسی دانش‌آموز بودن (جدید)
+// بررسی قرآن‌آموز بودن (جدید)
 function isStudent(userId) {
   console.log(`🔍 [MID] isStudent called for userId: ${userId}`);
   
   // از ساختار مرکزی استفاده کن
   const userInfo = getUserInfo(userId);
-  const result = userInfo.role === 'STUDENT';
+  const result = hasRole(userId, 'STUDENT');
   
   console.log(`✅ [MID] isStudent result for ${userId}: ${result}`);
+  return result;
+}
+
+// بررسی اینکه آیا کاربر هم کمک مربی و هم قرآن‌آموز است (جدید)
+function isAssistantAndStudent(userId) {
+  console.log(`🔍 [MID] isAssistantAndStudent called for userId: ${userId}`);
+  
+  const isAssist = hasRole(userId, 'ASSISTANT');
+  const isStud = hasRole(userId, 'STUDENT');
+  const result = isAssist && isStud;
+  
+  console.log(`✅ [MID] isAssistantAndStudent result for ${userId}: ${result} (ASSISTANT: ${isAssist}, STUDENT: ${isStud})`);
   return result;
 }
 
@@ -296,6 +310,7 @@ module.exports = {
   isCoach,
   isAssistant,
   isStudent,
+  isAssistantAndStudent,
   isCoachByPhone,
   getCoachInfoByPhone,
   getUserName,
