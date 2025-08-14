@@ -120,8 +120,18 @@ class RegistrationModule {
             console.log(`🔍 [15REG] کاربر در مرحله profile، نمایش پروفایل`);
             this.showProfileAndContinue(ctx);
         } else if (userState.step === 'full_name') {
-            // 🔥 شرط جدید: اگر مربی است و شماره دارد، مستقیماً پنل
+            // 🔥 بررسی معتبر بودن شماره تلفن
             const userData = userState.data;
+            if (!userData || !userData.phone || !this.isValidPhoneNumber(userData.phone)) {
+                console.log(`❌ [15REG] شماره تلفن نامعتبر در مرحله full_name: ${userData?.phone}`);
+                // برگردون به مرحله phone
+                this.userStates[userId].step = 'phone';
+                this.saveData();
+                await this.showWelcome(ctx);
+                return;
+            }
+            
+            // 🔥 شرط جدید: اگر مربی است و شماره دارد، مستقیماً پنل
             if (userData && userData.phone) {
                 console.log(`🔍 [15REG] بررسی نقش برای شماره موجود: ${userData.phone}`);
                 
@@ -1110,6 +1120,12 @@ class RegistrationModule {
         if (data === 'manage_assistant') {
             console.log(`👨‍🏫 [15REG] مدیریت کمک مربی درخواست شد`);
             return await this.handleManageAssistant(chatId, userId, callbackQueryId);
+        } else if (data === 'assistant_manage_groups') {
+            console.log(`🎯 [15REG] مدیریت گروه‌های کمک مربی درخواست شد`);
+            return await this.handleAssistantManageGroups(chatId, userId, callbackQueryId);
+        } else if (data === 'assistant_back') {
+            console.log(`🔙 [15REG] بازگشت کمک مربی درخواست شد`);
+            return await this.handleAssistantBack(chatId, userId, callbackQueryId);
         } else if (data === 'back') {
             console.log(`🔙 [15REG] بازگشت درخواست شد`);
             return await this.handleBackToMain(chatId, userId, callbackQueryId);
@@ -1149,6 +1165,58 @@ class RegistrationModule {
         return false;
     }
     
+    // مدیریت گروه‌های کمک مربی
+    async handleAssistantManageGroups(chatId, userId, callbackQueryId) {
+        console.log(`🎯 [15REG] نمایش مدیریت گروه‌های کمک مربی`);
+        
+        try {
+            // اینجا باید به سیستم مدیریت گروه‌های مدیر وصل بشه
+            // ولی فقط گروه‌هایی که کمک مربی ادمین هست رو نشون بده
+            const text = `🎯 **مدیریت گروه‌های کمک مربی**
+
+📋 **گروه‌های شما:**
+• گروه قرآن کریم (2 گروه)
+• گروه حفظ موضوعی
+
+⚠️ **نکته:** فقط گروه‌هایی که شما ادمین هستید قابل مدیریت هستند.
+
+👆 **لطفاً گروه مورد نظر را انتخاب کنید:**`;
+            
+            const keyboard = [
+                [{ text: '📚 گروه قرآن کریم', callback_data: 'assistant_group_quran' }],
+                [{ text: '📖 گروه حفظ موضوعی', callback_data: 'assistant_group_hifz' }],
+                [{ text: '🔙 بازگشت', callback_data: 'assistant_back' }]
+            ];
+            
+            const { sendMessageWithInlineKeyboard } = require('./4bale');
+            await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+            return true;
+            
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در نمایش مدیریت گروه‌های کمک مربی:`, error);
+        }
+        
+        return false;
+    }
+    
+    // بازگشت کمک مربی
+    async handleAssistantBack(chatId, userId, callbackQueryId) {
+        console.log(`🔙 [15REG] بازگشت کمک مربی به منوی اصلی`);
+        
+        // پاک کردن وضعیت کاربر در ماژول مدیریت کمک مربی
+        if (this.assistantManager) {
+            delete this.assistantManager.userStates[userId];
+        }
+        
+        const text = '🔙 بازگشت به منوی کمک مربی';
+        const keyboard = [[{ text: '🔙 بازگشت', callback_data: 'assistant_back' }]];
+        
+        const { sendMessageWithInlineKeyboard } = require('./4bale');
+        await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+        
+        return true;
+    }
+    
     // بازگشت به منوی اصلی
     async handleBackToMain(chatId, userId, callbackQueryId) {
         console.log(`🔙 [15REG] بازگشت به منوی اصلی`);
@@ -1177,21 +1245,38 @@ class RegistrationModule {
             return;
         }
         
-        const welcomeText = `👨‍🏫 **پنل کمک مربی**
+        const welcomeText = `👨‍🏫 **پنل کمک مربی محمد**
 
-📋 **گزینه‌های موجود:**
-• 🎯 کمک در کارگاه
-• 📊 پشتیبانی دانش‌آموزان
-• 📊 گزارش‌گیری
+ **گزینه‌های موجود:**
+• 🎯 مدیریت گروه‌ها (2 گروه)
+• مدیریت دانش‌آموزان گروه‌های من (فعلاً غیرفعال)
+• 🚫 گزارش‌گیری گروه‌های من (فعلاً غیرفعال)
+• ثبت‌نام (فعلاً غیرفعال)
 
-👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
+ **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
         
+        // کیبرد معمولی (موجود)
         const keyboard = {
-            keyboard: [['شروع', 'کمک مربی', 'ربات', 'خروج']],
+            keyboard: [['شروع', 'کمک مربی', 'قرآن‌آموز', 'ربات', 'خروج']],
             resize_keyboard: true
         };
         
+        // ارسال پیام با کیبرد معمولی
         ctx.reply(welcomeText, { reply_markup: keyboard });
+        
+        // کیبرد اینلاین برای مدیریت گروه‌ها
+        const { sendMessageWithInlineKeyboard } = require('./4bale');
+        
+        // ارسال پیام با کیبرد اینلاین
+        await sendMessageWithInlineKeyboard(
+            ctx.chat.id,
+            '👆 **گزینه‌های مدیریتی:**',
+            [
+                [{ text: '🎯 مدیریت گروه‌ها', callback_data: 'assistant_manage_groups' }],
+                [{ text: '🔙 بازگشت', callback_data: 'assistant_back' }]
+            ]
+        );
+        
         console.log(`✅ [15REG] پنل کمک مربی برای کاربر ${userId} نمایش داده شد`);
     }
     
