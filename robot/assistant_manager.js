@@ -373,19 +373,36 @@ class AssistantManagerModule {
                 registrationData = JSON.parse(data);
             }
             
-            // اضافه کردن کمک مربی جدید
-            const newUserId = Date.now().toString();
-            registrationData.userStates[newUserId] = {
-                step: 'completed',
-                data: {
-                    phone: assistantData.phone,
-                    fullName: assistantData.fullName,
-                    firstName: assistantData.firstName,
-                    lastName: assistantData.lastName,
-                    userRole: assistantData.userRole
-                },
-                timestamp: Date.now()
-            };
+            // بررسی وجود شماره تلفن
+            let existingUserId = null;
+            for (const [uid, userData] of Object.entries(registrationData.userStates || {})) {
+                if (userData.data && userData.data.phone === assistantData.phone) {
+                    existingUserId = uid;
+                    break;
+                }
+            }
+            
+            if (existingUserId) {
+                // به‌روزرسانی کاربر موجود
+                registrationData.userStates[existingUserId] = {
+                    step: 'completed',
+                    data: {
+                        ...registrationData.userStates[existingUserId].data,
+                        ...assistantData
+                    },
+                    timestamp: Date.now()
+                };
+                console.log(`✅ کمک مربی موجود به‌روزرسانی شد: ${assistantData.fullName}`);
+            } else {
+                // اضافه کردن کاربر جدید
+                const newUserId = Date.now().toString();
+                registrationData.userStates[newUserId] = {
+                    step: 'completed',
+                    data: assistantData,
+                    timestamp: Date.now()
+                };
+                console.log(`✅ کمک مربی جدید اضافه شد: ${assistantData.fullName}`);
+            }
             
             // به‌روزرسانی lastUpdated
             registrationData.lastUpdated = new Date().toISOString();
