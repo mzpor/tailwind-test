@@ -323,6 +323,35 @@ async function sendInvoice(chat_id, invoiceData) {
   }
 }
 
+async function answerPreCheckoutQuery(pre_checkout_query_id, ok = true, error_message = null) {
+  console.log('📋 [BALE] answerPreCheckoutQuery STARTED');
+  console.log(`📋 [BALE] PreCheckoutQueryId: ${pre_checkout_query_id}, Ok: ${ok}`);
+  
+  try {
+    const payload = {
+      pre_checkout_query_id,
+      ok
+    };
+    
+    if (error_message) {
+      payload.error_message = error_message;
+    }
+    
+    console.log('📋 [BALE] Final payload:', JSON.stringify(payload, null, 2));
+    
+    const response = await axios.post(`${API_URL()}/answerPreCheckoutQuery`, payload, {
+      timeout: 10000 // 10 ثانیه timeout
+    });
+    console.log('📋 [BALE] answerPreCheckoutQuery SUCCESS');
+    console.log('📋 [BALE] Response:', JSON.stringify(response.data, null, 2));
+    return response.data.ok;
+  } catch (error) {
+    console.error('❌ [BALE] answerPreCheckoutQuery ERROR:', error.message);
+    console.error('❌ [BALE] Error response:', error.response?.data);
+    return false;
+  }
+}
+
 module.exports = { 
   getUpdates, 
   sendMessage, 
@@ -334,5 +363,6 @@ module.exports = {
   answerCallbackQuery,
   editMessage,
   editMessageWithInlineKeyboard,
-  sendInvoice
+  sendInvoice,
+  answerPreCheckoutQuery
 };

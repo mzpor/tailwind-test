@@ -156,28 +156,24 @@ class PaymentModule {
   // ✅ پاسخ به PreCheckoutQuery
   async answerPreCheckoutQuery(preCheckoutQueryId, ok = true, errorMessage = null) {
     try {
-      const payload = {
-        pre_checkout_query_id: preCheckoutQueryId,
-        ok: ok
-      };
+      console.log(`📋 [PAYMENT] Answering PreCheckoutQuery: ${preCheckoutQueryId}, ok: ${ok}`);
       
-      if (errorMessage) {
-        payload.error_message = errorMessage;
-      }
-      
-      const response = await this.makeRequest(`${this.baseUrl}/answerPreCheckoutQuery`, payload);
-      if (response && response.ok) {
-        const result = await response.json();
-        if (result.ok) {
-          console.log(`✅ [PAYMENT] PreCheckoutQuery answered successfully`);
+      // استفاده از 4bale.js برای answerPreCheckoutQuery
+      try {
+        const { answerPreCheckoutQuery } = require('./4bale');
+        const result = await answerPreCheckoutQuery(preCheckoutQueryId, ok, errorMessage);
+        
+        if (result) {
+          console.log(`✅ [PAYMENT] PreCheckoutQuery answered successfully via 4bale.js`);
           return true;
         } else {
-          console.error(`❌ [PAYMENT] API error in answerPreCheckoutQuery:`, result);
+          console.error(`❌ [PAYMENT] Failed to answer PreCheckoutQuery via 4bale.js`);
+          return false;
         }
+      } catch (error) {
+        console.error(`❌ [PAYMENT] Error using 4bale.js answerPreCheckoutQuery:`, error);
+        return false;
       }
-      
-      console.error(`❌ [PAYMENT] Failed to answer PreCheckoutQuery`);
-      return false;
     } catch (error) {
       console.error(`❌ [PAYMENT] Error in answerPreCheckoutQuery:`, error);
       return false;
