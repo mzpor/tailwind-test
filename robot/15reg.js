@@ -1,6 +1,3 @@
-
-
-
 const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./4bale');
@@ -832,9 +829,36 @@ class RegistrationModule {
             return true;
         }
         
-        // 🔥 بررسی وضعیت کاربر و حل مشکل مرحله profile
+        // 🔥 بررسی وضعیت کاربر
         const userState = this.userStates[userId];
-        if (userState && userState.step === 'profile') {
+        
+        if (!userState) {
+            // 🔥 کاربر جدید - نمایش خوش‌آمدگویی و درخواست تلفن
+            console.log(`🎉 [15REG] کاربر جدید، نمایش خوش‌آمدگویی`);
+            await this.showWelcome(ctx);
+            return true;
+        }
+        
+        if (userState.step === 'phone') {
+            // 🔥 کاربر در مرحله تلفن - نمایش دکمه contact
+            console.log(`📱 [15REG] کاربر در مرحله تلفن، نمایش دکمه contact`);
+            await this.showContactButton(ctx);
+            return true;
+        }
+        
+        if (userState.step === 'profile') {
+            // 🔥 بررسی معتبر بودن شماره تلفن
+            const userData = userState.data;
+            if (!userData || !userData.phone || !this.isValidPhoneNumber(userData.phone)) {
+                console.log(`❌ [15REG] شماره تلفن نامعتبر: ${userData?.phone}`);
+                // برگردون به مرحله phone
+                this.userStates[userId].step = 'phone';
+                this.saveData();
+                await this.showWelcome(ctx);
+                return true;
+            }
+            
+            // 🔥 شماره تلفن معتبر - حل مشکل مرحله profile
             console.log(`🔧 [15REG] کاربر در مرحله profile گیر کرده، حل مشکل...`);
             await this.fixProfileStage(ctx);
             return true;
@@ -858,21 +882,24 @@ class RegistrationModule {
             return;
         }
         
-        // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
-        const userRole = userData.userRole;
+        // 🔥 اگر نقش ذخیره نشده، دوباره شناسایی کن
+        let userRole = userData.userRole;
         if (!userRole) {
-            console.log(`❌ [15REG] نقش کاربر ذخیره نشده`);
-            return;
+            console.log(`🔍 [15REG] نقش ذخیره نشده، شناسایی مجدد...`);
+            userRole = await this.checkUserRole(userData.phone);
+            this.userStates[userId].data.userRole = userRole;
+            this.saveData();
+            console.log(`✅ [15REG] نقش جدید ذخیره شد: ${userRole}`);
         }
         
-        console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
+        console.log(`🔍 [15REG] نقش کاربر: ${userRole}`);
         
         if (userRole === 'coach' || userRole === 'assistant') {
             // 🔥 مربی یا کمک مربی - استفاده از نام ورکشاپ
             const workshopName = await this.getWorkshopName(userData.phone);
             const firstName = workshopName || 'مربی';
             
-            console.log(`✅ [15REG] تکمیل ثبت‌نام برای ${userRole} با نام: ${firstName}`);
+            console.log(`✅ [15REG] تکمیل خودکار ثبت‌نام برای ${userRole} با نام: ${firstName}`);
             
             // تکمیل اطلاعات
             this.userStates[userId].data.firstName = firstName;
