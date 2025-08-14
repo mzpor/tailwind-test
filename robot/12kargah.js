@@ -113,8 +113,8 @@ class KargahModule {
       text = '🏭 *مدیریت کارگاه‌ها*\n\n❌ هیچ کارگاهی ثبت نشده است.\nبرای شروع، کارگاه جدید اضافه کنید:';
     } else {
       text = '🏭 *مدیریت کارگاه‌ها*\n\n📋 لیست کارگاه‌های ثبت شده:\n';
-      for (const [workshopId, workshop] of Object.entries(this.workshops)) {
-        const instructorName = workshop.instructor_name || 'نامشخص';
+      for (const [coachId, workshop] of Object.entries(this.workshops.coach)) {
+        const instructorName = workshop.name || 'نامشخص';
         const cost = workshop.cost || 'نامشخص';
         const level = workshop.level || '';
         const emoji = level.includes('پیشرفته') ? '🔥' : level.includes('متوسط') ? '⚡' : '🌱';
@@ -422,12 +422,34 @@ class KargahModule {
   }
   
   async handleEditInstructor(chatId, messageId, userId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    let workshopType = '';
+    
+    if (workshopId.startsWith('coach_')) {
+      const coachId = workshopId.replace('coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+      workshopType = 'coach';
+    } else if (workshopId.startsWith('assistant_')) {
+      const assistantId = workshopId.replace('assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+      workshopType = 'assistant';
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+      if (this.workshops.coach?.[workshopId]) {
+        workshopType = 'coach';
+      } else if (this.workshops.assistant?.[workshopId]) {
+        workshopType = 'assistant';
+      }
+    }
+    
+    if (!workshop) {
       return false;
     }
     
     this.userStates[userId] = `kargah_edit_instructor_${workshopId}`;
-    this.tempData[userId] = { workshop_id: workshopId };
+    this.tempData[userId] = { workshop_id: workshopId, workshop_type: workshopType };
     
     const text = '👨‍🏫 لطفاً نام جدید مربی را وارد کنید:';
     const keyboard = [[{ text: '🔙 بازگشت', callback_data: `kargah_view_${workshopId}` }]];
@@ -436,14 +458,36 @@ class KargahModule {
   }
   
   async handleEditPhone(chatId, messageId, userId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    let workshopType = '';
+    
+    if (workshopId.startsWith('coach_')) {
+      const coachId = workshopId.replace('coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+      workshopType = 'coach';
+    } else if (workshopId.startsWith('assistant_')) {
+      const assistantId = workshopId.replace('assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+      workshopType = 'assistant';
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+      if (this.workshops.coach?.[workshopId]) {
+        workshopType = 'coach';
+      } else if (this.workshops.assistant?.[workshopId]) {
+        workshopType = 'assistant';
+      }
+    }
+    
+    if (!workshop) {
       return false;
     }
     
     this.userStates[userId] = `kargah_edit_phone_${workshopId}`;
-    this.tempData[userId] = { workshop_id: workshopId };
+    this.tempData[userId] = { workshop_id: workshopId, workshop_type: workshopType };
     
-    const currentPhone = this.workshops[workshopId].instructor_phone || 'وارد نشده';
+    const currentPhone = workshop.phone || 'وارد نشده';
     const text = `📱 *ویرایش تلفن مربی*\n\nتلفن فعلی: ${currentPhone}\n\nلطفاً شماره تلفن جدید را وارد کنید:\n\nمثال‌ها:\n• 09123456789\n• 0912 345 6789\n• 0 برای پاک کردن`;
     const keyboard = [[{ text: '🔙 بازگشت', callback_data: `kargah_view_${workshopId}` }]];
     await this.editMessageWithInlineKeyboard(chatId, messageId, text, keyboard);
@@ -451,14 +495,36 @@ class KargahModule {
   }
   
   async handleEditCost(chatId, messageId, userId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    let workshopType = '';
+    
+    if (workshopId.startsWith('coach_')) {
+      const coachId = workshopId.replace('coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+      workshopType = 'coach';
+    } else if (workshopId.startsWith('assistant_')) {
+      const assistantId = workshopId.replace('assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+      workshopType = 'assistant';
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+      if (this.workshops.coach?.[workshopId]) {
+        workshopType = 'coach';
+      } else if (this.workshops.assistant?.[workshopId]) {
+        workshopType = 'assistant';
+      }
+    }
+    
+    if (!workshop) {
       return false;
     }
     
     this.userStates[userId] = `kargah_edit_cost_${workshopId}`;
-    this.tempData[userId] = { workshop_id: workshopId };
+    this.tempData[userId] = { workshop_id: workshopId, workshop_type: workshopType };
     
-    const currentCost = this.workshops[workshopId].cost || 'نامشخص';
+    const currentCost = workshop.cost || 'نامشخص';
     const text = `💰 *ویرایش هزینه کارگاه*\n\nهزینه فعلی: ${currentCost}\n\nلطفاً هزینه جدید را وارد کنید:\n\nمثال‌ها:\n• 500,000 تومان\n• 750000 تومان\n• 1000000 تومان\n• ۱,۰۰۰,۰۰۰ تومان`;
     const keyboard = [[{ text: '🔙 بازگشت', callback_data: `kargah_view_${workshopId}` }]];
     await this.editMessageWithInlineKeyboard(chatId, messageId, text, keyboard);
@@ -466,12 +532,34 @@ class KargahModule {
   }
   
   async handleEditLink(chatId, messageId, userId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    let workshopType = '';
+    
+    if (workshopId.startsWith('coach_')) {
+      const coachId = workshopId.replace('coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+      workshopType = 'coach';
+    } else if (workshopId.startsWith('assistant_')) {
+      const assistantId = workshopId.replace('assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+      workshopType = 'assistant';
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+      if (this.workshops.coach?.[workshopId]) {
+        workshopType = 'coach';
+      } else if (this.workshops.assistant?.[workshopId]) {
+        workshopType = 'assistant';
+      }
+    }
+    
+    if (!workshop) {
       return false;
     }
     
     this.userStates[userId] = `kargah_edit_link_${workshopId}`;
-    this.tempData[userId] = { workshop_id: workshopId };
+    this.tempData[userId] = { workshop_id: workshopId, workshop_type: workshopType };
     
     const text = '🔗 لطفاً لینک جدید را وارد کنید:';
     const keyboard = [[{ text: '🔙 بازگشت', callback_data: `kargah_view_${workshopId}` }]];
@@ -485,15 +573,35 @@ class KargahModule {
       
       if (userState.startsWith('kargah_edit_instructor_')) {
         const workshopId = userState.replace('kargah_edit_instructor_', '');
-        if (this.workshops[workshopId]) {
+        const userData = this.tempData[userId];
+        const workshopType = userData?.workshop_type || 'coach';
+        
+        let workshop = null;
+        if (workshopType === 'coach') {
+          if (workshopId.startsWith('coach_')) {
+            const coachId = workshopId.replace('coach_', '');
+            workshop = this.workshops.coach?.[coachId];
+          } else {
+            workshop = this.workshops.coach?.[workshopId];
+          }
+        } else if (workshopType === 'assistant') {
+          if (workshopId.startsWith('assistant_')) {
+            const assistantId = workshopId.replace('assistant_', '');
+            workshop = this.workshops.assistant?.[assistantId];
+          } else {
+            workshop = this.workshops.assistant?.[workshopId];
+          }
+        }
+        
+        if (workshop) {
           // ساده‌سازی اعتبارسنجی نام مربی - فقط بررسی خالی نبودن
           if (!text || text.trim().length === 0) {
             await this.sendMessage(chatId, '❌ نام مربی نمی‌تواند خالی باشد. لطفاً نام مربی را وارد کنید:');
             return true;
           }
           
-          const oldName = this.workshops[workshopId].instructor_name;
-          this.workshops[workshopId].instructor_name = text.trim();
+          const oldName = workshop.name || 'نامشخص';
+          workshop.name = text.trim();
           this.saveWorkshops();
           
           delete this.userStates[userId];
@@ -508,7 +616,27 @@ class KargahModule {
         
       } else if (userState.startsWith('kargah_edit_phone_')) {
         const workshopId = userState.replace('kargah_edit_phone_', '');
-        if (this.workshops[workshopId]) {
+        const userData = this.tempData[userId];
+        const workshopType = userData?.workshop_type || 'coach';
+        
+        let workshop = null;
+        if (workshopType === 'coach') {
+          if (workshopId.startsWith('coach_')) {
+            const coachId = workshopId.replace('coach_', '');
+            workshop = this.workshops.coach?.[coachId];
+          } else {
+            workshop = this.workshops.coach?.[workshopId];
+          }
+        } else if (workshopType === 'assistant') {
+          if (workshopId.startsWith('assistant_')) {
+            const assistantId = workshopId.replace('assistant_', '');
+            workshop = this.workshops.assistant?.[assistantId];
+          } else {
+            workshop = this.workshops.assistant?.[workshopId];
+          }
+        }
+        
+        if (workshop) {
           // پردازش شماره تلفن مربی (اختیاری)
           let instructorPhone = '';
           if (text && text.trim() !== '0' && text.trim() !== '') {
@@ -523,8 +651,8 @@ class KargahModule {
             }
           }
           
-          const oldPhone = this.workshops[workshopId].instructor_phone || 'وارد نشده';
-          this.workshops[workshopId].instructor_phone = instructorPhone;
+          const oldPhone = workshop.phone || 'وارد نشده';
+          workshop.phone = instructorPhone;
           this.saveWorkshops();
           
           delete this.userStates[userId];
@@ -540,7 +668,27 @@ class KargahModule {
         
       } else if (userState.startsWith('kargah_edit_cost_')) {
         const workshopId = userState.replace('kargah_edit_cost_', '');
-        if (this.workshops[workshopId]) {
+        const userData = this.tempData[userId];
+        const workshopType = userData?.workshop_type || 'coach';
+        
+        let workshop = null;
+        if (workshopType === 'coach') {
+          if (workshopId.startsWith('coach_')) {
+            const coachId = workshopId.replace('coach_', '');
+            workshop = this.workshops.coach?.[coachId];
+          } else {
+            workshop = this.workshops.coach?.[workshopId];
+          }
+        } else if (workshopType === 'assistant') {
+          if (workshopId.startsWith('assistant_')) {
+            const assistantId = workshopId.replace('assistant_', '');
+            workshop = this.workshops.assistant?.[assistantId];
+          } else {
+            workshop = this.workshops.assistant?.[workshopId];
+          }
+        }
+        
+        if (workshop) {
           // بررسی اعتبار هزینه
           const normalizedCost = this.normalizeCostText(text);
           if (!normalizedCost || normalizedCost === 'نامشخص') {
@@ -548,8 +696,8 @@ class KargahModule {
             return true;
           }
           
-          const oldCost = this.workshops[workshopId].cost;
-          this.workshops[workshopId].cost = normalizedCost;
+          const oldCost = workshop.cost;
+          workshop.cost = normalizedCost;
           this.saveWorkshops();
           
           delete this.userStates[userId];
@@ -564,10 +712,30 @@ class KargahModule {
         
       } else if (userState.startsWith('kargah_edit_link_')) {
         const workshopId = userState.replace('kargah_edit_link_', '');
-        if (this.workshops[workshopId]) {
+        const userData = this.tempData[userId];
+        const workshopType = userData?.workshop_type || 'coach';
+        
+        let workshop = null;
+        if (workshopType === 'coach') {
+          if (workshopId.startsWith('coach_')) {
+            const coachId = workshopId.replace('coach_', '');
+            workshop = this.workshops.coach?.[coachId];
+          } else {
+            workshop = this.workshops.coach?.[workshopId];
+          }
+        } else if (workshopType === 'assistant') {
+          if (workshopId.startsWith('assistant_')) {
+            const assistantId = workshopId.replace('assistant_', '');
+            workshop = this.workshops.assistant?.[assistantId];
+          } else {
+            workshop = this.workshops.assistant?.[workshopId];
+          }
+        }
+        
+        if (workshop) {
           // حذف کامل اعتبارسنجی لینک - هر متنی پذیرفته شود
-          const oldLink = this.workshops[workshopId].link;
-          this.workshops[workshopId].link = text;
+          const oldLink = workshop.link;
+          workshop.link = text;
           this.saveWorkshops();
           
           delete this.userStates[userId];
@@ -712,7 +880,7 @@ class KargahModule {
       }
       
       // نمایش پیام موفقیت
-      const responseText = `✅ کارگاه *${workshopData.instructor_name}* با موفقیت اضافه شد!\n\n🆔 *کد کارگاه:* ${coachId}\n👨‍🏫 *مربی:* ${workshopData.instructor_name}\n💰 *هزینه:* ${workshopData.cost}\n🔗 *لینک:* ${workshopData.link}`;
+      const responseText = `✅ کارگاه *${workshopData.instructor_name}* با موفقیت اضافه شد!\n\n🆔 *کد کارگاه:* coach_${coachId}\n👨‍🏫 *مربی:* ${workshopData.instructor_name}\n💰 *هزینه:* ${workshopData.cost}\n🔗 *لینک:* ${workshopData.link}`;
       const replyMarkup = this.getWorkshopManagementKeyboard();
       await this.editMessageWithInlineKeyboard(chatId, messageId, responseText, replyMarkup.inline_keyboard);
       
@@ -750,7 +918,7 @@ class KargahModule {
   
   // متدهای مربوط به دانش‌آموزان
   showWorkshopsForStudent(chatId, userId) {
-    if (!this.workshops || Object.keys(this.workshops).length === 0) {
+    if (!this.workshops || !this.workshops.coach || Object.keys(this.workshops.coach).length === 0) {
       const text = `📚 **انتخاب کلاس**
 
 ❌ در حال حاضر هیچ کلاسی برای ثبت‌نام موجود نیست.
@@ -769,8 +937,8 @@ class KargahModule {
       
       // ساخت کیبورد برای انتخاب کارگاه
       const keyboard = [];
-      for (const [workshopId, workshop] of Object.entries(this.workshops)) {
-        const instructorName = workshop.instructor_name || 'نامشخص';
+      for (const [coachId, workshop] of Object.entries(this.workshops.coach)) {
+        const instructorName = workshop.name || 'نامشخص';
         const cost = workshop.cost || 'نامشخص';
         
         // فیلتر کردن کارگاه‌های نامعتبر (با نام‌های کوتاه یا نامعتبر)
@@ -778,7 +946,7 @@ class KargahModule {
             cost.length > 5 && cost !== 'نامشخص') {
           keyboard.push([{
             text: `📚 ${instructorName} - ${cost}`,
-            callback_data: `student_select_workshop_${workshopId}`
+            callback_data: `student_select_workshop_coach_${coachId}`
           }]);
         }
       }
@@ -796,12 +964,25 @@ class KargahModule {
   }
   
   async handleStudentSelectWorkshop(chatId, messageId, userId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    
+    if (workshopId.startsWith('coach_')) {
+      const coachId = workshopId.replace('student_select_workshop_coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+    } else if (workshopId.startsWith('assistant_')) {
+      const assistantId = workshopId.replace('student_select_workshop_assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+    }
+    
+    if (!workshop) {
       return false;
     }
     
-    const workshop = this.workshops[workshopId];
-    const instructorName = workshop.instructor_name || 'نامشخص';
+    const instructorName = workshop.name || 'نامشخص';
     const cost = workshop.cost || 'نامشخص';
     const link = workshop.link || 'نامشخص';
     
@@ -830,12 +1011,25 @@ class KargahModule {
   }
   
   async handleStudentPayWorkshop(chatId, messageId, userId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    
+    if (workshopId.startsWith('student_pay_workshop_coach_')) {
+      const coachId = workshopId.replace('student_pay_workshop_coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+    } else if (workshopId.startsWith('student_pay_workshop_assistant_')) {
+      const assistantId = workshopId.replace('student_pay_workshop_assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+    }
+    
+    if (!workshop) {
       return false;
     }
     
-    const workshop = this.workshops[workshopId];
-    const instructorName = workshop.instructor_name || 'نامشخص';
+    const instructorName = workshop.name || 'نامشخص';
     const cost = workshop.cost || 'نامشخص';
     
     const text = `💳 **پرداخت و ثبت‌نام**
@@ -885,12 +1079,12 @@ class KargahModule {
     } else {
       // ساخت کیبورد برای انتخاب کارگاه
       const keyboard = [];
-      for (const [workshopId, workshop] of Object.entries(this.workshops)) {
-        const instructorName = workshop.instructor_name || 'نامشخص';
+      for (const [coachId, workshop] of Object.entries(this.workshops.coach)) {
+        const instructorName = workshop.name || 'نامشخص';
         const cost = workshop.cost || 'نامشخص';
         keyboard.push([{
           text: `📚 ${instructorName} - ${cost}`,
-          callback_data: `student_select_workshop_${workshopId}`
+          callback_data: `student_select_workshop_coach_${coachId}`
         }]);
       }
       
@@ -946,8 +1140,8 @@ class KargahModule {
       
       // ساخت کیبورد برای انتخاب کارگاه
       const keyboard = [];
-      for (const [workshopId, workshop] of Object.entries(this.workshops)) {
-        const instructorName = workshop.instructor_name || 'نامشخص';
+      for (const [coachId, workshop] of Object.entries(this.workshops.coach)) {
+        const instructorName = workshop.name || 'نامشخص';
         const cost = workshop.cost || 'نامشخص';
         
         // فیلتر کردن کارگاه‌های نامعتبر (با نام‌های کوتاه یا نامعتبر)
@@ -955,7 +1149,7 @@ class KargahModule {
             cost.length > 5 && cost !== 'نامشخص') {
           keyboard.push([{
             text: `📚 ${instructorName} - ${cost}`,
-            callback_data: `student_select_workshop_${workshopId}`
+            callback_data: `student_select_workshop_coach_${coachId}`
           }]);
         }
       }
@@ -968,12 +1162,25 @@ class KargahModule {
   }
 
   async handlePayment(chatId, messageId, userId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    
+    if (workshopId.startsWith('pay_workshop_coach_')) {
+      const coachId = workshopId.replace('pay_workshop_coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+    } else if (workshopId.startsWith('pay_workshop_assistant_')) {
+      const assistantId = workshopId.replace('pay_workshop_assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+    }
+    
+    if (!workshop) {
       return false;
     }
     
-    const workshop = this.workshops[workshopId];
-    const instructorName = workshop.instructor_name || 'نامشخص';
+    const instructorName = workshop.name || 'نامشخص';
     const cost = workshop.cost || 'نامشخص';
     const link = workshop.link || 'نامشخص';
     
