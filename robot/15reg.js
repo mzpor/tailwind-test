@@ -334,37 +334,59 @@ class RegistrationModule {
         const userId = ctx.from.id;
         const phoneNumber = contact.phone_number;
         
-        // استخراج نام کامل و اسم کوچک - اصلاح شده
-        const fullName = contact.first_name || ctx.from.first_name || 'کاربر';
-        
-        // تقسیم نام به بخش‌های مختلف
-        const nameParts = fullName.split(/[\s\u200C\u200D]+/).filter(part => part.length > 0);
-        const firstName = nameParts.length > 0 ? nameParts[0] : fullName;
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-        
-        console.log(`👤 [15REG] نام کامل: "${fullName}"`);
-        console.log(`👤 [15REG] نام‌های تقسیم شده:`, nameParts);
-        console.log(`👤 [15REG] اسم کوچک: "${firstName}"`);
-        console.log(`👤 [15REG] نام خانوادگی: "${lastName}"`);
         console.log(`📱 [15REG] Contact دریافت شد: ${phoneNumber}`);
-        
-        // ذخیره کامل اطلاعات کاربر
-        this.userStates[userId].data = {
-            phone: phoneNumber,  // شماره تلفن واقعی
-            fullName: fullName,
-            firstName: firstName,
-            lastName: lastName
-        };
-        this.saveData();
         
         // بررسی نقش کاربر
         const userRole = await this.checkUserRole(phoneNumber);
+        console.log(`🔍 [15REG] نقش تشخیص داده شد: ${userRole}`);
         
         if (userRole === 'coach' || userRole === 'assistant') {
-            // مربی یا کمک مربی
+            // 🔥 مربی یا کمک مربی - استفاده از نام ورکشاپ
+            const workshopName = await this.getWorkshopName(phoneNumber);
+            const firstName = workshopName || 'مربی';
+            
+            console.log(`👤 [15REG] نام ورکشاپ: "${workshopName}"`);
+            console.log(`👤 [15REG] اسم کوچک: "${firstName}"`);
+            
+            // ذخیره کامل اطلاعات کاربر
+            this.userStates[userId].data = {
+                phone: phoneNumber,  // شماره تلفن واقعی
+                fullName: workshopName || 'مربی',
+                firstName: firstName,
+                lastName: ''
+            };
+            this.userStates[userId].step = 'completed';  // 🔥 مستقیماً تکمیل
+            this.saveData();
+            
+            console.log(`✅ [15REG] اطلاعات مربی ذخیره شد و ثبت‌نام تکمیل شد`);
+            
+            // نمایش پنل مربی
             await this.handleCoachWelcome(ctx, userRole, firstName);
+            
         } else {
-            // قرآن‌آموز
+            // قرآن‌آموز - ادامه ثبت‌نام
+            const fullName = contact.first_name || ctx.from.first_name || 'کاربر';
+            
+            // تقسیم نام به بخش‌های مختلف
+            const nameParts = fullName.split(/[\s\u200C\u200D]+/).filter(part => part.length > 0);
+            const firstName = nameParts.length > 0 ? nameParts[0] : fullName;
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+            
+            console.log(`👤 [15REG] نام کامل: "${fullName}"`);
+            console.log(`👤 [15REG] نام‌های تقسیم شده:`, nameParts);
+            console.log(`👤 [15REG] اسم کوچک: "${firstName}"`);
+            console.log(`👤 [15REG] نام خانوادگی: "${lastName}"`);
+            
+            // ذخیره کامل اطلاعات کاربر
+            this.userStates[userId].data = {
+                phone: phoneNumber,  // شماره تلفن واقعی
+                fullName: fullName,
+                firstName: firstName,
+                lastName: lastName
+            };
+            this.userStates[userId].step = 'full_name';  // 🔥 ادامه ثبت‌نام
+            this.saveData();
+            
             await this.handleQuranStudentRegistration(ctx);
         }
     }
@@ -387,7 +409,7 @@ class RegistrationModule {
                         return 'coach';  // مربی
                     }
                     
-                    // بررسی کمک مربی
+                    // بررسی کمک مربی (فعلاً وجود ندارد)
                     if (workshop.assistant_phone && phoneNumber.includes(workshop.assistant_phone)) {
                         console.log(`✅ [15REG] نقش تشخیص داده شد: کمک مربی (کارگاه ${workshopId})`);
                         return 'assistant';  // کمک مربی
@@ -403,6 +425,29 @@ class RegistrationModule {
         } catch (error) {
             console.error(`❌ [15REG] خطا در بررسی نقش:`, error.message);
             return 'quran_student';  // پیش‌فرض در صورت خطا
+        }
+    }
+    
+    // 🔥 متد جدید: دریافت نام ورکشاپ
+    async getWorkshopName(phoneNumber) {
+        console.log(`🔍 [15REG] دریافت نام ورکشاپ برای شماره: ${phoneNumber}`);
+        
+        try {
+            const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+            if (fs.existsSync(workshopsFile)) {
+                const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
+                
+                for (const [workshopId, workshop] of Object.entries(workshopsData)) {
+                    if (workshop.instructor_phone && phoneNumber.includes(workshop.instructor_phone)) {
+                        console.log(`✅ [15REG] نام ورکشاپ یافت شد: ${workshop.instructor_name}`);
+                        return workshop.instructor_name;
+                    }
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در دریافت نام ورکشاپ:`, error.message);
+            return null;
         }
     }
 
@@ -589,13 +634,19 @@ class RegistrationModule {
         console.log(`🔍 [15REG] نقش کاربر در fixProfileStage: ${userRole}`);
         
         if (userRole === 'coach' || userRole === 'assistant') {
-            // مربی یا کمک مربی - تکمیل ثبت‌نام
-            console.log(`✅ [15REG] تکمیل ثبت‌نام برای ${userRole}`);
+            // 🔥 مربی یا کمک مربی - استفاده از نام ورکشاپ
+            const workshopName = await this.getWorkshopName(userData.phone);
+            const firstName = workshopName || 'مربی';
+            
+            console.log(`✅ [15REG] تکمیل ثبت‌نام برای ${userRole} با نام: ${firstName}`);
+            
+            // تکمیل اطلاعات
+            this.userStates[userId].data.firstName = firstName;
+            this.userStates[userId].data.fullName = workshopName || 'مربی';
             this.userStates[userId].step = 'completed';
             this.saveData();
             
             const roleText = userRole === 'coach' ? 'مربی' : 'کمک مربی';
-            const firstName = userData.firstName || 'کاربر';
             
             const welcomeText = `👨‍🏫 خوش‌آمدی ${roleText} ${firstName}
 پنل ${roleText} فعال شد`;
