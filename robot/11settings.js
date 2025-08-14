@@ -229,7 +229,13 @@ class SettingsModule {
     const registrationStatus = registrationButtonEnabled ? '✅ فعال' : '❌ غیرفعال';
     const registrationButtonText = `📝 ثبت‌نام ماه آینده: ${registrationStatus}`;
     
+    // دریافت وضعیت ثبت‌نام کارگاه از کانفیگ اصلی
+    const workshopRegistrationEnabled = isButtonVisible('WORKSHOP_REGISTRATION_BUTTON');
+    const workshopRegistrationStatus = workshopRegistrationEnabled ? '✅ فعال' : '❌ غیرفعال';
+    const workshopRegistrationButtonText = `🏭 ثبت‌نام در کارگاه: ${workshopRegistrationStatus}`;
+    
     console.log(`🔧 [SETTINGS] Registration button status from config: ${registrationButtonEnabled ? 'enabled' : 'disabled'}`);
+    console.log(`🔧 [SETTINGS] Workshop registration button status from config: ${workshopRegistrationEnabled ? 'enabled' : 'disabled'}`);
     
     const keyboard = [
       [{ text: `📅 تمرین (${practiceDaysCount} روز)`, callback_data: 'practice_days_settings' }],
@@ -248,7 +254,8 @@ class SettingsModule {
     keyboard.push(
       [{ text: `📝 نظرسنجی: ${satisfactionStatus}`, callback_data: 'toggle_satisfaction_survey' }],
       [{ text: `📋 گروه گزارش: ${reportsStatus}`, callback_data: 'toggle_bot_reports' }],
-      [{ text: registrationButtonText, callback_data: 'toggle_registration' }]
+      [{ text: registrationButtonText, callback_data: 'toggle_registration' }],
+      [{ text: workshopRegistrationButtonText, callback_data: 'toggle_workshop_registration' }]
     );
     
     console.log('🔧 [SETTINGS] Keyboard generated:', JSON.stringify(keyboard, null, 2));
@@ -397,6 +404,8 @@ class SettingsModule {
         return this.handleToggleBotReports(chatId, messageId, callbackQueryId);
       } else if (data === 'toggle_registration') {
         return this.handleToggleRegistration(chatId, messageId, callbackQueryId);
+      } else if (data === 'toggle_workshop_registration') {
+        return this.handleToggleWorkshopRegistration(chatId, messageId, callbackQueryId);
       } else if (data === 'settings_back') {
         return this.handleSettingsBack(chatId, messageId, callbackQueryId);
       } else {
@@ -1068,6 +1077,38 @@ class SettingsModule {
     } catch (error) {
       console.error('❌ [SETTINGS] Error toggling registration:', error);
       await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر وضعیت ثبت‌نام');
+    }
+  }
+  
+  async handleToggleWorkshopRegistration(chatId, messageId, callbackQueryId) {
+    try {
+      // تغییر وضعیت در کانفیگ اصلی
+      const { setButtonVisibility, isButtonVisible } = require('./3config');
+      const currentStatus = isButtonVisible('WORKSHOP_REGISTRATION_BUTTON');
+      const newStatus = !currentStatus;
+      
+      // تغییر وضعیت در کانفیگ
+      const success = setButtonVisibility('WORKSHOP_REGISTRATION_BUTTON', newStatus);
+      
+      if (!success) {
+        await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر تنظیمات ثبت‌نام کارگاه');
+        return;
+      }
+      
+      const status = newStatus ? 'فعال' : 'غیرفعال';
+      console.log(`✅ [SETTINGS] Workshop registration button visibility changed to: ${status}`);
+      
+      // آپدیت منوی تنظیمات
+      const text = `⚙️ *پنل تنظیمات مدیر*
+انتخاب کنید:`;
+      
+      const replyMarkup = await this.getMainSettingsKeyboard();
+      await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
+      await answerCallbackQuery(callbackQueryId, `🏭 ثبت‌نام در کارگاه ${status} شد!`);
+      
+    } catch (error) {
+      console.error('❌ [SETTINGS] Error toggling workshop registration:', error);
+      await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر وضعیت ثبت‌نام کارگاه');
     }
   }
   
