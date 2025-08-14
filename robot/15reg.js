@@ -610,18 +610,23 @@ class RegistrationModule {
             if (fs.existsSync(workshopsFile)) {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
                 
-                // بررسی اینکه آیا شماره در کارگاه‌ها وجود دارد
-                for (const [workshopId, workshop] of Object.entries(workshopsData)) {
-                    // بررسی مربی
-                    if (workshop.instructor_phone && phoneNumber.includes(workshop.instructor_phone)) {
-                        console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (کارگاه ${workshopId})`);
-                        return 'coach';  // مربی
+                // بررسی مربی‌ها
+                if (workshopsData.coach) {
+                    for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
+                        if (coach.phone && phoneNumber.includes(coach.phone)) {
+                            console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (کارگاه ${coachId})`);
+                            return 'coach';  // مربی
+                        }
                     }
-                    
-                    // بررسی کمک مربی (فعلاً وجود ندارد)
-                    if (workshop.assistant_phone && phoneNumber.includes(workshop.assistant_phone)) {
-                        console.log(`✅ [15REG] نقش تشخیص داده شد: کمک مربی (کارگاه ${workshopId})`);
-                        return 'assistant';  // کمک مربی
+                }
+                
+                // بررسی کمک مربی‌ها
+                if (workshopsData.assistant) {
+                    for (const [assistantId, assistant] of Object.entries(workshopsData.assistant)) {
+                        if (assistant.phone && phoneNumber.includes(assistant.phone)) {
+                            console.log(`✅ [15REG] نقش تشخیص داده شد: کمک مربی (کمک مربی ${assistantId})`);
+                            return 'assistant';  // کمک مربی
+                        }
                     }
                 }
                 
@@ -646,10 +651,23 @@ class RegistrationModule {
             if (fs.existsSync(workshopsFile)) {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
                 
-                for (const [workshopId, workshop] of Object.entries(workshopsData)) {
-                    if (workshop.instructor_phone && phoneNumber.includes(workshop.instructor_phone)) {
-                        console.log(`✅ [15REG] نام ورکشاپ یافت شد: ${workshop.instructor_name}`);
-                        return workshop.instructor_name;
+                // بررسی مربی‌ها
+                if (workshopsData.coach) {
+                    for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
+                        if (coach.phone && phoneNumber.includes(coach.phone)) {
+                            console.log(`✅ [15REG] نام ورکشاپ یافت شد: ${coach.name}`);
+                            return coach.name;
+                        }
+                    }
+                }
+                
+                // بررسی کمک مربی‌ها
+                if (workshopsData.assistant) {
+                    for (const [assistantId, assistant] of Object.entries(workshopsData.assistant)) {
+                        if (assistant.phone && phoneNumber.includes(assistant.phone)) {
+                            console.log(`✅ [15REG] نام کمک مربی یافت شد: ${assistant.name}`);
+                            return assistant.name;
+                        }
                     }
                 }
             }
@@ -670,10 +688,12 @@ class RegistrationModule {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
                 
                 // اولین شماره مربی که پیدا شود
-                for (const [workshopId, workshop] of Object.entries(workshopsData)) {
-                    if (workshop.instructor_phone && workshop.instructor_phone !== "0") {
-                        console.log(`✅ [15REG] شماره واقعی مربی یافت شد: ${workshop.instructor_phone}`);
-                        return workshop.instructor_phone;
+                if (workshopsData.coach) {
+                    for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
+                        if (coach.phone && coach.phone !== "0") {
+                            console.log(`✅ [15REG] شماره واقعی مربی یافت شد: ${coach.phone}`);
+                            return coach.phone;
+                        }
                     }
                 }
             }
@@ -1247,13 +1267,13 @@ class RegistrationModule {
         
         const welcomeText = `👨‍🏫 **پنل کمک مربی محمد**
 
- **گزینه‌های موجود:**
+📋 **گزینه‌های موجود:**
 • 🎯 مدیریت گروه‌ها (2 گروه)
 • مدیریت دانش‌آموزان گروه‌های من (فعلاً غیرفعال)
 • 🚫 گزارش‌گیری گروه‌های من (فعلاً غیرفعال)
 • ثبت‌نام (فعلاً غیرفعال)
 
- **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
         
         // کیبرد معمولی (موجود)
         const keyboard = {
