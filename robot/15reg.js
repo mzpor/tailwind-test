@@ -193,7 +193,16 @@ class RegistrationModule {
     async handleContact(ctx, contact) {
         const userId = ctx.from.id;
         const phoneNumber = contact.phone_number;
-        const firstName = ctx.from.first_name || 'کاربر';
+        
+        // استخراج اولین اسم از contact یا استفاده از first_name کاربر
+        let firstName = 'کاربر';
+        if (contact.first_name) {
+            firstName = contact.first_name.split(' ')[0];
+            console.log(`👤 [15REG] نام از contact: "${contact.first_name}" -> اولین اسم: "${firstName}"`);
+        } else if (ctx.from.first_name) {
+            firstName = ctx.from.first_name.split(' ')[0];
+            console.log(`👤 [15REG] نام از ctx: "${ctx.from.first_name}" -> اولین اسم: "${firstName}"`);
+        }
         
         console.log(`📱 [15REG] Contact دریافت شد: ${phoneNumber}`);
         
@@ -291,7 +300,10 @@ class RegistrationModule {
     // پردازش ورود نام و فامیل
     async handleFullNameInput(ctx, fullName) {
         const userId = ctx.from.id;
-        const firstName = ctx.from.first_name || fullName.split(' ')[0];
+        
+        // استخراج اولین اسم (قبل از فاصله)
+        const firstName = fullName.split(' ')[0];
+        console.log(`👤 [15REG] نام کامل: "${fullName}" -> اولین اسم: "${firstName}"`);
         
         // ذخیره نام
         this.userStates[userId].data.fullName = fullName;
