@@ -29,6 +29,7 @@ const SettingsModule = require('./11settings');
 const KargahModule = require('./12kargah');
 const SmartRegistrationModule = require('./15reg.js');
 const PaymentModule = require('./16pay');
+const { practiceManager } = require('./practice_manager');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 // ایجاد یک instance واحد از SmartRegistrationModule
@@ -1125,7 +1126,17 @@ function startPolling() {
             continue;
           }
           
-
+          // 🎯 پردازش پیام‌های تمرین (صوتی با کپشن تمرین)
+          if (practiceManager.isPracticeMessage(msg)) {
+            console.log(`🎯 [POLLING] Practice message detected in group ${msg.chat.title}`);
+            const success = await practiceManager.handlePracticeMessage(msg);
+            if (success) {
+              console.log('✅ [POLLING] Practice message handled successfully');
+            } else {
+              console.error('❌ [POLLING] Failed to handle practice message');
+            }
+            continue;
+          }
           
           // دستورات غیرمجاز برای اعضا
           if (msg.text === '/ربات' || msg.text === '/لیست') {
