@@ -9,20 +9,22 @@ class AssistantManagerModule {
         this.assistants = {}; // ذخیره کمک مربی‌ها
         this.userStates = {}; // وضعیت کاربران
         this.tempData = {}; // داده‌های موقت برای اضافه/ویرایش
-        this.assistantsFile = path.join(__dirname, 'data', 'assistants.json');
+        this.workshopsFile = path.join(__dirname, 'data', 'workshops.json');
         this.loadAssistants();
         console.log('✅ AssistantManagerModule initialized successfully');
     }
     
     loadAssistants() {
         try {
-            if (fs.existsSync(this.assistantsFile)) {
-                const data = fs.readFileSync(this.assistantsFile, 'utf8');
-                this.assistants = JSON.parse(data);
-                console.log('✅ Assistants loaded successfully');
+            if (fs.existsSync(this.workshopsFile)) {
+                const data = fs.readFileSync(this.workshopsFile, 'utf8');
+                const workshopsData = JSON.parse(data);
+                this.assistants = workshopsData.assistant || {};
+                console.log('✅ Assistants loaded successfully from workshops.json');
+                console.log('📊 Assistants count:', Object.keys(this.assistants).length);
             } else {
                 this.assistants = {};
-                console.log('No assistants file found, starting with empty assistants');
+                console.log('No workshops.json file found, starting with empty assistants');
             }
         } catch (error) {
             console.error('Error loading assistants:', error.message);
@@ -33,13 +35,24 @@ class AssistantManagerModule {
     saveAssistants() {
         try {
             // اطمینان از وجود پوشه data
-            const dataDir = path.dirname(this.assistantsFile);
+            const dataDir = path.dirname(this.workshopsFile);
             if (!fs.existsSync(dataDir)) {
                 fs.mkdirSync(dataDir, { recursive: true });
             }
             
-            fs.writeFileSync(this.assistantsFile, JSON.stringify(this.assistants, null, 2), 'utf8');
-            console.log('✅ Assistants saved successfully');
+            // خواندن فایل موجود
+            let workshopsData = {};
+            if (fs.existsSync(this.workshopsFile)) {
+                const existingData = fs.readFileSync(this.workshopsFile, 'utf8');
+                workshopsData = JSON.parse(existingData);
+            }
+            
+            // به‌روزرسانی فقط بخش assistant
+            workshopsData.assistant = this.assistants;
+            
+            // ذخیره کل فایل
+            fs.writeFileSync(this.workshopsFile, JSON.stringify(workshopsData, null, 2), 'utf8');
+            console.log('✅ Assistants saved successfully to workshops.json');
         } catch (error) {
             console.error('Error saving assistants:', error.message);
         }

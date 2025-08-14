@@ -21,13 +21,14 @@ class KargahModule {
         const data = fs.readFileSync(this.workshopsFile, 'utf8');
         this.workshops = JSON.parse(data);
         console.log('✅ Workshops loaded successfully');
+        console.log('📊 Structure:', Object.keys(this.workshops));
       } else {
-        this.workshops = {};
-        console.log('No workshops file found, starting with empty workshops');
+        this.workshops = { coach: {}, assistant: {} };
+        console.log('No workshops file found, starting with empty structure');
       }
     } catch (error) {
       console.error('Error loading workshops:', error.message);
-      this.workshops = {};
+      this.workshops = { coach: {}, assistant: {} };
     }
   }
   
@@ -47,16 +48,16 @@ class KargahModule {
   getWorkshopListKeyboard() {
     const keyboard = [];
     
-    if (!this.workshops || Object.keys(this.workshops).length === 0) {
+    if (!this.workshops.coach || Object.keys(this.workshops.coach).length === 0) {
       keyboard.push([{ text: '📝 کارگاه جدید', callback_data: 'kargah_add' }]);
       keyboard.push([{ text: '🔙 بازگشت', callback_data: 'kargah_back' }]);
     } else {
-      for (const [workshopId, workshop] of Object.entries(this.workshops)) {
-        const instructorName = workshop.instructor_name || 'نامشخص';
-        const cost = workshop.cost || 'نامشخص';
+      for (const [coachId, coach] of Object.entries(this.workshops.coach)) {
+        const instructorName = coach.name || 'نامشخص';
+        const cost = coach.cost || 'نامشخص';
         keyboard.push([{
           text: `📚 ${instructorName} - ${cost}`,
-          callback_data: `kargah_view_${workshopId}`
+          callback_data: `kargah_view_coach_${coachId}`
         }]);
       }
       
@@ -71,15 +72,15 @@ class KargahModule {
     const keyboard = [];
     
     // نمایش لیست کارگاه‌ها
-    if (this.workshops && Object.keys(this.workshops).length > 0) {
-      for (const [workshopId, workshop] of Object.entries(this.workshops)) {
-        const instructorName = workshop.instructor_name || 'نامشخص';
-        const cost = workshop.cost || 'نامشخص';
-        const level = workshop.level || '';
+    if (this.workshops.coach && Object.keys(this.workshops.coach).length > 0) {
+      for (const [coachId, coach] of Object.entries(this.workshops.coach)) {
+        const instructorName = coach.name || 'نامشخص';
+        const cost = coach.cost || 'نامشخص';
+        const level = coach.level || '';
         const emoji = level.includes('پیشرفته') ? '🔥' : level.includes('متوسط') ? '⚡' : '🌱';
         keyboard.push([{
           text: `${emoji} ${instructorName} - ${cost}`,
-          callback_data: `kargah_view_${workshopId}`
+          callback_data: `kargah_view_coach_${coachId}`
         }]);
       }
     }
@@ -233,14 +234,14 @@ class KargahModule {
   
   async handleListWorkshops(chatId, messageId, callbackQueryId) {
     let text = '';
-    if (!this.workshops || Object.keys(this.workshops).length === 0) {
+    if (!this.workshops.coach || Object.keys(this.workshops.coach).length === 0) {
       text = '📋 *لیست کارگاه‌ها*\n\n❌ هیچ کارگاهی ثبت نشده است.';
     } else {
       text = '📋 *لیست کارگاه‌ها*\n\n';
-      for (const [workshopId, workshop] of Object.entries(this.workshops)) {
-        const instructorName = workshop.instructor_name || 'نامشخص';
-        const cost = workshop.cost || 'نامشخص';
-        const link = workshop.link || 'نامشخص';
+      for (const [coachId, coach] of Object.entries(this.workshops.coach)) {
+        const instructorName = coach.name || 'نامشخص';
+        const cost = coach.cost || 'نامشخص';
+        const link = coach.link || 'نامشخص';
         // نمایش نام مربی به جای ID کارگاه
         text += `🏭 *${instructorName}*\n`;
         text += `💰 هزینه: ${cost}\n`;
@@ -364,16 +365,37 @@ class KargahModule {
   }
   
   async handleViewWorkshop(chatId, messageId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    let workshopType = '';
+    
+    if (workshopId.startsWith('coach_')) {
+      const coachId = workshopId.replace('coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+      workshopType = 'coach';
+    } else if (workshopId.startsWith('assistant_')) {
+      const assistantId = workshopId.replace('assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+      workshopType = 'assistant';
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+      if (this.workshops.coach?.[workshopId]) {
+        workshopType = 'coach';
+      } else if (this.workshops.assistant?.[workshopId]) {
+        workshopType = 'assistant';
+      }
+    }
+    
+    if (!workshop) {
       const text = '❌ کارگاه مورد نظر یافت نشد.';
       const replyMarkup = this.getWorkshopManagementKeyboard();
       await this.editMessageWithInlineKeyboard(chatId, messageId, text, replyMarkup.inline_keyboard);
       return true;
     }
     
-    const workshop = this.workshops[workshopId];
-    const instructorName = workshop.instructor_name || 'نامشخص';
-    const instructorPhone = workshop.instructor_phone || 'وارد نشده';
+    const instructorName = workshop.name || workshop.instructor_name || 'نامشخص';
+    const instructorPhone = workshop.phone || workshop.instructor_phone || 'وارد نشده';
     const cost = workshop.cost || 'نامشخص';
     const link = workshop.link || 'نامشخص';
     const description = workshop.description || 'توضیحات موجود نیست';
@@ -381,16 +403,18 @@ class KargahModule {
     const duration = workshop.duration || 'نامشخص';
     const level = workshop.level || 'نامشخص';
     
-    let text = `🏭 *جزئیات کارگاه*\n\n`;
-    text += `👨‍🏫 *نام مربی:* ${instructorName}\n`;
-    text += `📱 *تلفن مربی:* ${instructorPhone}\n`;
-    text += `💰 *هزینه:* ${cost}\n`;
-    text += `📝 *توضیحات:* ${description}\n`;
-    text += `👥 *ظرفیت:* ${capacity} نفر\n`;
-    text += `⏱️ *مدت دوره:* ${duration}\n`;
-    text += `📊 *سطح:* ${level}\n`;
-    text += `🔗 *لینک گروه:* ${link}\n`;
-    text += `🆔 *کد کارگاه:* ${workshopId}`;
+    let text = `🏭 *جزئیات ${workshopType === 'coach' ? 'کارگاه' : 'کمک مربی'}*\n\n`;
+    text += `👨‍🏫 *نام ${workshopType === 'coach' ? 'مربی' : 'کمک مربی'}:* ${instructorName}\n`;
+    text += `📱 *تلفن:* ${instructorPhone}\n`;
+    if (workshopType === 'coach') {
+      text += `💰 *هزینه:* ${cost}\n`;
+      text += `📝 *توضیحات:* ${description}\n`;
+      text += `👥 *ظرفیت:* ${capacity} نفر\n`;
+      text += `⏱️ *مدت دوره:* ${duration}\n`;
+      text += `📊 *سطح:* ${level}\n`;
+      text += `🔗 *لینک گروه:* ${link}\n`;
+    }
+    text += `🆔 *کد:* ${workshopId}`;
     
     const replyMarkup = this.getWorkshopEditKeyboard(workshopId);
     await this.editMessageWithInlineKeyboard(chatId, messageId, text, replyMarkup.inline_keyboard);
@@ -576,15 +600,44 @@ class KargahModule {
   }
   
   async handleDeleteWorkshop(chatId, messageId, workshopId, callbackQueryId) {
-    if (!this.workshops[workshopId]) {
+    // بررسی نوع ID (coach یا assistant)
+    let workshop = null;
+    let workshopType = '';
+    
+    if (workshopId.startsWith('coach_')) {
+      const coachId = workshopId.replace('coach_', '');
+      workshop = this.workshops.coach?.[coachId];
+      workshopType = 'coach';
+    } else if (workshopId.startsWith('assistant_')) {
+      const assistantId = workshopId.replace('assistant_', '');
+      workshop = this.workshops.assistant?.[assistantId];
+      workshopType = 'assistant';
+    } else {
+      // برای backward compatibility
+      workshop = this.workshops.coach?.[workshopId] || this.workshops.assistant?.[workshopId];
+      if (this.workshops.coach?.[workshopId]) {
+        workshopType = 'coach';
+      } else if (this.workshops.assistant?.[workshopId]) {
+        workshopType = 'assistant';
+      }
+    }
+    
+    if (!workshop) {
       return false;
     }
     
-    const workshopName = this.workshops[workshopId].instructor_name || 'نامشخص';
-    const instructorPhone = this.workshops[workshopId].instructor_phone;
+    const workshopName = workshop.name || workshop.instructor_name || 'نامشخص';
+    const instructorPhone = workshop.phone || workshop.instructor_phone;
     
     // حذف کارگاه
-    delete this.workshops[workshopId];
+    if (workshopType === 'coach') {
+      const coachId = workshopId.startsWith('coach_') ? workshopId.replace('coach_', '') : workshopId;
+      delete this.workshops.coach[coachId];
+    } else if (workshopType === 'assistant') {
+      const assistantId = workshopId.startsWith('assistant_') ? workshopId.replace('assistant_', '') : workshopId;
+      delete this.workshops.assistant[assistantId];
+    }
+    
     this.saveWorkshops();
     
     // حذف مربی از لیست COACH اگر شماره تلفن داشته باشد
@@ -601,7 +654,7 @@ class KargahModule {
       }
     }
     
-    const text = `🗑️ کارگاه ${workshopName} با موفقیت حذف شد!`;
+    const text = `🗑️ ${workshopType === 'coach' ? 'کارگاه' : 'کمک مربی'} ${workshopName} با موفقیت حذف شد!`;
     const replyMarkup = this.getWorkshopManagementKeyboard();
     await this.editMessageWithInlineKeyboard(chatId, messageId, text, replyMarkup.inline_keyboard);
     return true;
@@ -620,10 +673,28 @@ class KargahModule {
         return false;
       }
       
-      // ایجاد کارگاه جدید
-      const workshopId = String(Object.keys(this.workshops).length + 1).padStart(2, '0');
+      // ایجاد کارگاه جدید در بخش coach
+      const coachId = String(Object.keys(this.workshops.coach || {}).length + 1);
       const workshopData = { ...this.tempData[userId] };
-      this.workshops[workshopId] = workshopData;
+      
+      // تبدیل فیلدهای قدیمی به جدید
+      const newCoachData = {
+        name: workshopData.instructor_name,
+        phone: workshopData.instructor_phone,
+        cost: workshopData.cost,
+        link: workshopData.link,
+        description: workshopData.description || 'توضیحات موجود نیست',
+        capacity: workshopData.capacity || 20,
+        duration: workshopData.duration || '3 ماه',
+        level: workshopData.level || 'همه سطوح'
+      };
+      
+      // اطمینان از وجود بخش coach
+      if (!this.workshops.coach) {
+        this.workshops.coach = {};
+      }
+      
+      this.workshops.coach[coachId] = newCoachData;
       this.saveWorkshops();
       
       // اضافه کردن مربی به لیست COACH اگر شماره تلفن داشته باشد
@@ -641,7 +712,7 @@ class KargahModule {
       }
       
       // نمایش پیام موفقیت
-      const responseText = `✅ کارگاه *${workshopData.instructor_name}* با موفقیت اضافه شد!\n\n🆔 *کد کارگاه:* ${workshopId}\n👨‍🏫 *مربی:* ${workshopData.instructor_name}\n💰 *هزینه:* ${workshopData.cost}\n🔗 *لینک:* ${workshopData.link}`;
+      const responseText = `✅ کارگاه *${workshopData.instructor_name}* با موفقیت اضافه شد!\n\n🆔 *کد کارگاه:* ${coachId}\n👨‍🏫 *مربی:* ${workshopData.instructor_name}\n💰 *هزینه:* ${workshopData.cost}\n🔗 *لینک:* ${workshopData.link}`;
       const replyMarkup = this.getWorkshopManagementKeyboard();
       await this.editMessageWithInlineKeyboard(chatId, messageId, responseText, replyMarkup.inline_keyboard);
       
