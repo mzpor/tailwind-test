@@ -43,37 +43,45 @@ class PaymentModule {
     }
   }
 
-  // 💰 ارسال فاکتور پرداخت (جایگزین برای Bale API)
+  // 💰 ارسال فاکتور پرداخت واقعی با Bale API (درون پلتفرم)
   async sendInvoice(chatId, workshopId, workshopData) {
     try {
-      console.log(`💰 [PAYMENT] Sending payment request for workshop ${workshopId} to chat ${chatId}`);
+      console.log(`💰 [PAYMENT] Sending real payment invoice for workshop ${workshopId} to chat ${chatId}`);
       
       // تبدیل هزینه به عدد
       const costText = workshopData.cost || '0 تومان';
       const costAmount = this.extractAmountFromCost(costText);
       const costInToman = Math.floor(costAmount / 10);
       
-      // استفاده از sendMessage با دکمه‌های اینلاین (جایگزین sendInvoice)
-      const { sendMessageWithInlineKeyboard } = require('./4bale');
+      // استفاده از Bale API sendInvoice برای پرداخت درون پلتفرم (دقیقاً مثل پایتون)
+      const payload = {
+        chat_id: chatId,
+        title: `پرداخت برای ${workshopData.name || 'کارگاه'}`,
+        description: `پرداخت برای ثبت‌نام در کارگاه ${workshopData.name || 'کارگاه'} با مبلغ ${costInToman} تومان`,
+        payload: `workshop_${workshopId}_${Date.now()}`,
+        provider_token: this.paymentToken,
+        currency: "IRR",
+        prices: [{
+          label: `کارگاه ${workshopData.name || 'کارگاه'}`,
+          amount: costAmount
+        }],
+        need_phone_number: true
+      };
       
-      const text = `💰 **درخواست پرداخت**
-      
-📚 **کارگاه:** ${workshopData.name || 'کارگاه'}
-💵 **مبلغ:** ${costInToman} تومان
-📖 **توضیحات:** ${workshopData.description || 'توضیحات موجود نیست'}
-
-🎯 **برای تکمیل پرداخت، یکی از گزینه‌های زیر را انتخاب کنید:**`;
-      
-      const keyboard = [
-        [{ text: `💳 پرداخت ${costInToman} تومان`, callback_data: `payment_confirm_${workshopId}` }],
-        [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }],
-        [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
-      ];
-      
-      await sendMessageWithInlineKeyboard(chatId, text, keyboard);
-      
-      console.log(`✅ [PAYMENT] Payment request sent successfully for workshop ${workshopId}`);
-      return true;
+      const response = await this.makeRequest(`${this.baseUrl}/sendInvoice`, payload);
+      if (response && response.ok) {
+        const result = await response.json();
+        if (result.ok) {
+          console.log(`✅ [PAYMENT] Real invoice sent successfully for workshop ${workshopId}`);
+          return true;
+        } else {
+          console.error(`❌ [PAYMENT] API error in sendInvoice:`, result);
+          return false;
+        }
+      } else {
+        console.error(`❌ [PAYMENT] HTTP error in sendInvoice: ${response?.status || 'No response'}`);
+        return false;
+      }
       
     } catch (error) {
       console.error(`❌ [PAYMENT] Error in sendInvoice:`, error);

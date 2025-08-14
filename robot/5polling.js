@@ -1004,6 +1004,7 @@ function startPolling() {
                      callback_query.data.startsWith('quran_student_panel') || 
                      callback_query.data.startsWith('complete_registration') ||
                      callback_query.data.startsWith('quran_student_') ||
+                     callback_query.data.startsWith('payment_confirm_') ||
                      callback_query.data === 'school_intro' ||
                      callback_query.data === 'intro_quran_bot' ||
                      callback_query.data === 'next_month_registration' ||
