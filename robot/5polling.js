@@ -1023,7 +1023,24 @@ function startPolling() {
             } else {
               console.log('✅ [POLLING] Registration callback handled successfully');
             }
-          } else {
+                      } else if (callback_query.data.startsWith('workshop_')) {
+            console.log('🔄 [POLLING] Workshop direct payment callback detected');
+            console.log(`🔄 [POLLING] Workshop callback data: ${callback_query.data}`);
+            
+            // پردازش پرداخت فوری کارگاه
+            const workshopId = callback_query.data.replace('workshop_', '');
+            const success = await registrationModule.handleWorkshopDirectPay(
+                callback_query.message.chat.id, 
+                callback_query.from.id, 
+                workshopId
+            );
+            
+            if (!success) {
+                console.error('❌ [POLLING] Error handling workshop direct payment');
+            } else {
+                console.log('✅ [POLLING] Workshop direct payment handled successfully');
+            }
+            } else {
             console.log(`⚠️ [POLLING] Unknown callback data: ${callback_query.data}`);
             console.log(`⚠️ [POLLING] Callback data type: ${typeof callback_query.data}`);
             console.log(`⚠️ [POLLING] Callback data length: ${callback_query.data.length}`);

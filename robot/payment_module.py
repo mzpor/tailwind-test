@@ -1,11 +1,15 @@
 # payment_module.py
-import requests
-import time
+import urllib.request
+import urllib.parse
 import json
+import time
 import uuid
 from typing import Dict, List, Optional, Any
-from config import BASE_URL, BOT_TOKEN
 import logging
+
+# تنظیمات پیش‌فرض
+BOT_TOKEN = "1778171143:vD6rjJXAYidLL7hQyQkBeu5TJ9KpRd4zAKegqUt3"  # توکن ربات محرابی
+BASE_URL = f"https://tapi.bale.ai/bot{BOT_TOKEN}"  # Bale API
 
 # تنظیم لاگ
 logging.basicConfig(level=logging.INFO)
@@ -19,11 +23,14 @@ class PaymentModule:
         self.group_link = "ble.ir/join/Gah9cS9LzQ"
         logger.info("PaymentModule initialized successfully")
 
-    def _make_request(self, url: str, payload: Dict[str, Any]) -> Optional[requests.Response]:
+    def _make_request(self, url: str, payload: Dict[str, Any]) -> Optional[urllib.request.Request]:
         """ارسال درخواست HTTP با مدیریت خطا"""
         try:
-            response = requests.post(url, json=payload, timeout=10)
-            logger.debug(f"Request to {url}: {response.status_code}")
+            # Convert payload to bytes for urllib.request
+            payload_bytes = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(url, data=payload_bytes, headers={'Content-Type': 'application/json'})
+            response = urllib.request.urlopen(req, timeout=10)
+            logger.debug(f"Request to {url}: {response.status}")
             return response
         except Exception as e:
             logger.error(f"Error in request to {url}: {e}")
@@ -47,13 +54,14 @@ class PaymentModule:
             payload["reply_markup"] = secondary_reply_markup
             
         response = self._make_request(f"{BASE_URL}/sendMessage", payload)
-        if response and response.status_code == 200:
-            result = response.json()
-            if result.get("ok"):
+        if response and response.status == 200:
+            result = response.read().decode('utf-8')
+            result_json = json.loads(result)
+            if result_json.get("ok"):
                 logger.info(f"Message sent successfully to {chat_id}")
                 return True
             else:
-                logger.error(f"Telegram API error: {result.get('description', 'Unknown error')}")
+                logger.error(f"Telegram API error: {result_json.get('description', 'Unknown error')}")
         
         logger.error(f"Failed to send message to {chat_id}")
         return False
@@ -90,16 +98,17 @@ class PaymentModule:
             }
             
             response = self._make_request(f"{BASE_URL}/sendInvoice", payload)
-            if response and response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
+            if response and response.status == 200:
+                result = response.read().decode('utf-8')
+                result_json = json.loads(result)
+                if result_json.get("ok"):
                     logger.info(f"Invoice sent successfully for workshop {workshop_id}")
                     return True
                 else:
-                    logger.error(f"API error in sendInvoice: {result}")
+                    logger.error(f"API error in sendInvoice: {result_json}")
                     return False
             else:
-                logger.error(f"HTTP error in sendInvoice: {response.status_code if response else 'No response'}")
+                logger.error(f"HTTP error in sendInvoice: {response.status if response else 'No response'}")
                 return False
                 
         except Exception as e:
@@ -139,13 +148,14 @@ class PaymentModule:
             payload["error_message"] = error_message
             
         response = self._make_request(f"{BASE_URL}/answerPreCheckoutQuery", payload)
-        if response and response.status_code == 200:
-            result = response.json()
-            if result.get("ok"):
+        if response and response.status == 200:
+            result = response.read().decode('utf-8')
+            result_json = json.loads(result)
+            if result_json.get("ok"):
                 logger.info(f"PreCheckoutQuery answered successfully")
                 return True
             else:
-                logger.error(f"API error in answerPreCheckoutQuery: {result}")
+                logger.error(f"API error in answerPreCheckoutQuery: {result_json}")
         
         logger.error(f"Failed to answer PreCheckoutQuery")
         return False
@@ -179,8 +189,8 @@ class PaymentModule:
         user_id = callback["from"]["id"]
         data = callback["data"]
         
-        if data.startswith("pay_workshop_"):
-            workshop_id = data.replace("pay_workshop_", "")
+        if data.startswith("workshop_"):
+            workshop_id = data.replace("workshop_", "")
             self._handle_workshop_payment(chat_id, user_id, workshop_id)
 
     def handle_pre_checkout_query(self, pre_checkout_query: Dict):
@@ -235,8 +245,8 @@ class PaymentModule:
             
             # پاک کردن وضعیت
             self.user_states[user_id] = "DONE"
-            if f"payment_workshop_{user_id}" in self.user_states:
-                del self.user_states[f"payment_workshop_{user_id}"]
+            if f"workshop_{user_id}" in self.user_states:
+                del self.user_states[f"workshop_{user_id}"]
             
             logger.info(f"Payment processing completed for user {user_id}")
             
@@ -278,7 +288,7 @@ class PaymentModule:
             cost = workshop.get('cost', 'نامشخص')
             buttons.append({
                 "text": f"{instructor_name} - {cost}",
-                "callback_data": f"pay_workshop_{workshop_id}"
+                "callback_data": f"workshop_{workshop_id}"
             })
         
         self.send_message(chat_id, "🎓 لطفاً یکی از کارگاه‌ها رو انتخاب کن:", 
@@ -298,7 +308,7 @@ class PaymentModule:
         
         workshop_data = self.kargah_module.workshops[workshop_id]
         self.user_states[user_id] = "PAY"
-        self.user_states[f"payment_workshop_{user_id}"] = workshop_id
+        self.user_states[f"workshop_{user_id}"] = workshop_id
         
         if self.send_invoice(chat_id, workshop_id, workshop_data):
             self.user_states[user_id] = "AWAITING_PAYMENT"
@@ -315,3 +325,68 @@ class PaymentModule:
         """اعتبارسنجی ساختار callback"""
         required_fields = ["message", "from", "data", "id"]
         return all(field in callback for field in required_fields) 
+
+# بخش command line interface برای استفاده مستقیم
+if __name__ == "__main__":
+    import sys
+    
+    if len(sys.argv) < 3:
+        print("Usage: python payment_module.py <command> <user_id> [workshop_id] [message]")
+        print("Commands: send_invoice, test_message")
+        sys.exit(1)
+    
+    command = sys.argv[1]
+    user_id = sys.argv[2]
+    
+    if command == "test_message":
+        if len(sys.argv) < 4:
+            print("Usage: python payment_module.py test_message <user_id> <message>")
+            sys.exit(1)
+        message = sys.argv[3]
+        payment_module = PaymentModule()
+        try:
+            success = payment_module.send_message(int(user_id), message)
+            if success:
+                print(f"SUCCESS: Message sent successfully to user {user_id}")
+                sys.exit(0)
+            else:
+                print(f"FAILED: Failed to send message to user {user_id}")
+                sys.exit(1)
+        except Exception as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
+    elif command == "send_invoice":
+        if len(sys.argv) < 4:
+            print("Usage: python payment_module.py send_invoice <user_id> <workshop_id>")
+            sys.exit(1)
+        workshop_id = sys.argv[3]
+        payment_module = PaymentModule()
+        
+        # خواندن اطلاعات کارگاه از فایل JSON
+        try:
+            import json
+            with open('data/workshops.json', 'r', encoding='utf-8') as f:
+                workshops_data = json.load(f)
+            
+            if workshop_id in workshops_data.get('coach', {}):
+                workshop_data = workshops_data['coach'][workshop_id]
+                
+                # ارسال صورتحساب
+                success = payment_module.send_invoice(int(user_id), workshop_id, workshop_data)
+                
+                if success:
+                    print(f"SUCCESS: Invoice sent successfully for user {user_id}, workshop {workshop_id}")
+                    sys.exit(0)
+                else:
+                    print(f"FAILED: Failed to send invoice for user {user_id}, workshop {workshop_id}")
+                    sys.exit(1)
+            else:
+                print(f"NOT_FOUND: Workshop {workshop_id} not found")
+                sys.exit(1)
+                
+        except Exception as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
+    else:
+        print(f"UNKNOWN_COMMAND: Unknown command: {command}")
+        sys.exit(1) 

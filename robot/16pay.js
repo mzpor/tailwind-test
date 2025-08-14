@@ -177,7 +177,7 @@ class PaymentModule {
       console.log(`💸 [PAYMENT] Processing successful payment for user ${userId}:`, successfulPayment);
       
       // دریافت اطلاعات کارگاه از وضعیت کاربر
-      const workshopId = this.userStates[`payment_workshop_${userId}`];
+      const workshopId = this.userStates[`workshop_${userId}`];
       let workshopData = null;
       
       if (workshopId) {
@@ -225,8 +225,8 @@ class PaymentModule {
       
       // پاک کردن وضعیت
       this.userStates[userId] = "DONE";
-      if (`payment_workshop_${userId}` in this.userStates) {
-        delete this.userStates[`payment_workshop_${userId}`];
+      if (`workshop_${userId}` in this.userStates) {
+        delete this.userStates[`workshop_${userId}`];
       }
       
       console.log(`✅ [PAYMENT] Payment processing completed for user ${userId}`);
@@ -268,7 +268,7 @@ class PaymentModule {
       
       // تنظیم وضعیت کاربر
       this.userStates[userId] = "PAY";
-      this.userStates[`payment_workshop_${userId}`] = workshopId;
+      this.userStates[`workshop_${userId}`] = workshopId;
       
       // ارسال فاکتور
       const invoiceSent = await this.sendInvoice(chatId, workshopId, workshopData);

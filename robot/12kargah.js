@@ -1046,7 +1046,7 @@ class KargahModule {
 برای تکمیل ثبت‌نام، لطفاً روی دکمه پرداخت کلیک کنید.`;
     
     const keyboard = [
-      [{ text: '💳 پرداخت', callback_data: `pay_workshop_${workshopId}` }],
+                      [{ text: '💳 پرداخت', callback_data: `workshop_${workshopId}` }],
       [{ text: '🔙 بازگشت', callback_data: `student_select_workshop_${workshopId}` }]
     ];
     
