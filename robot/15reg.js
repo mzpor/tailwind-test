@@ -130,11 +130,26 @@ class RegistrationModule {
                     // 🔥 شماره واقعی را از ورکشاپ پیدا کن
                     phoneToCheck = await this.findRealPhoneForCoach();
                     console.log(`🔍 [15REG] شماره واقعی پیدا شد: ${phoneToCheck}`);
+                    
+                    // 🔥 شماره واقعی را در userStates ذخیره کن
+                    if (phoneToCheck && phoneToCheck !== "مربی") {
+                        this.userStates[userId].data.phone = phoneToCheck;
+                        this.saveData();
+                        console.log(`✅ [15REG] شماره واقعی در userStates ذخیره شد: ${phoneToCheck}`);
+                    }
                 }
                 
                 if (phoneToCheck && phoneToCheck !== "مربی") {
-                    this.checkAndCompleteCoachRegistration(ctx);
-                    return;
+                    // 🔥 حالا نقش را با شماره واقعی بررسی کن
+                    const userRole = await this.checkUserRole(phoneToCheck);
+                    console.log(`🔍 [15REG] نقش با شماره واقعی: ${userRole}`);
+                    
+                    if (userRole === 'coach' || userRole === 'assistant') {
+                        // 🔥 نقش مربی تشخیص داده شد - تکمیل خودکار
+                        this.userStates[userId].data.userRole = userRole;
+                        this.checkAndCompleteCoachRegistration(ctx);
+                        return;
+                    }
                 }
             }
             
@@ -160,9 +175,17 @@ class RegistrationModule {
             return;
         }
         
-        // بررسی نقش کاربر
-        const userRole = await this.checkUserRole(userData.phone);
-        console.log(`🔍 [15REG] نقش کاربر در full_name: ${userRole}`);
+        // 🔥 اگر نقش ذخیره نشده، دوباره شناسایی کن
+        let userRole = userData.userRole;
+        if (!userRole) {
+            console.log(`🔍 [15REG] نقش ذخیره نشده، شناسایی مجدد...`);
+            userRole = await this.checkUserRole(userData.phone);
+            this.userStates[userId].data.userRole = userRole;
+            this.saveData();
+            console.log(`✅ [15REG] نقش جدید ذخیره شد: ${userRole}`);
+        }
+        
+        console.log(`🔍 [15REG] نقش کاربر: ${userRole}`);
         
         if (userRole === 'coach' || userRole === 'assistant') {
             // 🔥 مربی یا کمک مربی - استفاده از نام ورکشاپ
@@ -222,9 +245,14 @@ class RegistrationModule {
             return;
         }
         
-        // بررسی نقش کاربر
-        const userRole = await this.checkUserRole(userData.phone);
-        console.log(`🔍 [15REG] نقش کاربر در profile: ${userRole}`);
+        // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
+        const userRole = userData.userRole;
+        if (!userRole) {
+            console.log(`❌ [15REG] نقش کاربر ذخیره نشده`);
+            return;
+        }
+        
+        console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
         
         if (userRole === 'coach' || userRole === 'assistant') {
             // مربی یا کمک مربی - تکمیل ثبت‌نام
@@ -418,9 +446,12 @@ class RegistrationModule {
         
         console.log(`📱 [15REG] Contact دریافت شد: ${phoneNumber}`);
         
-        // بررسی نقش کاربر
+        // 🔥 یک بار نقش را شناسایی و ذخیره کن
         const userRole = await this.checkUserRole(phoneNumber);
         console.log(`🔍 [15REG] نقش تشخیص داده شد: ${userRole}`);
+        
+        // ذخیره نقش در userStates
+        this.userStates[userId].data.userRole = userRole;
         
         if (userRole === 'coach' || userRole === 'assistant') {
             // 🔥 مربی یا کمک مربی - استفاده از نام ورکشاپ
@@ -435,7 +466,8 @@ class RegistrationModule {
                 phone: phoneNumber,  // شماره تلفن واقعی
                 fullName: workshopName || 'مربی',
                 firstName: firstName,
-                lastName: ''
+                lastName: '',
+                userRole: userRole  // 🔥 نقش ذخیره شد
             };
             this.userStates[userId].step = 'completed';  // 🔥 مستقیماً تکمیل
             this.saveData();
@@ -464,7 +496,8 @@ class RegistrationModule {
                 phone: phoneNumber,  // شماره تلفن واقعی
                 fullName: fullName,
                 firstName: firstName,
-                lastName: lastName
+                lastName: lastName,
+                userRole: userRole  // 🔥 نقش ذخیره شد
             };
             this.userStates[userId].step = 'full_name';  // 🔥 ادامه ثبت‌نام
             this.saveData();
@@ -637,9 +670,12 @@ class RegistrationModule {
         this.userStates[userId].step = 'completed';
         this.saveData();
         
-        // بررسی نقش کاربر بر اساس شماره تلفن
-        const phoneNumber = this.userStates[userId].data.phone;
-        const userRole = await this.checkUserRole(phoneNumber);
+        // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
+        const userRole = this.userStates[userId].data.userRole;
+        if (!userRole) {
+            console.log(`❌ [15REG] نقش کاربر ذخیره نشده`);
+            return;
+        }
         
         // تعیین متن نقش
         let roleText = 'قرآن‌آموز';
@@ -735,9 +771,14 @@ class RegistrationModule {
             return;
         }
         
-        // بررسی نقش کاربر
-        const userRole = await this.checkUserRole(userData.phone);
-        console.log(`🔍 [15REG] نقش کاربر در fixProfileStage: ${userRole}`);
+        // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
+        const userRole = userData.userRole;
+        if (!userRole) {
+            console.log(`❌ [15REG] نقش کاربر ذخیره نشده`);
+            return;
+        }
+        
+        console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
         
         if (userRole === 'coach' || userRole === 'assistant') {
             // 🔥 مربی یا کمک مربی - استفاده از نام ورکشاپ
@@ -816,11 +857,16 @@ class RegistrationModule {
             return;
         }
         
-        // بررسی نقش کاربر بر اساس شماره تلفن واقعی
-        const userRole = await this.checkUserRole(userData.phone);
+        // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
+        const userRole = userData.userRole;
+        if (!userRole) {
+            console.log(`❌ [15REG] نقش کاربر ذخیره نشده`);
+            return;
+        }
+        
         const firstName = userData.firstName || 'کاربر';
         
-        console.log(`🔍 [15REG] نقش کاربر در showRoleBasedKeyboard: ${userRole}`);
+        console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
         console.log(`🔍 [15REG] شماره تلفن: ${userData.phone}`);
         
         // تعیین متن نقش و کیبرد
@@ -954,9 +1000,14 @@ class RegistrationModule {
             return;
         }
         
-        // بررسی نقش کاربر بر اساس شماره تلفن واقعی
-        const userRole = await this.checkUserRole(userData.phone);
-        console.log(`🔍 [15REG] نقش کاربر در ربات: ${userRole}`);
+        // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
+        const userRole = userData.userRole;
+        if (!userRole) {
+            console.log(`❌ [15REG] نقش کاربر ذخیره نشده`);
+            return;
+        }
+        
+        console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
         console.log(`🔍 [15REG] شماره تلفن: ${userData.phone}`);
         
         const robotText = `🤖 **معرفی ربات قرآنی هوشمند**
@@ -1006,11 +1057,16 @@ class RegistrationModule {
             return;
         }
         
-        // بررسی نقش کاربر بر اساس شماره تلفن واقعی
-        const userRole = await this.checkUserRole(userData.phone);
+        // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
+        const userRole = userData.userRole;
+        if (!userRole) {
+            console.log(`❌ [15REG] نقش کاربر ذخیره نشده`);
+            return;
+        }
+        
         const firstName = userData.firstName || 'کاربر';
         
-        console.log(`🔍 [15REG] نقش کاربر در شروع: ${userRole}`);
+        console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
         console.log(`🔍 [15REG] شماره تلفن: ${userData.phone}`);
         
         let roleText, keyboardRows;
@@ -1055,9 +1111,14 @@ class RegistrationModule {
             return;
         }
         
-        // بررسی نقش کاربر بر اساس شماره تلفن واقعی
-        const userRole = await this.checkUserRole(userData.phone);
-        console.log(`🔍 [15REG] نقش کاربر در خروج: ${userRole}`);
+        // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
+        const userRole = userData.userRole;
+        if (!userRole) {
+            console.log(`❌ [15REG] نقش کاربر ذخیره نشده`);
+            return;
+        }
+        
+        console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
         
         let roleText;
         if (userRole === 'coach') {

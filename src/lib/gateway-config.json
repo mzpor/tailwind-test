@@ -1,5 +1,5 @@
 {
-  "gatewayPort": 3003,
-  "gatewayUrl": "http://localhost:3003",
-  "lastUpdate": "2025-08-14T05:50:19.332Z"
+  "gatewayPort": 3005,
+  "gatewayUrl": "http://localhost:3005",
+  "lastUpdate": "2025-08-14T06:11:26.182Z"
 }
