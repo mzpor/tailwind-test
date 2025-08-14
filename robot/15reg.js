@@ -81,17 +81,17 @@ class RegistrationModule {
     async showWelcome(ctx) {
         const welcomeText = `🎉 به ربات دستیار تلاوت قران خوش امدید.
 
-💡 برای شروع، می‌توانید مستقیماً از کارگاه‌های موجود انتخاب کنید:`;
+📱 برای شروع، لطفاً ابتدا ثبت‌نام کنید:`;
         
         ctx.reply(welcomeText);
         
-        // نمایش لیست کارگاه‌ها برای کاربران ناشناس
-        await this.showWorkshopListForAnonymous(ctx);
+        // نمایش دکمه درخواست شماره تلفن
+        this.showContactButton(ctx);
         
         // تنظیم وضعیت کاربر
         const userId = ctx.from.id;
         this.userStates[userId] = {
-            step: 'anonymous',
+            step: 'phone',
             data: {},
             timestamp: Date.now()
         };
@@ -1251,6 +1251,10 @@ class RegistrationModule {
             console.log(`💳 [15REG] تأیید پرداخت کارگاه: ${data}`);
             const workshopId = data.replace('payment_confirm_', '');
             return await this.handlePaymentConfirmation(chatId, userId, workshopId);
+        } else if (data.startsWith('pay_workshop_')) {
+            console.log(`💳 [15REG] پرداخت مستقیم کارگاه: ${data}`);
+            const workshopId = data.replace('pay_workshop_', '');
+            return await this.paymentModule.handleQuranStudentPayment(chatId, userId, workshopId);
         } else if (data === 'manage_assistant') {
             console.log(`👨‍🏫 [15REG] مدیریت کمک مربی درخواست شد`);
             return await this.handleManageAssistant(chatId, userId, callbackQueryId);
@@ -1890,122 +1894,10 @@ class RegistrationModule {
          }
      }
      
-     // متد جدید: پرداخت فوری کارگاه با پایتون (بدون تأیید)
-     async handleWorkshopDirectPay(chatId, userId, workshopId) {
-         console.log(`💰 [15REG] پرداخت فوری کارگاه برای کاربر ${userId} و کارگاه ${workshopId}`);
-         
-         try {
-             // خواندن اطلاعات کارگاه از 12kargah
-             const { readJson } = require('./server/utils/jsonStore');
-             const workshops = await readJson('data/workshops.json', {});
-             
-             if (!workshops || !workshops.coach || !workshops.coach[workshopId]) {
-                 throw new Error('کارگاه یافت نشد');
-             }
-             
-             const workshop = workshops.coach[workshopId];
-             
-             // ارسال پیام "در حال ارسال صورتحساب..."
-             const { sendMessage } = require('./4bale');
-             await sendMessage(chatId, '📋 در حال ارسال صورتحساب...');
-             
-             // فراخوانی ماژول پایتون با spawn
-             const { spawn } = require('child_process');
-             const pythonProcess = spawn('python', ['payment_module.py', 'send_invoice', userId, workshopId]);
-             
-             return new Promise((resolve, reject) => {
-                 let output = '';
-                 let errorOutput = '';
-                 
-                 pythonProcess.stdout.on('data', (data) => {
-                     output += data.toString();
-                 });
-                 
-                 pythonProcess.stderr.on('data', (data) => {
-                     errorOutput += data.toString();
-                 });
-                 
-                 pythonProcess.on('close', async (code) => {
-                     console.log(`🐍 [15REG] Python process exited with code ${code}`);
-                     console.log(`🐍 [15REG] Python output: ${output}`);
-                     
-                     if (errorOutput) {
-                         console.error(`🐍 [15REG] Python error: ${errorOutput}`);
-                     }
-                     
-                     if (code === 0) {
-                         // موفقیت
-                         await sendMessage(chatId, '✅ صورتحساب ارسال شد');
-                         console.log(`✅ [15REG] Invoice sent successfully for user ${userId}, workshop ${workshopId}`);
-                         resolve(true);
-                     } else {
-                         // خطا
-                         await sendMessage(chatId, '❌ خطا در ارسال صورتحساب. لطفاً دوباره تلاش کنید.');
-                         console.error(`❌ [15REG] Invoice sending failed for user ${userId}, workshop ${workshopId}`);
-                         resolve(false);
-                     }
-                 });
-                 
-                 pythonProcess.on('error', async (error) => {
-                     console.error(`❌ [15REG] Python process error:`, error);
-                     await sendMessage(chatId, '❌ خطا در اجرای ماژول پرداخت. لطفاً با پشتیبانی تماس بگیرید.');
-                     resolve(false);
-                 });
-             });
-             
-         } catch (error) {
-             console.error(`❌ [15REG] خطا در پرداخت فوری کارگاه:`, error);
-             const { sendMessage } = require('./4bale');
-             await sendMessage(chatId, '❌ خطا در پردازش درخواست پرداخت. لطفاً دوباره تلاش کنید.');
-             return false;
-         }
-     }
 
-    // نمایش لیست کارگاه‌ها برای کاربران ناشناس
-    async showWorkshopListForAnonymous(ctx) {
-        try {
-            console.log(`📚 [15REG] نمایش لیست کارگاه‌ها برای کاربر ناشناس ${ctx.from.id}`);
-            
-            // خواندن اطلاعات کارگاه‌ها
-            const { readJson } = require('./server/utils/jsonStore');
-            const workshops = await readJson('data/workshops.json', {});
-            
-            if (!workshops || !workshops.coach || Object.keys(workshops.coach).length === 0) {
-                const text = '❌ هیچ کارگاهی برای نمایش موجود نیست.';
-                ctx.reply(text);
-                return;
-            }
-            
-            // ساخت دکمه‌های کارگاه‌ها
-            const keyboard = [];
-            for (const [workshopId, workshop] of Object.entries(workshops.coach)) {
-                const instructorName = workshop.name || 'نامشخص';
-                const cost = workshop.cost || 'نامشخص';
-                keyboard.push([{
-                    text: `📚 ${instructorName} - ${cost}`,
-                    callback_data: `workshop_${workshopId}`
-                }]);
-            }
-            
-            // اضافه کردن دکمه ثبت‌نام
-            keyboard.push([{ text: '📝 ثبت‌نام کامل', callback_data: 'start_registration' }]);
-            
-            const text = `🎓 **کارگاه‌های موجود:**
 
-💡 **برای شروع سریع:** روی کارگاه مورد نظر کلیک کنید تا فوراً صورتحساب ارسال شود.
 
-📝 **برای ثبت‌نام کامل:** از دکمه پایین استفاده کنید.`;
-            
-            const { sendMessageWithInlineKeyboard } = require('./4bale');
-            await sendMessageWithInlineKeyboard(ctx.from.id, text, keyboard);
-            
-            console.log(`✅ [15REG] لیست کارگاه‌ها برای کاربر ناشناس ${ctx.from.id} نمایش داده شد`);
-            
-        } catch (error) {
-            console.error(`❌ [15REG] خطا در نمایش لیست کارگاه‌ها:`, error);
-            ctx.reply('❌ خطا در بارگذاری کارگاه‌ها. لطفاً دوباره تلاش کنید.');
-        }
-    }
+
  }
  
  module.exports = RegistrationModule;

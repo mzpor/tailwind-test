@@ -10,8 +10,18 @@ class PaymentModule {
   constructor() {
     this.userStates = {};
     this.paymentToken = "WALLET-LIiCzxGZnCd58Obr"; // توکن تولید
-    this.groupLink = "ble.ir/join/Gah9cS9LzQ";
+    //this.groupLink = "ble.ir/join/Gah9cS9LzQ";
     this.baseUrl = "https://tapi.bale.ai/bot"; // استفاده از Bale API
+    
+    // خواندن توکن بات مستقیماً از کانفیگ
+    try {
+      const { BOT_TOKEN } = require('./3config');
+      this.botToken = BOT_TOKEN;
+      console.log(`🔑 [PAYMENT] Bot token loaded directly: ${this.botToken}`);
+    } catch (error) {
+      console.error(`❌ [PAYMENT] Error loading bot token:`, error);
+      this.botToken = null;
+    }
     
     console.log('✅ PaymentModule initialized successfully');
   }
@@ -19,23 +29,28 @@ class PaymentModule {
   // 🔧 تنظیم توکن بات
   setBotToken(botToken) {
     this.botToken = botToken;
-    this.baseUrl = `https://tapi.bale.ai/bot${botToken}`; // استفاده از Bale API
-    console.log('🔑 Bot token set for payment module');
+    this.baseUrl = `https://tapi.bale.ai/bot/${botToken}`; // استفاده از Bale API
+    console.log(`🔑 Bot token set for payment module: ${botToken}`);
+    console.log(`🔗 Base URL set to: ${this.baseUrl}`);
   }
 
   // 📤 ارسال درخواست HTTP
   async makeRequest(url, payload) {
     try {
+      console.log(`📤 [PAYMENT] Sending request to: ${url}`);
+      console.log(`📦 [PAYMENT] Payload:`, JSON.stringify(payload, null, 2));
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
-        timeout: 10000
+        body: JSON.stringify(payload)
       });
       
-      console.log(`📡 [PAYMENT] Request to ${url}: ${response.status}`);
+      console.log(`📡 [PAYMENT] Response status: ${response.status}`);
+      console.log(`📡 [PAYMENT] Response headers:`, response.headers);
+      
       return response;
     } catch (error) {
       console.error(`❌ [PAYMENT] Error in request to ${url}:`, error);
@@ -68,18 +83,42 @@ class PaymentModule {
         need_phone_number: true
       };
       
-      const response = await this.makeRequest(`${this.baseUrl}/sendInvoice`, payload);
-      if (response && response.ok) {
-        const result = await response.json();
-        if (result.ok) {
-          console.log(`✅ [PAYMENT] Real invoice sent successfully for workshop ${workshopId}`);
+      // ساخت URL کامل با توکن بات
+      const fullUrl = `https://tapi.bale.ai/bot/${this.botToken}/sendInvoice`;
+      console.log(`🔗 [PAYMENT] Using full URL: ${fullUrl}`);
+      console.log(`🔑 [PAYMENT] Bot token: ${this.botToken}`);
+      console.log(`💳 [PAYMENT] Payment token: ${this.paymentToken}`);
+      console.log(`💰 [PAYMENT] Cost amount: ${costAmount}`);
+      console.log(`📊 [PAYMENT] Workshop data:`, JSON.stringify(workshopData, null, 2));
+      
+      // استفاده از 4bale.js که قبلاً کار می‌کرده
+      try {
+        const { sendInvoice } = require('./4bale');
+        const invoiceData = {
+          title: `پرداخت برای ${workshopData.name || 'کارگاه'}`,
+          description: `پرداخت برای ثبت‌نام در کارگاه ${workshopData.name || 'کارگاه'} با مبلغ ${costInToman} تومان`,
+          payload: `workshop_${workshopId}_${Date.now()}`,
+          provider_token: this.paymentToken,
+          currency: "IRR",
+          prices: [{
+            label: `کارگاه ${workshopData.name || 'کارگاه'}`,
+            amount: costAmount
+          }],
+          need_phone_number: true
+        };
+        
+        console.log(`📤 [PAYMENT] Using 4bale.js sendInvoice with data:`, JSON.stringify(invoiceData, null, 2));
+        const result = await sendInvoice(chatId, invoiceData);
+        
+        if (result) {
+          console.log(`✅ [PAYMENT] Invoice sent successfully via 4bale.js for workshop ${workshopId}`);
           return true;
         } else {
-          console.error(`❌ [PAYMENT] API error in sendInvoice:`, result);
+          console.error(`❌ [PAYMENT] Failed to send invoice via 4bale.js`);
           return false;
         }
-      } else {
-        console.error(`❌ [PAYMENT] HTTP error in sendInvoice: ${response?.status || 'No response'}`);
+      } catch (error) {
+        console.error(`❌ [PAYMENT] Error using 4bale.js sendInvoice:`, error);
         return false;
       }
       

@@ -301,6 +301,28 @@ async function getChat(chat_id) {
   }
 }
 
+async function sendInvoice(chat_id, invoiceData) {
+  console.log('💳 [BALE] sendInvoice STARTED');
+  console.log(`💳 [BALE] ChatId: ${chat_id}, Invoice data:`, JSON.stringify(invoiceData, null, 2));
+  
+  try {
+    // اضافه کردن chat_id به payload
+    const payload = { chat_id, ...invoiceData };
+    console.log('💳 [BALE] Final payload:', JSON.stringify(payload, null, 2));
+    
+    const response = await axios.post(`${API_URL()}/sendInvoice`, payload, {
+      timeout: 10000 // 10 ثانیه timeout
+    });
+    console.log('💳 [BALE] sendInvoice SUCCESS');
+    console.log('💳 [BALE] Response:', JSON.stringify(response.data, null, 2));
+    return response.data.ok;
+  } catch (error) {
+    console.error('❌ [BALE] sendInvoice ERROR:', error.message);
+    console.error('❌ [BALE] Error response:', error.response?.data);
+    return false;
+  }
+}
+
 module.exports = { 
   getUpdates, 
   sendMessage, 
@@ -311,5 +333,6 @@ module.exports = {
   getChat,
   answerCallbackQuery,
   editMessage,
-  editMessageWithInlineKeyboard
+  editMessageWithInlineKeyboard,
+  sendInvoice
 };
