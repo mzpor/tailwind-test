@@ -194,20 +194,19 @@ class RegistrationModule {
         const userId = ctx.from.id;
         const phoneNumber = contact.phone_number;
         
-        // استخراج اولین اسم از contact یا استفاده از first_name کاربر
-        let firstName = 'کاربر';
-        if (contact.first_name) {
-            firstName = contact.first_name.split(' ')[0];
-            console.log(`👤 [15REG] نام از contact: "${contact.first_name}" -> اولین اسم: "${firstName}"`);
-        } else if (ctx.from.first_name) {
-            firstName = ctx.from.first_name.split(' ')[0];
-            console.log(`👤 [15REG] نام از ctx: "${ctx.from.first_name}" -> اولین اسم: "${firstName}"`);
-        }
+        // استخراج نام کامل و اسم کوچک
+        const fullName = contact.first_name || ctx.from.first_name || 'کاربر';
+        const firstName = fullName.split(' ')[0];
         
+        console.log(`👤 [15REG] نام کامل: "${fullName}" -> اسم کوچک: "${firstName}"`);
         console.log(`📱 [15REG] Contact دریافت شد: ${phoneNumber}`);
         
-        // ذخیره شماره تلفن
-        this.userStates[userId].data.phone = phoneNumber;
+        // ذخیره کامل اطلاعات کاربر
+        this.userStates[userId].data = {
+            phone: phoneNumber,
+            fullName: fullName,
+            firstName: firstName
+        };
         this.saveData();
         
         // بررسی نقش کاربر
@@ -303,10 +302,11 @@ class RegistrationModule {
         
         // استخراج اولین اسم (قبل از فاصله)
         const firstName = fullName.split(' ')[0];
-        console.log(`👤 [15REG] نام کامل: "${fullName}" -> اولین اسم: "${firstName}"`);
+        console.log(`👤 [15REG] نام کامل: "${fullName}" -> اسم کوچک: "${firstName}"`);
         
-        // ذخیره نام
+        // ذخیره کامل اطلاعات کاربر
         this.userStates[userId].data.fullName = fullName;
+        this.userStates[userId].data.firstName = firstName;
         this.userStates[userId].step = 'completed';
         this.saveData();
         
