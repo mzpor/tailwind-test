@@ -227,8 +227,19 @@ class PaymentModule {
         }
       }
       
-      const instructorName = workshopData?.name || 'کارگاه';
-      const groupLink = workshopData?.link || this.groupLink;
+             const instructorName = workshopData?.name || 'کارگاه';
+       
+       // بررسی لینک کارگاه - اگر لینک معتبر نیست، از لینک پیش‌فرض استفاده کن
+       let groupLink = workshopData?.link || this.groupLink;
+       console.log(`🔍 [PAYMENT] Workshop link check: "${groupLink}"`);
+       
+       // بررسی معتبر بودن لینک
+       if (!groupLink || groupLink.length < 5 || (!groupLink.startsWith('http') && !groupLink.startsWith('t.me') && !groupLink.startsWith('ble.ir'))) {
+         groupLink = "ble.ir/join/Gah9cS9LzQ"; // لینک پیش‌فرض
+         console.log(`⚠️ [PAYMENT] Invalid workshop link, using default: ${groupLink}`);
+       } else {
+         console.log(`✅ [PAYMENT] Using workshop link: ${groupLink}`);
+       }
       
       // ارسال پیام‌های موفقیت
       const successMessage = `💸 پرداخت برای '${instructorName}' با موفقیت انجام شد!`;
