@@ -211,21 +211,28 @@ class PaymentModule {
       
       console.log(`💸 [PAYMENT] Processing successful payment for user ${userId}:`, successfulPayment);
       
-      // دریافت اطلاعات کارگاه از وضعیت کاربر
-      const workshopId = this.userStates[`workshop_${userId}`];
-      let workshopData = null;
-      
-      if (workshopId) {
-        // خواندن اطلاعات کارگاه از فایل
-        try {
-          const { readJson } = require('./3config');
-          const workshops = await readJson('data/workshops.json', {});
-          workshopData = workshops.coach[workshopId];
-          console.log(`📚 [PAYMENT] Found workshop data:`, workshopData);
-        } catch (error) {
-          console.error(`❌ [PAYMENT] Error reading workshop data:`, error);
-        }
-      }
+             // دریافت اطلاعات کارگاه از invoice_payload
+       const invoicePayload = successfulPayment.invoice_payload;
+       console.log(`🔍 [PAYMENT] Invoice payload: ${invoicePayload}`);
+       
+       // استخراج workshopId از payload (workshop_7_1755206650115)
+       const workshopId = invoicePayload.split('_')[1];
+       console.log(`🔍 [PAYMENT] Extracted workshop ID: ${workshopId}`);
+       
+       let workshopData = null;
+       
+                if (workshopId) {
+           // خواندن اطلاعات کارگاه از فایل
+           try {
+             const workshopsPath = path.join(__dirname, 'data', 'workshops.json');
+             const workshopsContent = fs.readFileSync(workshopsPath, 'utf8');
+             const workshops = JSON.parse(workshopsContent);
+             workshopData = workshops.coach[workshopId];
+             console.log(`📚 [PAYMENT] Found workshop data:`, workshopData);
+           } catch (error) {
+             console.error(`❌ [PAYMENT] Error reading workshop data:`, error);
+           }
+         }
       
              const instructorName = workshopData?.name || 'کارگاه';
        
@@ -233,13 +240,13 @@ class PaymentModule {
        let groupLink = workshopData?.link || this.groupLink;
        console.log(`🔍 [PAYMENT] Workshop link check: "${groupLink}"`);
        
-       // بررسی معتبر بودن لینک
-       if (!groupLink || groupLink.length < 5 || (!groupLink.startsWith('http') && !groupLink.startsWith('t.me') && !groupLink.startsWith('ble.ir'))) {
-         groupLink = "ble.ir/join/Gah9cS9LzQ"; // لینک پیش‌فرض
-         console.log(`⚠️ [PAYMENT] Invalid workshop link, using default: ${groupLink}`);
-       } else {
-         console.log(`✅ [PAYMENT] Using workshop link: ${groupLink}`);
-       }
+               // بررسی معتبر بودن لینک
+        if (!groupLink || groupLink.length < 1) {
+          groupLink = "ble.ir/join/Gah9cS9LzQ"; // لینک پیش‌فرض
+          console.log(`⚠️ [PAYMENT] Invalid workshop link, using default: ${groupLink}`);
+        } else {
+          console.log(`✅ [PAYMENT] Using workshop link: ${groupLink}`);
+        }
       
       // ارسال پیام‌های موفقیت
       const successMessage = `💸 پرداخت برای '${instructorName}' با موفقیت انجام شد!`;
