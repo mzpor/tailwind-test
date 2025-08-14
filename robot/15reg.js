@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sendMessage } = require('./4bale');
+const { USER_ACCESS_CONFIG } = require('./3config');
 
 class RegistrationModule {
     constructor() {
@@ -164,6 +165,13 @@ class RegistrationModule {
             return true;
         }
         
+        // اگر دکمه ریست فشرده شد
+        if (messageText === 'ریست' && USER_ACCESS_CONFIG.allowUserReset === 1) {
+            console.log(`🔄 [15REG] دکمه ریست فشرده شد`);
+            await this.handleReset(artificialCtx);
+            return true;
+        }
+        
         console.log(`❌ [15REG] پیام پردازش نشد`);
         return false;
     }
@@ -275,10 +283,21 @@ class RegistrationModule {
         const welcomeText = `👨‍🏫 خوش‌آمدی ${roleText} ${firstName}
 پنل ${roleText} فعال شد`;
         
+        // ساخت کیبرد با توجه به تنظیمات
+        const keyboardRows = [
+            ['شروع', 'ربات','مدرسه', 'خروج']
+        ];
+        
+        // اضافه کردن دکمه ریست اگر مجاز باشد
+        if (USER_ACCESS_CONFIG.allowUserReset === 1) {
+            keyboardRows.push(['ریست']);
+            console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
+        } else {
+            console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+        }
+        
         const keyboard = {
-            keyboard: [
-                ['شروع', 'ربات', 'خروج']
-            ],
+            keyboard: keyboardRows,
             resize_keyboard: true
         };
         
@@ -324,10 +343,21 @@ class RegistrationModule {
         
         const welcomeText = `📖 ${roleText} ${firstName} خوش‌آمدی`;
         
+        // ساخت کیبرد با توجه به تنظیمات
+        const keyboardRows = [
+            ['شروع', 'نقش', 'ربات', 'خروج']
+        ];
+        
+        // اضافه کردن دکمه ریست اگر مجاز باشد
+        if (USER_ACCESS_CONFIG.allowUserReset === 1) {
+            keyboardRows.push(['ریست']);
+            console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
+        } else {
+            console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+        }
+        
         const keyboard = {
-            keyboard: [
-                ['شروع', 'نقش', 'ربات', 'خروج']
-            ],
+            keyboard: keyboardRows,
             resize_keyboard: true
         };
         
@@ -376,6 +406,22 @@ class RegistrationModule {
         // ادامه معمول
         this.start(ctx);
         return true;
+    }
+    
+    // پردازش دکمه ریست
+    async handleReset(ctx) {
+        const userId = ctx.from.id;
+        
+        console.log(`🔄 [15REG] درخواست ریست از کاربر ${userId}`);
+        
+        // پاک کردن تمام اطلاعات کاربر
+        delete this.userStates[userId];
+        this.saveData();
+        
+        console.log(`✅ [15REG] اطلاعات کاربر ${userId} ریست شد`);
+        
+        // شروع مجدد
+        this.start(ctx);
     }
 }
 

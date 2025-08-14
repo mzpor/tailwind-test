@@ -36,6 +36,11 @@ const BUTTON_VISIBILITY_CONFIG = {
   PRACTICE_EVALUATION_DAYS_BUTTON: 0,  // دکمه روزهای تمرین و ارزیابی: 1 = فعال، 0 = غیرفعال
   // EXIT_BUTTON: 1
 };
+
+// ===== کنترل دسترسی کاربران =====
+const USER_ACCESS_CONFIG = {
+  allowUserReset: 1,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
+};
 // نگاشت نام کاربران
 const USER_NAMES = {
  
@@ -949,5 +954,7 @@ module.exports = {
   isButtonVisible,
   setButtonVisibility,
   getButtonVisibilityConfig,
-  BUTTON_VISIBILITY_CONFIG
+  BUTTON_VISIBILITY_CONFIG,
+  // ===== توابع کنترل دسترسی کاربران =====
+  USER_ACCESS_CONFIG
 };
