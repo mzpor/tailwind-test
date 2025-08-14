@@ -3,6 +3,9 @@ const path = require('path');
 const { sendMessage } = require('./4bale');
 const { USER_ACCESS_CONFIG, addUserToRole } = require('./3config');
 
+// اضافه کردن ماژول پرداخت
+const PaymentModule = require('./16pay');
+
 class RegistrationModule {
     constructor() {
         this.dataFile = path.join(__dirname, 'data', 'smart_registration.json');
@@ -12,6 +15,9 @@ class RegistrationModule {
         // اضافه کردن ماژول مدیریت کمک مربی
         const AssistantManagerModule = require('./assistant_manager');
         this.assistantManager = new AssistantManagerModule();
+        
+        // اضافه کردن ماژول پرداخت
+        this.paymentModule = new PaymentModule();
     }
 
     // بارگذاری داده‌ها
@@ -1237,6 +1243,10 @@ class RegistrationModule {
         } else if (data.startsWith('quran_student_select_workshop_')) {
             console.log(`📚 [15REG] انتخاب کارگاه قرآن‌آموز: ${data}`);
             return await this.handleQuranStudentWorkshopSelection(chatId, userId, callbackQueryId, data);
+        } else if (data.startsWith('quran_student_payment_')) {
+            console.log(`💳 [15REG] پرداخت کارگاه قرآن‌آموز: ${data}`);
+            const workshopId = data.replace('quran_student_payment_', '');
+            return await this.paymentModule.handleQuranStudentPayment(chatId, userId, workshopId);
         } else if (data === 'manage_assistant') {
             console.log(`👨‍🏫 [15REG] مدیریت کمک مربی درخواست شد`);
             return await this.handleManageAssistant(chatId, userId, callbackQueryId);
@@ -1406,8 +1416,8 @@ class RegistrationModule {
         
         try {
             // استفاده از ماژول کارگاه‌ها برای نمایش انتخاب کارگاه
-            const WorkshopModule = require('./12kargah');
-            const workshopModule = new WorkshopModule();
+            const KargahModule = require('./12kargah');
+            const workshopModule = new KargahModule();
             
             // ارسال پیام انتخاب کارگاه
             const text = `📝 **ثبت نام قرآن آموز**

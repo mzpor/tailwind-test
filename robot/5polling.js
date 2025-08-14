@@ -28,10 +28,18 @@ const { BASE_URL } = require('./3config');
 const SettingsModule = require('./11settings');
 const KargahModule = require('./12kargah');
 const SmartRegistrationModule = require('./15reg.js');
+const PaymentModule = require('./16pay');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 // ایجاد یک instance واحد از SmartRegistrationModule
 const registrationModule = new SmartRegistrationModule();
+
+// ایجاد یک instance واحد از PaymentModule
+const paymentModule = new PaymentModule();
+
+// تنظیم توکن بات در ماژول پرداخت
+const { BOT_TOKEN } = require('./3config');
+paymentModule.setBotToken(BOT_TOKEN);
 
 let lastId = 0;
 
@@ -715,6 +723,8 @@ function startPolling() {
         lastId = update.update_id;
         const msg = update.message;
         const callback_query = update.callback_query;
+        const pre_checkout_query = update.pre_checkout_query;
+        const successful_payment = update.message?.successful_payment;
         
         // پردازش callback query (کیبورد شیشه‌ای)
         if (callback_query) {
@@ -730,6 +740,7 @@ function startPolling() {
           // حذف پیام قبلی که کیبورد شیشه‌ای داشت - فقط برای callback های غیر کارگاه و غیر بازگشت
           if (!callback_query.data.startsWith('kargah_') && 
               !callback_query.data.startsWith('student_') && 
+              !callback_query.data.startsWith('quran_student_') && 
               callback_query.data !== 'back_to_groups' && 
               callback_query.data !== 'back_to_main') {
             try {
@@ -992,6 +1003,7 @@ function startPolling() {
                      callback_query.data.startsWith('final_confirm') || 
                      callback_query.data.startsWith('quran_student_panel') || 
                      callback_query.data.startsWith('complete_registration') ||
+                     callback_query.data.startsWith('quran_student_') ||
                      callback_query.data === 'school_intro' ||
                      callback_query.data === 'intro_quran_bot' ||
                      callback_query.data === 'next_month_registration' ||
@@ -1017,6 +1029,38 @@ function startPolling() {
             console.log(`⚠️ [POLLING] Callback data starts with 'practice_': ${callback_query.data.startsWith('practice_')}`);
             console.log(`⚠️ [POLLING] Callback data starts with 'evaluation_': ${callback_query.data.startsWith('evaluation_')}`);
             console.log(`⚠️ [POLLING] Callback data === 'practice_evaluation_days_settings': ${callback_query.data === 'practice_evaluation_days_settings'}`);
+          }
+          continue;
+        }
+        
+        // پردازش PreCheckoutQuery (پیش از پرداخت)
+        if (pre_checkout_query) {
+          console.log('💰 [POLLING] PreCheckoutQuery detected');
+          try {
+            const success = await paymentModule.handlePreCheckoutQuery(pre_checkout_query);
+            if (success) {
+              console.log('✅ [POLLING] PreCheckoutQuery handled successfully');
+            } else {
+              console.error('❌ [POLLING] PreCheckoutQuery handling failed');
+            }
+          } catch (error) {
+            console.error('❌ [POLLING] Error handling PreCheckoutQuery:', error);
+          }
+          continue;
+        }
+        
+        // پردازش پرداخت موفق
+        if (successful_payment) {
+          console.log('💸 [POLLING] Successful payment detected');
+          try {
+            const success = await paymentModule.handleSuccessfulPayment(msg);
+            if (success) {
+              console.log('✅ [POLLING] Successful payment handled successfully');
+            } else {
+              console.error('❌ [POLLING] Successful payment handling failed');
+            }
+          } catch (error) {
+            console.error('❌ [POLLING] Error handling successful payment:', error);
           }
           continue;
         }
