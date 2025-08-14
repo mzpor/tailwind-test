@@ -996,10 +996,12 @@ function startPolling() {
                      callback_query.data === 'intro_quran_bot' ||
                      callback_query.data === 'next_month_registration' ||
                      callback_query.data === 'start_next_month_registration' ||
-                     callback_query.data === 'back_to_main') {
+                     callback_query.data === 'back_to_main' ||
+                     callback_query.data === 'manage_assistant' ||
+                     callback_query.data.startsWith('assistant_')) {
             console.log('🔄 [POLLING] Registration callback detected');
             console.log(`🔄 [POLLING] Registration callback data: ${callback_query.data}`);
-            // پردازش callback های ثبت‌نام
+            // پردازش callback های ثبت‌نام و مدیریت کمک مربی
             const success = await registrationModule.handleCallback(callback_query);
             
             if (!success) {
