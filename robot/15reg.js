@@ -1164,7 +1164,7 @@ class RegistrationModule {
         
         // بررسی وضعیت ثبت‌نام کارگاه از تنظیمات مدیر
         const { isButtonVisible } = require('./3config');
-        const workshopRegistrationEnabled = isButtonVisible('WORKSHOP_REGISTRATION_BUTTON');
+        const workshopRegistrationEnabled = isButtonVisible('REGISTRATION_BUTTON'); // Changed to use REGISTRATION_BUTTON
         
         // ارسال دکمه ثبت‌نام با کیبرد اینلاین
         const { sendMessageWithInlineKeyboard } = require('./4bale');
@@ -1786,7 +1786,7 @@ class RegistrationModule {
             
             // بررسی وضعیت ثبت‌نام کارگاه از تنظیمات مدیر
             const { isButtonVisible } = require('./3config');
-            const workshopRegistrationEnabled = isButtonVisible('WORKSHOP_REGISTRATION_BUTTON');
+            const workshopRegistrationEnabled = isButtonVisible('REGISTRATION_BUTTON'); // Changed to use REGISTRATION_BUTTON
             
             // ارسال دکمه ثبت‌نام با کیبرد اینلاین
             const { sendMessageWithInlineKeyboard } = require('./4bale');
