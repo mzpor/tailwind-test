@@ -105,7 +105,7 @@ class RegistrationModule {
     }
 
     // ادامه ثبت‌نام
-    continueRegistration(ctx) {
+    async continueRegistration(ctx) {
         const userId = ctx.from.id;
         const userState = this.userStates[userId];
         
@@ -119,6 +119,26 @@ class RegistrationModule {
             console.log(`🔍 [15REG] کاربر در مرحله profile، نمایش پروفایل`);
             this.showProfileAndContinue(ctx);
         } else if (userState.step === 'full_name') {
+            // 🔥 شرط جدید: اگر مربی است و شماره دارد، مستقیماً پنل
+            const userData = userState.data;
+            if (userData && userData.phone) {
+                console.log(`🔍 [15REG] بررسی نقش برای شماره موجود: ${userData.phone}`);
+                
+                // اگر شماره "مربی" است، از شماره واقعی استفاده کن
+                let phoneToCheck = userData.phone;
+                if (userData.phone === "مربی") {
+                    // 🔥 شماره واقعی را از ورکشاپ پیدا کن
+                    phoneToCheck = await this.findRealPhoneForCoach();
+                    console.log(`🔍 [15REG] شماره واقعی پیدا شد: ${phoneToCheck}`);
+                }
+                
+                if (phoneToCheck && phoneToCheck !== "مربی") {
+                    this.checkAndCompleteCoachRegistration(ctx);
+                    return;
+                }
+            }
+            
+            // ادامه معمول
             ctx.reply('👤 لطفاً نام و فامیل خود را وارد کنید:');
         } else {
             console.log(`⚠️ [15REG] مرحله ناشناخته: ${userState.step}`);
@@ -130,6 +150,68 @@ class RegistrationModule {
         }
     }
     
+    // 🔥 متد جدید: بررسی و تکمیل ثبت‌نام مربی
+    async checkAndCompleteCoachRegistration(ctx) {
+        const userId = ctx.from.id;
+        const userData = this.userStates[userId]?.data;
+        
+        if (!userData || !userData.phone) {
+            console.log(`❌ [15REG] اطلاعات کاربر ناقص`);
+            return;
+        }
+        
+        // بررسی نقش کاربر
+        const userRole = await this.checkUserRole(userData.phone);
+        console.log(`🔍 [15REG] نقش کاربر در full_name: ${userRole}`);
+        
+        if (userRole === 'coach' || userRole === 'assistant') {
+            // 🔥 مربی یا کمک مربی - استفاده از نام ورکشاپ
+            const workshopName = await this.getWorkshopName(userData.phone);
+            const firstName = workshopName || 'مربی';
+            
+            console.log(`✅ [15REG] تکمیل خودکار ثبت‌نام برای ${userRole} با نام: ${firstName}`);
+            
+            // تکمیل اطلاعات
+            this.userStates[userId].data.firstName = firstName;
+            this.userStates[userId].data.fullName = workshopName || 'مربی';
+            this.userStates[userId].step = 'completed';
+            this.saveData();
+            
+            const roleText = userRole === 'coach' ? 'مربی' : 'کمک مربی';
+            
+            const welcomeText = `👨‍🏫 خوش‌آمدی ${roleText} ${firstName}
+پنل ${roleText} فعال شد`;
+            
+            // ساخت کیبرد متناسب با نقش
+            let keyboardRows;
+            if (userRole === 'coach') {
+                keyboardRows = [['شروع', 'مربی', 'ربات', 'خروج']];
+            } else {
+                keyboardRows = [['شروع', 'کمک مربی', 'ربات', 'خروج']];
+            }
+            
+            // اضافه کردن دکمه ریست اگر مجاز باشد
+            if (USER_ACCESS_CONFIG.allowUserReset === 1) {
+                keyboardRows.push(['ریست']);
+                console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
+            } else {
+                console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
+            }
+            
+            const keyboard = {
+                keyboard: keyboardRows,
+                resize_keyboard: true
+            };
+            
+            ctx.reply(welcomeText, { reply_markup: keyboard });
+            
+        } else {
+            // قرآن‌آموز - ادامه ثبت‌نام
+            console.log(`✅ [15REG] ادامه ثبت‌نام برای قرآن‌آموز`);
+            ctx.reply('👤 لطفاً نام و فامیل خود را وارد کنید:');
+        }
+    }
+
     // 🔥 متد جدید: نمایش پروفایل و ادامه
     async showProfileAndContinue(ctx) {
         const userId = ctx.from.id;
@@ -447,6 +529,30 @@ class RegistrationModule {
             return null;
         } catch (error) {
             console.error(`❌ [15REG] خطا در دریافت نام ورکشاپ:`, error.message);
+            return null;
+        }
+    }
+    
+    // 🔥 متد جدید: پیدا کردن شماره واقعی برای مربی
+    async findRealPhoneForCoach() {
+        console.log(`🔍 [15REG] جستجوی شماره واقعی برای مربی`);
+        
+        try {
+            const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+            if (fs.existsSync(workshopsFile)) {
+                const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
+                
+                // اولین شماره مربی که پیدا شود
+                for (const [workshopId, workshop] of Object.entries(workshopsData)) {
+                    if (workshop.instructor_phone && workshop.instructor_phone !== "0") {
+                        console.log(`✅ [15REG] شماره واقعی مربی یافت شد: ${workshop.instructor_phone}`);
+                        return workshop.instructor_phone;
+                    }
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در پیدا کردن شماره واقعی:`, error.message);
             return null;
         }
     }
