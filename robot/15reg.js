@@ -247,9 +247,16 @@ class RegistrationModule {
                 
                 // بررسی اینکه آیا شماره در کارگاه‌ها وجود دارد
                 for (const [workshopId, workshop] of Object.entries(workshopsData)) {
+                    // بررسی مربی
                     if (workshop.instructor_phone && phoneNumber.includes(workshop.instructor_phone)) {
                         console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (کارگاه ${workshopId})`);
                         return 'coach';  // مربی
+                    }
+                    
+                    // بررسی کمک مربی
+                    if (workshop.assistant_phone && phoneNumber.includes(workshop.assistant_phone)) {
+                        console.log(`✅ [15REG] نقش تشخیص داده شد: کمک مربی (کارگاه ${workshopId})`);
+                        return 'assistant';  // کمک مربی
                     }
                 }
                 
