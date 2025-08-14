@@ -417,6 +417,13 @@ class RegistrationModule {
             const assistantResult = await this.assistantManager.handleMessage(ctx);
             if (assistantResult) {
                 console.log(`✅ [15REG] پیام در ماژول مدیریت کمک مربی پردازش شد`);
+                
+                // اگر نتیجه شامل text و keyboard است، پیام جدید ارسال کن
+                if (assistantResult.text && assistantResult.keyboard) {
+                    const { sendMessageWithInlineKeyboard } = require('./4bale');
+                    await sendMessageWithInlineKeyboard(ctx.chat.id, assistantResult.text, assistantResult.keyboard);
+                }
+                
                 return true;
             }
         }
