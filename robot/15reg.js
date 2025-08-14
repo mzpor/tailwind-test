@@ -438,8 +438,35 @@ class RegistrationModule {
         
         console.log(`📱 [15REG] پردازش شماره تلفن: ${phoneNumber}`);
         
-        // ذخیره شماره تلفن
-        this.userStates[userId].data.phone = phoneNumber;
+        // 🔥 بررسی وجود شماره تلفن در رکوردهای دیگر
+        let existingUserId = null;
+        for (const [uid, userData] of Object.entries(this.userStates)) {
+            if (uid !== userId.toString() && userData.data && userData.data.phone === phoneNumber) {
+                existingUserId = uid;
+                break;
+            }
+        }
+        
+        if (existingUserId) {
+            // 🔥 به‌روزرسانی رکورد موجود
+            console.log(`🔄 [15REG] شماره تلفن ${phoneNumber} قبلاً ثبت شده، به‌روزرسانی رکورد موجود`);
+            
+            // کپی کردن اطلاعات از رکورد موجود
+            const existingData = this.userStates[existingUserId].data;
+            this.userStates[userId].data = {
+                ...existingData,
+                phone: phoneNumber
+            };
+            
+            // حذف رکورد قدیمی
+            delete this.userStates[existingUserId];
+            
+            console.log(`✅ [15REG] رکورد موجود به‌روزرسانی شد`);
+        } else {
+            // 🔥 ذخیره شماره تلفن جدید
+            this.userStates[userId].data.phone = phoneNumber;
+        }
+        
         this.userStates[userId].step = 'profile';
         this.saveData();
         
@@ -465,6 +492,32 @@ class RegistrationModule {
         const phoneNumber = contact.phone_number;
         
         console.log(`📱 [15REG] Contact دریافت شد: ${phoneNumber}`);
+        
+        // 🔥 بررسی وجود شماره تلفن در رکوردهای دیگر
+        let existingUserId = null;
+        for (const [uid, userData] of Object.entries(this.userStates)) {
+            if (uid !== userId.toString() && userData.data && userData.data.phone === phoneNumber) {
+                existingUserId = uid;
+                break;
+            }
+        }
+        
+        if (existingUserId) {
+            // 🔥 به‌روزرسانی رکورد موجود
+            console.log(`🔄 [15REG] شماره تلفن ${phoneNumber} قبلاً ثبت شده، به‌روزرسانی رکورد موجود`);
+            
+            // کپی کردن اطلاعات از رکورد موجود
+            const existingData = this.userStates[existingUserId].data;
+            this.userStates[userId].data = {
+                ...existingData,
+                phone: phoneNumber
+            };
+            
+            // حذف رکورد قدیمی
+            delete this.userStates[existingUserId];
+            
+            console.log(`✅ [15REG] رکورد موجود به‌روزرسانی شد`);
+        }
         
         // 🔥 یک بار نقش را شناسایی و ذخیره کن
         const userRole = await this.checkUserRole(phoneNumber);
