@@ -11,7 +11,7 @@ class PaymentModule {
     this.userStates = {};
     this.paymentToken = "WALLET-LIiCzxGZnCd58Obr"; // توکن تولید
     this.groupLink = "ble.ir/join/Gah9cS9LzQ";
-    this.baseUrl = "https://api.telegram.org/bot";
+    this.baseUrl = "https://tapi.bale.ai/bot"; // استفاده از Bale API
     
     console.log('✅ PaymentModule initialized successfully');
   }
@@ -19,7 +19,7 @@ class PaymentModule {
   // 🔧 تنظیم توکن بات
   setBotToken(botToken) {
     this.botToken = botToken;
-    this.baseUrl = `https://api.telegram.org/bot${botToken}`;
+    this.baseUrl = `https://tapi.bale.ai/bot${botToken}`; // استفاده از Bale API
     console.log('🔑 Bot token set for payment module');
   }
 
@@ -43,45 +43,40 @@ class PaymentModule {
     }
   }
 
-  // 💰 ارسال فاکتور پرداخت
+  // 💰 ارسال فاکتور پرداخت (جایگزین برای Bale API)
   async sendInvoice(chatId, workshopId, workshopData) {
     try {
-      console.log(`💰 [PAYMENT] Sending invoice for workshop ${workshopId} to chat ${chatId}`);
+      console.log(`💰 [PAYMENT] Sending payment request for workshop ${workshopId} to chat ${chatId}`);
       
       // تبدیل هزینه به عدد
       const costText = workshopData.cost || '0 تومان';
       const costAmount = this.extractAmountFromCost(costText);
+      const costInToman = Math.floor(costAmount / 10);
       
-      const payload = {
-        chat_id: chatId,
-        title: `پرداخت برای ${workshopData.name || 'کارگاه'}`,
-        description: `پرداخت برای ثبت‌نام در کارگاه ${workshopData.name || 'کارگاه'} با مبلغ ${Math.floor(costAmount / 10)} تومان`,
-        payload: uuidv4(),
-        provider_token: this.paymentToken,
-        currency: "IRR",
-        prices: [{
-          label: `کارگاه ${workshopData.name || 'کارگاه'}`,
-          amount: costAmount
-        }],
-        need_phone_number: true
-      };
+      // استفاده از sendMessage با دکمه‌های اینلاین (جایگزین sendInvoice)
+      const { sendMessageWithInlineKeyboard } = require('./4bale');
       
-      const response = await this.makeRequest(`${this.baseUrl}/sendInvoice`, payload);
-      if (response && response.ok) {
-        const result = await response.json();
-        if (result.ok) {
-          console.log(`✅ [PAYMENT] Invoice sent successfully for workshop ${workshopId}`);
-          return true;
-        } else {
-          console.error(`❌ [PAYMENT] API error in sendInvoice:`, result);
-          return false;
-        }
-      } else {
-        console.error(`❌ [PAYMENT] HTTP error in sendInvoice: ${response?.status || 'No response'}`);
-        return false;
-      }
+      const text = `💰 **درخواست پرداخت**
+      
+📚 **کارگاه:** ${workshopData.name || 'کارگاه'}
+💵 **مبلغ:** ${costInToman} تومان
+📖 **توضیحات:** ${workshopData.description || 'توضیحات موجود نیست'}
+
+🎯 **برای تکمیل پرداخت، یکی از گزینه‌های زیر را انتخاب کنید:**`;
+      
+      const keyboard = [
+        [{ text: `💳 پرداخت ${costInToman} تومان`, callback_data: `payment_confirm_${workshopId}` }],
+        [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }],
+        [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+      ];
+      
+      await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+      
+      console.log(`✅ [PAYMENT] Payment request sent successfully for workshop ${workshopId}`);
+      return true;
+      
     } catch (error) {
-      console.error(`❌ [PAYMENT] Error in send_invoice:`, error);
+      console.error(`❌ [PAYMENT] Error in sendInvoice:`, error);
       return false;
     }
   }
@@ -254,7 +249,7 @@ class PaymentModule {
       console.log(`💰 [PAYMENT] Handling payment for Quran student ${userId}, workshop ${workshopId}`);
       
       // خواندن اطلاعات کارگاه
-      const { readJson } = require('./3config');
+      const { readJson } = require('./server/utils/jsonStore');
       const workshops = await readJson('data/workshops.json', {});
       const workshopData = workshops.coach[workshopId];
       

@@ -1247,6 +1247,10 @@ class RegistrationModule {
             console.log(`💳 [15REG] پرداخت کارگاه قرآن‌آموز: ${data}`);
             const workshopId = data.replace('quran_student_payment_', '');
             return await this.paymentModule.handleQuranStudentPayment(chatId, userId, workshopId);
+        } else if (data.startsWith('payment_confirm_')) {
+            console.log(`💳 [15REG] تأیید پرداخت کارگاه: ${data}`);
+            const workshopId = data.replace('payment_confirm_', '');
+            return await this.handlePaymentConfirmation(chatId, userId, workshopId);
         } else if (data === 'manage_assistant') {
             console.log(`👨‍🏫 [15REG] مدیریت کمک مربی درخواست شد`);
             return await this.handleManageAssistant(chatId, userId, callbackQueryId);
@@ -1416,8 +1420,7 @@ class RegistrationModule {
         
         try {
             // استفاده از ماژول کارگاه‌ها برای نمایش انتخاب کارگاه
-            const KargahModule = require('./12kargah');
-            const workshopModule = new KargahModule();
+            const workshopModule = require('./12kargah');
             
             // ارسال پیام انتخاب کارگاه
             const text = `📝 **ثبت نام قرآن آموز**
@@ -1431,7 +1434,7 @@ class RegistrationModule {
 📚 **کلاس‌های موجود:**`;
             
             // ساخت کیبورد برای انتخاب کارگاه
-            const { readJson } = require('./3config');
+            const { readJson } = require('./server/utils/jsonStore');
             const workshops = await readJson('data/workshops.json', {});
             
             if (!workshops || !workshops.coach || Object.keys(workshops.coach).length === 0) {
@@ -1786,7 +1789,7 @@ class RegistrationModule {
             const workshopId = data.replace('quran_student_select_workshop_', '');
             
             // خواندن اطلاعات کارگاه
-            const { readJson } = require('./3config');
+            const { readJson } = require('./server/utils/jsonStore');
             const workshops = await readJson('data/workshops.json', {});
             
             if (!workshops || !workshops.coach || !workshops.coach[workshopId]) {
@@ -1830,9 +1833,60 @@ class RegistrationModule {
             await sendMessageWithInlineKeyboard(chatId, '❌ خطا در انتخاب کارگاه. لطفاً دوباره تلاش کنید.', [
                 [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }]
             ]);
-            return false;
-        }
-    }
-}
-
-module.exports = RegistrationModule;
+                         return false;
+         }
+     }
+     
+     // متد جدید: تأیید پرداخت
+     async handlePaymentConfirmation(chatId, userId, workshopId) {
+         console.log(`💳 [15REG] تأیید پرداخت برای کاربر ${userId} و کارگاه ${workshopId}`);
+         
+         try {
+             // خواندن اطلاعات کارگاه
+             const { readJson } = require('./server/utils/jsonStore');
+             const workshops = await readJson('data/workshops.json', {});
+             
+             if (!workshops || !workshops.coach || !workshops.coach[workshopId]) {
+                 throw new Error('کارگاه یافت نشد');
+             }
+             
+             const workshop = workshops.coach[workshopId];
+             const costText = workshop.cost || 'نامشخص';
+             
+             const text = `🎉 **پرداخت تأیید شد!**
+ 
+ 📚 **کارگاه:** ${workshop.name}
+ 💵 **مبلغ:** ${costText}
+ 👤 **کاربر:** ${userId}
+ 
+ ✅ **ثبت‌نام شما با موفقیت انجام شد**
+ 
+ 📱 **مراحل بعدی:**
+ • منتظر تماس از سوی استاد باشید
+ • اطلاعات ورود به گروه ارسال خواهد شد
+ • شروع کلاس طبق برنامه اعلام شده
+ 
+ 🎯 **برای بازگشت به منوی اصلی:**`;
+             
+             const keyboard = [
+                 [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+             ];
+             
+             const { sendMessageWithInlineKeyboard } = require('./4bale');
+             await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+             
+             console.log(`✅ [15REG] تأیید پرداخت برای کاربر ${userId} و کارگاه ${workshopId} نمایش داده شد`);
+             return true;
+             
+         } catch (error) {
+             console.error(`❌ [15REG] خطا در تأیید پرداخت:`, error);
+             const { sendMessageWithInlineKeyboard } = require('./4bale');
+             await sendMessageWithInlineKeyboard(chatId, '❌ خطا در تأیید پرداخت. لطفاً دوباره تلاش کنید.', [
+                 [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }]
+             ]);
+             return false;
+         }
+     }
+ }
+ 
+ module.exports = RegistrationModule;
