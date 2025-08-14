@@ -1015,7 +1015,16 @@ class RegistrationModule {
         } else if (data.startsWith('assistant_')) {
             // ارسال callback به ماژول مدیریت کمک مربی
             console.log(`👨‍🏫 [15REG] Callback مدیریت کمک مربی: ${data}`);
-            return await this.assistantManager.handleCallback(callback);
+            const result = await this.assistantManager.handleCallback(callback);
+            
+            // اگر نتیجه وجود دارد، پیام جدید ارسال کن
+            if (result && result.text && result.keyboard) {
+                const { sendMessageWithInlineKeyboard } = require('./4bale');
+                await sendMessageWithInlineKeyboard(chatId, result.text, result.keyboard);
+                return true;
+            }
+            
+            return result;
         }
         
         return false;
