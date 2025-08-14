@@ -650,9 +650,14 @@ class RegistrationModule {
         console.log(`🔍 [15REG] بررسی نقش برای شماره: ${phoneNumber}`);
         
         try {
-            // 🔥 نرمال‌سازی شماره تلفن
-            const normalizePhone = (phone) => phone.replace(/^(98\+?|0)/, '');
-            const normalizedPhone = normalizePhone(phoneNumber);
+                    // 🔥 نرمال‌سازی شماره تلفن - بهبود یافته
+        const normalizePhone = (phone) => {
+            const digits = phone.replace(/\D/g, '');
+            // اگر 11 رقم یا بیشتر، 10 رقم آخر
+            // اگر کمتر، همان عدد
+            return digits.length >= 11 ? digits.slice(-10) : digits;
+        };
+        const normalizedPhone = normalizePhone(phoneNumber);
             console.log(`🔧 [15REG] شماره نرمال‌سازی شده: ${normalizedPhone}`);
             
             // بارگذاری workshops.json
@@ -676,7 +681,7 @@ class RegistrationModule {
                 // بررسی کمک مربی‌ها
                 if (workshopsData.assistant) {
                     for (const [assistantId, assistant] of Object.entries(workshopsData.assistant)) {
-                        if (assistant.phone) {
+                        if (assistant.phone && assistant.phone.trim() !== "") {
                             const normalizedAssistantPhone = normalizePhone(assistant.phone);
                             if (normalizedPhone.includes(normalizedAssistantPhone)) {
                                 console.log(`✅ [15REG] نقش تشخیص داده شد: کمک مربی (کمک مربی ${assistantId})`);
@@ -710,9 +715,19 @@ class RegistrationModule {
                 // بررسی مربی‌ها
                 if (workshopsData.coach) {
                     for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
-                        if (coach.phone && phoneNumber.includes(coach.phone)) {
-                            console.log(`✅ [15REG] نام ورکشاپ یافت شد: ${coach.name}`);
-                            return coach.name;
+                        if (coach.phone && coach.phone !== "0" && coach.phone.trim() !== "") {
+                            // نرمال‌سازی شماره مربی
+                            const normalizePhone = (phone) => {
+                                const digits = phone.replace(/\D/g, '');
+                                return digits.length >= 11 ? digits.slice(-10) : digits;
+                            };
+                            const normalizedCoachPhone = normalizePhone(coach.phone);
+                            const normalizedUserPhone = normalizePhone(phoneNumber);
+                            
+                            if (normalizedUserPhone.includes(normalizedCoachPhone)) {
+                                console.log(`✅ [15REG] نام ورکشاپ یافت شد: ${coach.name}`);
+                                return coach.name;
+                            }
                         }
                     }
                 }
@@ -720,9 +735,19 @@ class RegistrationModule {
                 // بررسی کمک مربی‌ها
                 if (workshopsData.assistant) {
                     for (const [assistantId, assistant] of Object.entries(workshopsData.assistant)) {
-                        if (assistant.phone && phoneNumber.includes(assistant.phone)) {
-                            console.log(`✅ [15REG] نام کمک مربی یافت شد: ${assistant.name}`);
-                            return assistant.name;
+                        if (assistant.phone && assistant.phone.trim() !== "") {
+                            // نرمال‌سازی شماره کمک مربی
+                            const normalizePhone = (phone) => {
+                                const digits = phone.replace(/\D/g, '');
+                                return digits.length >= 11 ? digits.slice(-10) : digits;
+                            };
+                            const normalizedAssistantPhone = normalizePhone(assistant.phone);
+                            const normalizedUserPhone = normalizePhone(phoneNumber);
+                            
+                            if (normalizedUserPhone.includes(normalizedAssistantPhone)) {
+                                console.log(`✅ [15REG] نام کمک مربی یافت شد: ${assistant.name}`);
+                                return assistant.name;
+                            }
                         }
                     }
                 }
