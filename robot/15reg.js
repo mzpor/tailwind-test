@@ -1147,12 +1147,25 @@ class RegistrationModule {
 
 👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
         
+        // کیبرد معمولی
         const keyboard = {
-            keyboard: [['شروع', 'ربات', 'مدرسه', 'خروج']],
+            keyboard: [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']],
             resize_keyboard: true
         };
         
+        // ارسال پیام با کیبرد معمولی
         ctx.reply(welcomeText, { reply_markup: keyboard });
+        
+        // ارسال دکمه ثبت‌نام با کیبرد اینلاین
+        const { sendMessageWithInlineKeyboard } = require('./4bale');
+        await sendMessageWithInlineKeyboard(
+            ctx.chat.id,
+            '👆 **برای ثبت‌نام در کارگاه‌ها:**',
+            [
+                [{ text: '📝 ثبت‌نام در کارگاه', callback_data: 'quran_student_registration' }]
+            ]
+        );
+        
         console.log(`✅ [15REG] پنل قرآن‌آموز برای کاربر ${userId} نمایش داده شد`);
     }
     
@@ -1215,7 +1228,16 @@ class RegistrationModule {
         console.log(`🔍 [15REG] Callback received: ${data}`);
         
         // پردازش callback های مدیریت کمک مربی
-        if (data === 'manage_assistant') {
+        if (data === 'quran_student_registration') {
+            console.log(`📝 [15REG] ثبت‌نام قرآن‌آموز درخواست شد`);
+            return await this.handleQuranStudentRegistration(chatId, userId, callbackQueryId);
+        } else if (data === 'quran_student_back_to_menu') {
+            console.log(`🏠 [15REG] بازگشت قرآن‌آموز به منو درخواست شد`);
+            return await this.handleQuranStudentBackToMenu(chatId, userId, callbackQueryId);
+        } else if (data.startsWith('quran_student_select_workshop_')) {
+            console.log(`📚 [15REG] انتخاب کارگاه قرآن‌آموز: ${data}`);
+            return await this.handleQuranStudentWorkshopSelection(chatId, userId, callbackQueryId, data);
+        } else if (data === 'manage_assistant') {
             console.log(`👨‍🏫 [15REG] مدیریت کمک مربی درخواست شد`);
             return await this.handleManageAssistant(chatId, userId, callbackQueryId);
         } else if (data === 'assistant_manage_groups') {
@@ -1376,6 +1398,72 @@ class RegistrationModule {
         );
         
         console.log(`✅ [15REG] پنل کمک مربی برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // متد جدید: پردازش ثبت‌نام قرآن‌آموز
+    async handleQuranStudentRegistration(chatId, userId, callbackQueryId) {
+        console.log(`📝 [15REG] شروع ثبت‌نام قرآن‌آموز برای کاربر ${userId}`);
+        
+        try {
+            // استفاده از ماژول کارگاه‌ها برای نمایش انتخاب کارگاه
+            const WorkshopModule = require('./12kargah');
+            const workshopModule = new WorkshopModule();
+            
+            // ارسال پیام انتخاب کارگاه
+            const text = `📝 **ثبت نام قرآن آموز**
+
+🎯 **مراحل ثبت نام:**
+1️⃣ **انتخاب کلاس:** یکی از کلاس‌های موجود را انتخاب کنید
+2️⃣ **تکمیل اطلاعات:** نام و شماره تماس خود را وارد کنید
+3️⃣ **پرداخت:** هزینه کلاس را پرداخت کنید
+4️⃣ **تایید:** ثبت نام شما تایید خواهد شد
+
+📚 **کلاس‌های موجود:**`;
+            
+            // ساخت کیبورد برای انتخاب کارگاه
+            const { readJson } = require('./3config');
+            const workshops = await readJson('data/workshops.json', {});
+            
+            if (!workshops || !workshops.coach || Object.keys(workshops.coach).length === 0) {
+                const noWorkshopsText = text + `\n\n❌ در حال حاضر هیچ کلاسی برای ثبت‌نام موجود نیست.
+لطفاً بعداً دوباره تلاش کنید یا با مدیر تماس بگیرید.`;
+                
+                const keyboard = [
+                    [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+                ];
+                
+                const { sendMessageWithInlineKeyboard } = require('./4bale');
+                await sendMessageWithInlineKeyboard(chatId, noWorkshopsText, keyboard);
+                return true;
+            }
+            
+            // ساخت کیبورد برای انتخاب کارگاه
+            const keyboard = [];
+            for (const [coachId, workshop] of Object.entries(workshops.coach)) {
+                const instructorName = workshop.name || 'نامشخص';
+                const cost = workshop.cost || 'نامشخص';
+                keyboard.push([{
+                    text: `📚 ${instructorName} - ${cost}`,
+                    callback_data: `quran_student_select_workshop_${coachId}`
+                }]);
+            }
+            
+            keyboard.push([{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]);
+            
+            const { sendMessageWithInlineKeyboard } = require('./4bale');
+            await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+            
+            console.log(`✅ [15REG] انتخاب کارگاه برای کاربر ${userId} نمایش داده شد`);
+            return true;
+            
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در نمایش انتخاب کارگاه:`, error);
+            const { sendMessageWithInlineKeyboard } = require('./4bale');
+            await sendMessageWithInlineKeyboard(chatId, '❌ خطا در نمایش کارگاه‌ها. لطفاً دوباره تلاش کنید.', [
+                [{ text: '🔙 بازگشت', callback_data: 'quran_student_back_to_menu' }]
+            ]);
+            return false;
+        }
     }
     
     // 🔥 متد جدید: پردازش دکمه ربات
@@ -1621,6 +1709,119 @@ class RegistrationModule {
         }
         
         return false;
+    }
+    
+    // متد جدید: بازگشت قرآن‌آموز به منو
+    async handleQuranStudentBackToMenu(chatId, userId, callbackQueryId) {
+        console.log(`🏠 [15REG] بازگشت قرآن‌آموز به منوی اصلی`);
+        
+        try {
+            // حذف پیام‌های قبلی
+            const { deleteMessage } = require('./4bale');
+            try {
+                await deleteMessage(chatId, chatId);
+            } catch (error) {
+                console.log('Could not delete message, continuing...');
+            }
+            
+            // نمایش منوی اصلی قرآن‌آموز
+            const welcomeText = `📖 **پنل قرآن‌آموز**
+
+📋 **گزینه‌های موجود:**
+• 🤖 معرفی ربات
+• 📝 ثبت نام
+
+💡 **نکات مهم:**
+• می‌توانید هر ماه ثبت‌نام کنید
+• در نظر سنجی مدرسه شرکت کنید
+• از قابلیت‌های ربات استفاده کنید
+
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
+            
+            // کیبرد معمولی
+            const keyboard = {
+                keyboard: [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']],
+                resize_keyboard: true
+            };
+            
+            // ارسال پیام با کیبرد معمولی
+            const { sendMessage } = require('./4bale');
+            await sendMessage(chatId, welcomeText, { reply_markup: keyboard });
+            
+            // ارسال دکمه ثبت‌نام با کیبرد اینلاین
+            const { sendMessageWithInlineKeyboard } = require('./4bale');
+            await sendMessageWithInlineKeyboard(
+                chatId,
+                '👆 **برای ثبت‌نام در کارگاه‌ها:**',
+                [
+                    [{ text: '📝 ثبت‌نام در کارگاه', callback_data: 'quran_student_registration' }]
+                ]
+            );
+            
+            console.log(`✅ [15REG] بازگشت به منوی قرآن‌آموز برای کاربر ${userId} انجام شد`);
+            return true;
+            
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در بازگشت به منو:`, error);
+            return false;
+        }
+    }
+    
+    // متد جدید: انتخاب کارگاه قرآن‌آموز
+    async handleQuranStudentWorkshopSelection(chatId, userId, callbackQueryId, data) {
+        console.log(`📚 [15REG] انتخاب کارگاه برای کاربر ${userId}: ${data}`);
+        
+        try {
+            // استخراج ID کارگاه از callback data
+            const workshopId = data.replace('quran_student_select_workshop_', '');
+            
+            // خواندن اطلاعات کارگاه
+            const { readJson } = require('./3config');
+            const workshops = await readJson('data/workshops.json', {});
+            
+            if (!workshops || !workshops.coach || !workshops.coach[workshopId]) {
+                throw new Error('کارگاه یافت نشد');
+            }
+            
+            const workshop = workshops.coach[workshopId];
+            const instructorName = workshop.name || 'نامشخص';
+            const cost = workshop.cost || 'نامشخص';
+            const description = workshop.description || 'توضیحات موجود نیست';
+            const duration = workshop.duration || 'نامشخص';
+            const level = workshop.level || 'نامشخص';
+            
+            const text = `📚 **انتخاب کارگاه**
+
+👨‍🏫 **استاد:** ${instructorName}
+💰 **هزینه:** ${cost}
+📖 **توضیحات:** ${description}
+⏱️ **مدت:** ${duration}
+📊 **سطح:** ${level}
+
+🎯 **مرحله بعدی:** پرداخت هزینه کارگاه
+
+👆 **برای ادامه ثبت‌نام و پرداخت:**`;
+            
+            const keyboard = [
+                [{ text: `💳 پرداخت ${cost}`, callback_data: `quran_student_payment_${workshopId}` }],
+                [{ text: '🔙 بازگشت به انتخاب کارگاه', callback_data: 'quran_student_registration' }],
+                [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+            ];
+            
+            const { sendMessageWithInlineKeyboard } = require('./4bale');
+            await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+            
+            console.log(`✅ [15REG] انتخاب کارگاه ${workshopId} برای کاربر ${userId} نمایش داده شد`);
+            return true;
+            
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در انتخاب کارگاه:`, error);
+            const { sendMessageWithInlineKeyboard } = require('./4bale');
+            await sendMessageWithInlineKeyboard(chatId, '❌ خطا در انتخاب کارگاه. لطفاً دوباره تلاش کنید.', [
+                [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }]
+            ]);
+            return false;
+        }
     }
 }
 
