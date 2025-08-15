@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { sendMessage } = require('./4bale');
+const { sendMessage, answerCallbackQuery } = require('./4bale');
 const { USER_ACCESS_CONFIG, addUserToRole } = require('./3config');
 
 // اضافه کردن ماژول پرداخت
@@ -1279,16 +1279,24 @@ class RegistrationModule {
         
         // کیبرد اینلاین برای گزینه‌های اضافی
         const { sendMessageWithInlineKeyboard } = require('./4bale');
+        const { hasGroupManagementAccess } = require('./3config');
+        
+        // ساخت کیبرد بر اساس کانفیگ
+        const coachKeyboard = [
+            [{ text: '👨‍🏫 مدیریت کمک مربی', callback_data: 'manage_assistant' }],
+            [{ text: '🔙 بازگشت', callback_data: 'back' }]
+        ];
+        
+        // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
+        if (hasGroupManagementAccess('COACH')) {
+            coachKeyboard.unshift([{ text: '🎯 مدیریت گروه‌ها', callback_data: 'coach_groups' }]);
+        }
         
         // ارسال پیام با کیبرد اینلاین
         await sendMessageWithInlineKeyboard(
             msg.chat.id,
             '👆 **گزینه‌های اضافی:**',
-            [
-                                        [{ text: '🎯 مدیریت گروه‌ها', callback_data: 'coach_groups' }],
-                [{ text: '👨‍🏫 مدیریت کمک مربی', callback_data: 'manage_assistant' }],
-                [{ text: '🔙 بازگشت', callback_data: 'back' }]
-        ]
+            coachKeyboard
         );
         
         // اضافه کردن ماژول مدیریت کمک مربی
@@ -1340,11 +1348,39 @@ class RegistrationModule {
             console.log(`👨‍🏫 [15REG] مدیریت کمک مربی درخواست شد`);
             return await this.handleManageAssistant(chatId, userId, callbackQueryId);
         } else if (data === 'assistant_manage_groups') {
+            // بررسی کانفیگ مدیریت گروه‌ها
+            const { isGroupManagementEnabled, hasGroupManagementAccess } = require('./3config');
+            if (!isGroupManagementEnabled()) {
+                console.log(`❌ [15REG] Group management is disabled by config`);
+                await answerCallbackQuery(callbackQueryId, '⚠️ مدیریت گروه‌ها غیرفعال است', true);
+                return true;
+            }
+            
+            if (!hasGroupManagementAccess('ASSISTANT')) {
+                console.log(`❌ [15REG] Assistant has no access to group management`);
+                await answerCallbackQuery(callbackQueryId, '⚠️ شما دسترسی لازم برای مدیریت گروه‌ها را ندارید', true);
+                return true;
+            }
+            
             console.log(`🎯 [15REG] مدیریت گروه‌های کمک مربی درخواست شد`);
             return await this.handleAssistantManageGroups(chatId, userId, callbackQueryId);
-        }                 else if (data === 'coach_groups') {
-                    console.log(`🎯 [15REG] مدیریت گروه‌های مربی درخواست شد (همان مسیر کمک مربی)`);
-                    return false; // اجازه می‌دهد تا 5polling.js پردازش کند
+        } else if (data === 'coach_groups') {
+            // بررسی کانفیگ مدیریت گروه‌ها
+            const { isGroupManagementEnabled, hasGroupManagementAccess } = require('./3config');
+            if (!isGroupManagementEnabled()) {
+                console.log(`❌ [15REG] Group management is disabled by config`);
+                await answerCallbackQuery(callbackQueryId, '⚠️ مدیریت گروه‌ها غیرفعال است', true);
+                return true;
+            }
+            
+            if (!hasGroupManagementAccess('COACH')) {
+                console.log(`❌ [15REG] Coach has no access to group management`);
+                await answerCallbackQuery(callbackQueryId, '⚠️ شما دسترسی لازم برای مدیریت گروه‌ها را ندارید', true);
+                return true;
+            }
+            
+            console.log(`🎯 [15REG] مدیریت گروه‌های مربی درخواست شد (همان مسیر کمک مربی)`);
+            return false; // اجازه می‌دهد تا 5polling.js پردازش کند
                 } else if (data === 'assistant_back') {
             console.log(`🔙 [15REG] بازگشت کمک مربی درخواست شد`);
             return await this.handleAssistantBack(chatId, userId, callbackQueryId);
@@ -1563,15 +1599,23 @@ class RegistrationModule {
         
         // کیبرد اینلاین برای مدیریت گروه‌ها
         const { sendMessageWithInlineKeyboard } = require('./4bale');
+        const { hasGroupManagementAccess } = require('./3config');
+        
+        // ساخت کیبرد بر اساس کانفیگ
+        const assistantKeyboard = [
+            [{ text: '🔙 بازگشت', callback_data: 'assistant_back' }]
+        ];
+        
+        // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
+        if (hasGroupManagementAccess('ASSISTANT')) {
+            assistantKeyboard.unshift([{ text: '🎯 مدیریت گروه‌ها', callback_data: 'assistant_manage_groups' }]);
+        }
         
         // ارسال پیام با کیبرد اینلاین
         await sendMessageWithInlineKeyboard(
             ctx.chat.id,
             '👆 **گزینه‌های مدیریتی:**',
-            [
-                [{ text: '🎯 مدیریت گروه‌ها', callback_data: 'assistant_manage_groups' }],
-                [{ text: '🔙 بازگشت', callback_data: 'assistant_back' }]
-            ]
+            assistantKeyboard
         );
         
         console.log(`✅ [15REG] پنل کمک مربی برای کاربر ${userId} نمایش داده شد`);

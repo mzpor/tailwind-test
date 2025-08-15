@@ -19,11 +19,13 @@ const {
   ROLES, 
   USERS_BY_ROLE, 
   isButtonVisible, 
-  setButtonVisibility, 
+  setButtonVisible, 
   getButtonVisibilityConfig,
   isGroupEnabled,
   setGroupStatus,
-  getAllGroupsStatus
+  getAllGroupsStatus,
+  isGroupManagementEnabled,
+  hasGroupManagementAccess
 } = require('./3config');
 const { 
   getCurrentCoachId, 
@@ -645,19 +647,25 @@ async function handleRoleMessage(msg, role) {
         await registrationModule.handleCoachButton(msg);
         return; // ادامه حلقه بدون ارسال پیام معمولی
           } else if (isAssistant(msg.from.id)) {
-        // پنل کمک مربی - فقط دو گزینه
+        // پنل کمک مربی - بررسی کانفیگ مدیریت گروه‌ها
         const inlineKeyboard = [
-          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-          [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'assistant_groups' }]
+          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
+        
+        // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
+        if (hasGroupManagementAccess('ASSISTANT')) {
+          inlineKeyboard.push([{ text: '🏫 مدیریت گروه‌ها', callback_data: 'assistant_groups' }]);
+        }
+        
+        const groupManagementText = hasGroupManagementAccess('ASSISTANT') 
+          ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
+          : '';
         
         reply = `👨‍🏫 پنل کمک مربی
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
-• 🏫 مدیریت گروه‌ها (حضور و غیاب)
-
-👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
         
         await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
@@ -674,19 +682,27 @@ async function handleRoleMessage(msg, role) {
 ⏰ ${getTimeStamp()}`;
       keyboard = config.keyboard;
     } else {
-      // پنل مدیر - همه گزینه‌ها
+      // پنل مدیر - بررسی کانفیگ مدیریت گروه‌ها
       const inlineKeyboard = [
-        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-        [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }],
-        [{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]
+        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
       ];
+      
+      // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
+      if (hasGroupManagementAccess('SCHOOL_ADMIN')) {
+        inlineKeyboard.push([{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]);
+      }
+      
+      inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
+      
+      const groupManagementText = hasGroupManagementAccess('SCHOOL_ADMIN') 
+        ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
+        : '';
       
       reply = `🔧 پنل ${config.name}
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
-• 🏫 مدیریت گروه‌ها (حضور و غیاب)
-• 🏭 کارگاه‌ها
+${groupManagementText}• 🏭 کارگاه‌ها
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
@@ -1029,6 +1045,21 @@ function startPolling() {
               callback_query.data === 'assistant_groups' ||
               callback_query.data === 'back_to_groups' ||
               callback_query.data === 'back_to_main') {
+            
+            // بررسی کانفیگ مدیریت گروه‌ها
+            if (!isGroupManagementEnabled()) {
+              console.log('❌ [POLLING] Group management is disabled by config');
+              await answerCallbackQuery(callback_query.id, '⚠️ مدیریت گروه‌ها غیرفعال است', true);
+              return;
+            }
+            
+            // بررسی دسترسی کاربر
+            const userRole = getUserRole(callback_query.from.id);
+            if (!hasGroupManagementAccess(userRole)) {
+              console.log(`❌ [POLLING] User ${callback_query.from.id} with role ${userRole} has no access to group management`);
+              await answerCallbackQuery(callback_query.id, '⚠️ شما دسترسی لازم برای مدیریت گروه‌ها را ندارید', true);
+              return;
+            }
             
             console.log('🔄 [POLLING] Group management callback detected');
             // پردازش مدیریت گروه‌ها با استفاده از ماژول جدید
@@ -1681,53 +1712,73 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
       console.log(`🔙 [POLLING] Back to main for user ${userId} with role: ${role}`);
       
       if (isCoach(userId)) {
-        // پنل مربی
+        // پنل مربی - بررسی کانفیگ مدیریت گروه‌ها
         const inlineKeyboard = [
-          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-          [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]
+          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
+        
+        // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
+        if (hasGroupManagementAccess('COACH')) {
+          inlineKeyboard.push([{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]);
+        }
+        
+        const groupManagementText = hasGroupManagementAccess('COACH') 
+          ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
+          : '';
         
         const reply = `👨‍🏫 پنل مربی
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
-• 🏫 مدیریت گروه‌ها (حضور و غیاب)
-
-👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
         
         await sendMessageWithInlineKeyboard(chatId, reply, inlineKeyboard);
       } else if (isAssistant(userId)) {
-        // پنل کمک مربی
+        // پنل کمک مربی - بررسی کانفیگ مدیریت گروه‌ها
         const inlineKeyboard = [
-          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-          [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]
+          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
+        
+        // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
+        if (hasGroupManagementAccess('ASSISTANT')) {
+          inlineKeyboard.push([{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]);
+        }
+        
+        const groupManagementText = hasGroupManagementAccess('ASSISTANT') 
+          ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
+          : '';
         
         const reply = `👨‍🏫 پنل کمک مربی
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
-• 🏫 مدیریت گروه‌ها (حضور و غیاب)
-
-👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
         
         await sendMessageWithInlineKeyboard(chatId, reply, inlineKeyboard);
       } else {
-        // پنل مدیر - همه گزینه‌ها
+        // پنل مدیر - بررسی کانفیگ مدیریت گروه‌ها
         const inlineKeyboard = [
-          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-          [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }],
-          [{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]
+          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
+        
+        // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
+        if (hasGroupManagementAccess('SCHOOL_ADMIN')) {
+          inlineKeyboard.push([{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]);
+        }
+        
+        inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
+        
+        const groupManagementText = hasGroupManagementAccess('SCHOOL_ADMIN') 
+          ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
+          : '';
         
         const reply = `🔧 پنل مدیر مدرسه
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
-• 🏫 مدیریت گروه‌ها (حضور و غیاب)
-• 🏭 کارگاه‌ها
+${groupManagementText}• 🏭 کارگاه‌ها
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;

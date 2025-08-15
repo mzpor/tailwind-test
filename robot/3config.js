@@ -44,18 +44,18 @@ const GROUP_VISIBILITY_CONFIG = {
 
 // ===== کانفیگ مدیریت گروه‌ها =====
 const GROUP_MANAGEMENT_CONFIG = {
-  enabled: 1,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
+  enabled: 0,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
   visibility: {
-    admin: true,        // مدیر مدرسه
-    instructor: true,   // مربی
-    assistant: true,    // کمک مربی
-    regular: false      // کاربران عادی
+    admin: 1,        // مدیر مدرسه
+    instructor: 1,   // مربی
+    assistant: 1,    // کمک مربی
+    regular: 0       // کاربران عادی - همه دسترسی دارند
   },
   permissions: {
-    createGroup: ["admin", "instructor"],
-    editGroup: ["admin", "instructor"],
-    deleteGroup: ["admin"],
-    viewGroups: ["admin", "instructor", "assistant"]
+    createGroup: ["admin", "instructor", "assistant", "regular"],
+    editGroup: ["admin", "instructor", "assistant", "regular"],
+    deleteGroup: ["admin", "instructor", "assistant", "regular"],
+    viewGroups: ["admin", "instructor", "assistant", "regular"]
   }
 };
 
@@ -524,8 +524,8 @@ const getUserInfo = (userId) => {
 
 const getUserRoleFromCentral = (userId) => {
   const role = getUserInfo(userId).role;
-  // تبدیل به فرمت کوچک برای سازگاری با USER_ROLES
-  return role.toLowerCase();
+  // برگرداندن نقش به همان فرمت اصلی (بزرگ)
+  return role;
 };
 
 const getUserNameFromCentral = (userId) => {
@@ -1001,11 +1001,11 @@ function isRobotOnline() {
 
 // نقش‌های کاربران
 const ROLES = {
-  SCHOOL_ADMIN: 'school_admin',    // مدیر مدرسه
-  GROUP_ADMIN: 'group_admin',      // ادمین گروه
-  COACH: 'coach',                  // مربی
-  ASSISTANT: 'assistant',          // کمک مربی
-  STUDENT: 'student'               // قرآن آموز
+  SCHOOL_ADMIN: 'SCHOOL_ADMIN',    // مدیر مدرسه
+  GROUP_ADMIN: 'GROUP_ADMIN',      // ادمین گروه
+  COACH: 'COACH',                  // مربی
+  ASSISTANT: 'ASSISTANT',          // کمک مربی
+  STUDENT: 'STUDENT'               // قرآن آموز
 };
 
 // نگاشت نقش‌های کاربران (تولید خودکار از USERS)
@@ -1052,6 +1052,21 @@ const setButtonVisibility = (buttonName, visible) => {
 // تابع دریافت تمام تنظیمات نمایش دکمه‌ها
 const getButtonVisibilityConfig = () => {
   return { ...BUTTON_VISIBILITY_CONFIG };
+};
+
+// تابع بررسی فعال بودن مدیریت گروه‌ها
+const isGroupManagementEnabled = () => {
+  return GROUP_MANAGEMENT_CONFIG.enabled === 1;
+};
+
+// تابع بررسی دسترسی کاربر به مدیریت گروه‌ها
+const hasGroupManagementAccess = (userRole) => {
+  if (!isGroupManagementEnabled()) {
+    return false;
+  }
+  
+  // همه نقش‌ها دسترسی دارند
+  return true;
 };
 
 // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
@@ -1310,5 +1325,7 @@ module.exports = {
   getAllGroupsStatus,
   setDefaultGroupStatus,
   // ===== کانفیگ مدیریت گروه‌ها =====
-  GROUP_MANAGEMENT_CONFIG
+  GROUP_MANAGEMENT_CONFIG,
+  isGroupManagementEnabled,
+  hasGroupManagementAccess
 };
