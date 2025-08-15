@@ -52,17 +52,37 @@ function savePortConfig(port) {
     const fs = require('fs');
     const path = require('path');
     
+    // اطمینان از وجود دایرکتوری
+    const configDir = path.join(__dirname, '..', 'src', 'lib');
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+      console.log('📁 [CONFIG] دایرکتوری lib ایجاد شد');
+    }
+    
     const config = {
       gatewayPort: port,
       gatewayUrl: `http://localhost:${port}`,
       lastUpdate: new Date().toISOString()
     };
     
-    const configPath = path.join(__dirname, '..', 'src', 'lib', 'gateway-config.json');
+    const configPath = path.join(configDir, 'gateway-config.json');
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-    console.log(`✅ [CONFIG] پورت ${port} برای frontend ذخیره شد`);
+    console.log(`✅ [CONFIG] پورت ${port} برای frontend ذخیره شد در: ${configPath}`);
   } catch (error) {
     console.error('❌ [CONFIG] خطا در ذخیره کانفیگ پورت:', error);
+    // تلاش برای استفاده از مسیر جایگزین
+    try {
+      const fallbackPath = path.join(__dirname, '..', 'gateway-config.json');
+      const config = {
+        gatewayPort: port,
+        gatewayUrl: `http://localhost:${port}`,
+        lastUpdate: new Date().toISOString()
+      };
+      fs.writeFileSync(fallbackPath, JSON.stringify(config, null, 2));
+      console.log(`✅ [CONFIG] کانفیگ در مسیر جایگزین ذخیره شد: ${fallbackPath}`);
+    } catch (fallbackError) {
+      console.error('❌ [CONFIG] خطا در ذخیره در مسیر جایگزین:', fallbackError);
+    }
   }
 }
 

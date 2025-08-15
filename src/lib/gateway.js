@@ -2,18 +2,30 @@ const SHARED = import.meta.env.VITE_SHARED_KEY || "dev-123";
 
 // تابع دریافت BASE URL با پشتیبانی از پورت پویا
 async function getBaseUrl() {
-  try {
-    // ابتدا سعی کن از فایل کانفیگ پورت پویا بخوانی
-    const response = await fetch('/src/lib/gateway-config.json');
-    if (response.ok) {
-      const config = await response.json();
-      return config.gatewayUrl;
+  // تلاش برای خواندن از مسیرهای مختلف
+  const configPaths = [
+    '/src/lib/gateway-config.json',
+    '/gateway-config.json'
+  ];
+  
+  for (const configPath of configPaths) {
+    try {
+      const response = await fetch(configPath);
+      if (response.ok) {
+        const config = await response.json();
+        if (config.gatewayUrl) {
+          console.log('✅ [GATEWAY] کانفیگ پورت پویا یافت شد:', config.gatewayUrl);
+          return config.gatewayUrl;
+        }
+      }
+    } catch (error) {
+      console.warn(`⚠️ [GATEWAY] فایل کانفیگ در ${configPath} یافت نشد`);
     }
-  } catch (error) {
-    // اگر فایل کانفیگ نبود، از env variable یا پیش‌فرض استفاده کن
   }
   
-  return import.meta.env.VITE_GATEWAY_BASE || "http://localhost:3002";
+  const defaultUrl = import.meta.env.VITE_GATEWAY_BASE || "http://localhost:3002";
+  console.log('ℹ️ [GATEWAY] استفاده از URL پیش‌فرض:', defaultUrl);
+  return defaultUrl;
 }
 
 async function get(url){

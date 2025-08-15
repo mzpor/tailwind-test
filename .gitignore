@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Runtime generated files
+gateway-config.json
+src/lib/gateway-config.json

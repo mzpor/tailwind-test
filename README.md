@@ -1,12 +1,62 @@
-# React + Vite
+# مدرسه تلاوت - سیستم ثبت‌نام و نظرسنجی
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+این پروژه یک سیستم کامل برای مدیریت مدرسه تلاوت است که شامل ثبت‌نام دانش‌آموزان، نظرسنجی و مدیریت کارگاه‌ها می‌باشد.
 
-Currently, two official plugins are available:
+## 🚀 راه‌اندازی پروژه
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### پیش‌نیازها
+- Node.js (نسخه 18 یا بالاتر)
+- npm یا yarn
 
-## Expanding the ESLint configuration
+### نصب وابستگی‌ها
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### راه‌اندازی توسعه
+```bash
+npm run dev
+```
+
+### ساخت نسخه تولید
+```bash
+npm run build
+```
+
+## ⚙️ تنظیمات Gateway
+
+### فایل کانفیگ
+پروژه از فایل `gateway-config.json` برای تنظیم پورت و URL gateway استفاده می‌کند.
+
+**⚠️ مهم:** این فایل در زمان اجرا ایجاد می‌شود و نباید در git commit شود.
+
+### راه‌اندازی اولیه
+1. فایل `gateway-config.example.json` را کپی کنید:
+   ```bash
+   cp gateway-config.example.json gateway-config.json
+   ```
+
+2. مقادیر را مطابق نیاز خود تنظیم کنید:
+   ```json
+   {
+     "gatewayPort": 3003,
+     "gatewayUrl": "http://localhost:3003"
+   }
+   ```
+
+### ساخت خودکار
+اگر فایل کانفیگ وجود نداشته باشد، برنامه به صورت خودکار از مقادیر پیش‌فرض استفاده می‌کند.
+
+## 📁 ساختار پروژه
+
+- `src/` - کدهای frontend
+- `robot/` - کدهای backend و ربات تلگرام
+- `public/` - فایل‌های استاتیک
+- `data/` - فایل‌های داده (در زمان اجرا ایجاد می‌شوند)
+
+## 🔧 تکنولوژی‌ها
+
+- **Frontend:** React + Vite + Tailwind CSS
+- **Backend:** Node.js + Express
+- **Database:** JSON-based storage
+- **Telegram Bot:** Bale Bot API
