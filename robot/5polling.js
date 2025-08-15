@@ -667,7 +667,8 @@ async function handleRoleMessage(msg, role) {
           ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
           : '';
         
-        reply = `👨‍🏫 پنل کمک مربی
+        const { getRoleDisplayName } = require('./3config');
+        reply = `👨‍🏫 پنل ${getRoleDisplayName('ASSISTANT')}
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
@@ -678,7 +679,8 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         return; // ادامه حلقه بدون ارسال پیام معمولی
     } else if (getUserRole(msg.from.id) === ROLES.STUDENT) {
       // پنل قرآن آموز - نمایش ساده بدون Inline Keyboard
-      reply = `📖 **پنل قرآن آموز**
+      const { getRoleDisplayName } = require('./3config');
+      reply = `📖 **پنل ${getRoleDisplayName('STUDENT')}**
 
 📋 **گزینه‌های موجود:**
 • 🤖 معرفی ربات
@@ -712,7 +714,8 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         ? '• 👨‍🏫 استادها\n' 
         : '';
       
-      reply = `🔧 پنل ${config.name}
+              const { getRoleDisplayName } = require('./3config');
+        reply = `🔧 پنل ${getRoleDisplayName('SCHOOL_ADMIN')}
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
@@ -1536,7 +1539,8 @@ function startPolling() {
               continue;
             }
             if (msg.text === '/عضو') {
-              await sendMessage(msg.chat.id, '⚠️ این دستور برای قرآن آموزان است. ادمین‌ها و مربی‌ها نیازی به /عضو ندارند.');
+              const { getRoleDisplayName } = require('./3config');
+        await sendMessage(msg.chat.id, `⚠️ این دستور برای ${getRoleDisplayName('STUDENT')}ان است. ادمین‌ها و ${getRoleDisplayName('COACH')}ها نیازی به /عضو ندارند.`);
               continue;
             }
             if (msg.text === '/جمع‌آوری') {
@@ -1588,7 +1592,8 @@ function startPolling() {
           
           // دستورات غیرمجاز برای اعضا
           if (msg.text === '/ربات' || msg.text === '/لیست') {
-            await sendMessage(msg.chat.id, '⚠️ این دستورات فقط برای ادمین‌ها و مربی‌ها است.');
+            const { getRoleDisplayName } = require('./3config');
+        await sendMessage(msg.chat.id, `⚠️ این دستورات فقط برای ادمین‌ها و ${getRoleDisplayName('COACH')}ها است.`);
             continue;
           }
           

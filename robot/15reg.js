@@ -1261,11 +1261,12 @@ class RegistrationModule {
             return;
         }
         
-        const welcomeText = `👨‍🏫 **پنل مربی**
+        const { getRoleDisplayName } = require('./3config');
+        const welcomeText = `👨‍🏫 **پنل ${getRoleDisplayName('COACH')}**
 
 📋 **گزینه‌های موجود:**
 • 🎯 مدیریت گروه‌ها
-• 👨‍🏫 مدیریت کمک مربی`;
+• 👨‍🏫 مدیریت ${getRoleDisplayName('ASSISTANT')}`;
         
         // کیبرد معمولی (موجود)
         const keyboard = {
@@ -1283,7 +1284,7 @@ class RegistrationModule {
         
         // ساخت کیبرد بر اساس کانفیگ
         const coachKeyboard = [
-            [{ text: '👨‍🏫 مدیریت کمک مربی', callback_data: 'manage_assistant' }],
+            [{ text: `👨‍🏫 مدیریت ${getRoleDisplayName('ASSISTANT')}`, callback_data: 'manage_assistant' }],
             [{ text: '🔙 بازگشت', callback_data: 'back' }]
         ];
         

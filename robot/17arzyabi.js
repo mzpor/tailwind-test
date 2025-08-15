@@ -254,9 +254,10 @@ class ArzyabiModule {
         // ارسال به گروه گزارش
         this.sendPracticeReportToAdmin(userId, userData, currentDate, currentTime);
 
+        const { getRoleDisplayName } = require('./3config');
         return {
             success: true,
-            message: `✅ تمرین شما با موفقیت ثبت شد.\n📝 منتظر ارزیابی مربیان هستیم.`
+            message: `✅ تمرین شما با موفقیت ثبت شد.\n📝 منتظر ارزیابی ${getRoleDisplayName('COACH')}ان هستیم.`
         };
     }
 

@@ -353,16 +353,18 @@ const handleCoachesCallback = async (callbackQuery) => {
     
     if (data === 'coaches_list') {
       // نمایش لیست مربی‌ها
+      const { getRoleDisplayName } = require('./3config');
       const keyboard = generateCoachesKeyboard();
-      const text = '👨‍🏫 *لیست مربی‌ها و کارگاه‌ها*\n\nمربی مورد نظر خود را انتخاب کنید:';
+      const text = `👨‍🏫 *لیست ${getRoleDisplayName('COACH')}‌ها و کارگاه‌ها*\n\n${getRoleDisplayName('COACH')} مورد نظر خود را انتخاب کنید:`;
       
       return { text, keyboard, parse_mode: 'Markdown' };
       
     } else if (data.startsWith('coach_')) {
       // نمایش دانشجویان یک مربی
+      const { getRoleDisplayName } = require('./3config');
       const coachId = data.replace('coach_', '');
       const keyboard = generateStudentsKeyboard(coachId);
-      const text = '📚 *دانشجویان این مربی*\n\nدانشجوی مورد نظر خود را انتخاب کنید:';
+      const text = `📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
       
       return { text, keyboard, parse_mode: 'Markdown' };
       
@@ -417,7 +419,8 @@ const handleCoachesCallback = async (callbackQuery) => {
         
         if (coachId) {
           const keyboard = generateStudentsKeyboard(coachId);
-          const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}\n\n📚 *دانشجویان این مربی*\n\nدانشجوی مورد نظر خود را انتخاب کنید:`;
+          const { getRoleDisplayName } = require('./3config');
+          const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\n${getRoleDisplayName('STUDENT')}: ${studentId}\nوضعیت جدید: ${status}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
           
           return { text, keyboard, parse_mode: 'Markdown' };
         } else {
@@ -454,7 +457,8 @@ const handleCoachesCallback = async (callbackQuery) => {
         if (result.success) {
           // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
           const keyboard = generateStudentsKeyboard(coachId);
-          const text = `✅ *وضعیت حضور و غیاب همه دانشجویان به‌روزرسانی شد*\n\nوضعیت جدید: ${status}\n${result.message}\n\n📚 *دانشجویان این مربی*\n\nدانشجوی مورد نظر خود را انتخاب کنید:`;
+          const { getRoleDisplayName } = require('./3config');
+          const text = `✅ *وضعیت حضور و غیاب همه ${getRoleDisplayName('STUDENT')}ان به‌روزرسانی شد*\n\nوضعیت جدید: ${status}\n${result.message}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
           
           return { text, keyboard, parse_mode: 'Markdown' };
         } else {
@@ -473,12 +477,13 @@ const handleCoachesCallback = async (callbackQuery) => {
       const report = getAttendanceReport(coachId);
       
       // دریافت نام مربی
+      const { getRoleDisplayName } = require('./3config');
       const coaches = loadCoaches();
       const coach = coaches.find(c => c.id === coachId);
-      const coachName = coach ? coach.name : 'مربی';
+      const coachName = coach ? coach.name : getRoleDisplayName('COACH');
       
       const text = `📊 *گزارش حضور و غیاب - ${coachName}*\n\n` +
-        `📝 *لیست دانشجویان:*\n` +
+        `📝 *لیست ${getRoleDisplayName('STUDENT')}ان:*\n` +
         report.students.map((student, index) => {
           const statusEmoji = {
             'حاضر': '✅',
@@ -489,7 +494,7 @@ const handleCoachesCallback = async (callbackQuery) => {
           }[student.attendance] || '❓';
           
           return `${index + 1}. ${student.name} - ${statusEmoji} ${student.attendance}`;
-        }).join('\n') + `\n👥 *کل دانشجویان:* ${report.total}\n\n` +
+        }).join('\n') + `\n👥 *کل ${getRoleDisplayName('STUDENT')}ان:* ${report.total}\n\n` +
         `📈 *آمار:*\n` +
         `✅ حاضر: ${report.present}\n` +
         `⏰ حضور با تاخیر: ${report.late}\n` +
@@ -503,8 +508,9 @@ const handleCoachesCallback = async (callbackQuery) => {
       
     } else if (data === 'back_to_coaches') {
       // بازگشت به لیست مربی‌ها
+      const { getRoleDisplayName } = require('./3config');
       const keyboard = generateCoachesKeyboard();
-      const text = '👨‍🏫 *لیست مربی‌ها و کارگاه‌ها*\n\nمربی مورد نظر خود را انتخاب کنید:';
+      const text = `👨‍🏫 *لیست ${getRoleDisplayName('COACH')}‌ها و کارگاه‌ها*\n\n${getRoleDisplayName('COACH')} مورد نظر خود را انتخاب کنید:`;
       
       return { text, keyboard, parse_mode: 'Markdown' };
       
@@ -517,14 +523,16 @@ const handleCoachesCallback = async (callbackQuery) => {
       const coachId = data.replace('back_to_students_', '');
       
       if (coachId) {
+        const { getRoleDisplayName } = require('./3config');
         const keyboard = generateStudentsKeyboard(coachId);
-        const text = '📚 *دانشجویان این مربی*\n\nدانشجوی مورد نظر خود را انتخاب کنید:';
+        const text = `📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
         
         return { text, keyboard, parse_mode: 'Markdown' };
       } else {
         // اگر coachId پیدا نشد، به لیست مربی‌ها برمی‌گردیم
+        const { getRoleDisplayName } = require('./3config');
         const keyboard = generateCoachesKeyboard();
-        const text = '👨‍🏫 *لیست مربی‌ها و کارگاه‌ها*\n\nمربی مورد نظر خود را انتخاب کنید:';
+        const text = `👨‍🏫 *لیست ${getRoleDisplayName('COACH')}‌ها و کارگاه‌ها*\n\n${getRoleDisplayName('COACH')} مورد نظر خود را انتخاب کنید:`;
         
         return { text, keyboard, parse_mode: 'Markdown' };
       }

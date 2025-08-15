@@ -317,7 +317,8 @@ class AttendanceManager {
     // اضافه کردن گزینه مدیریت برای مدیران
     if (isAdmin(userId)) {
       keyboard.push([{ text: "🏭 مدیریت کارگاه‌ها", callback_data: "kargah_menu" }]);
-      keyboard.push([{ text: "👨‍🏫 مربی ها", callback_data: "instructors_menu" }]);
+              const { getRoleDisplayName } = require('./3config');
+        keyboard.push([{ text: `👨‍🏫 ${getRoleDisplayName('COACH')} ها`, callback_data: "instructors_menu" }]);
     }
     
     return keyboard;
