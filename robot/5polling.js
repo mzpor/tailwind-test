@@ -1549,11 +1549,25 @@ function startPolling() {
           // 🎯 پردازش پیام‌های تمرین (صوتی با کپشن تمرین)
           if (arzyabiModule.isPracticeMessage(msg)) {
             console.log(`🎯 [POLLING] Practice message detected in group ${msg.chat.title}`);
-            const success = await arzyabiModule.handlePracticeSubmission(msg);
-            if (success) {
+            
+            // ایجاد userData از اطلاعات پیام
+            const userData = {
+              full_name: msg.from.first_name + (msg.from.last_name ? ' ' + msg.from.last_name : ''),
+              first_name: msg.from.first_name,
+              last_name: msg.from.last_name || '',
+              username: msg.from.username || ''
+            };
+            
+            const result = await arzyabiModule.handlePracticeSubmission(msg, userData);
+            if (result && result.success) {
               console.log('✅ [POLLING] Practice message handled successfully');
+              // ارسال پیام پاسخ به کاربر
+              await sendMessage(msg.chat.id, result.message);
             } else {
               console.error('❌ [POLLING] Failed to handle practice message');
+              if (result && result.message) {
+                await sendMessage(msg.chat.id, result.message);
+              }
             }
             continue;
           }

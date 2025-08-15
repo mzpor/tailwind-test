@@ -1147,6 +1147,11 @@ const isVoiceWithReplyTaskEnabled = () => isPracticeDetectionEnabled('voice_with
 const isVoiceWithReplyStudentEnabled = () => isPracticeDetectionEnabled('voice_with_reply_student');
 const isTextOnlyEnabled = () => isPracticeDetectionEnabled('text_only');
 
+// بررسی فعال بودن تشخیص متن ریپلای به صوت
+const isTextReplyToVoiceEnabled = () => {
+  return EVALUATION_SYSTEM_CONFIG.evaluation_system?.practice_detection?.text_reply_to_voice === 1;
+};
+
 // بررسی فعال بودن زمان تمرین
 const isPracticeScheduleEnabled = () => {
   if (!isEvaluationSystemEnabled()) {
@@ -1527,6 +1532,7 @@ module.exports = {
   isVoiceWithReplyTaskEnabled,
   isVoiceWithReplyStudentEnabled,
   isTextOnlyEnabled,
+  isTextReplyToVoiceEnabled,
   isPracticeScheduleEnabled,
   getPracticeSchedule,
   isEvaluationEnabled,

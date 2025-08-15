@@ -37,7 +37,7 @@ class ArzyabiModule {
         return {
             evaluation_system: {
                 enabled: 1,
-                practice_detection: { voice_with_caption: 1, voice_with_reply_task: 1, voice_with_reply_student: 1, text_only: 0 },
+                practice_detection: { voice_with_caption: 1, voice_with_reply_task: 1, voice_with_reply_student: 1, text_only: 1, text_reply_to_voice: 1 },
                 practice_schedule: { enabled: 1, hours: [14, 15, 16], days: [0, 1, 2, 3, 4] },
                 evaluation: { enabled: 1, min_evaluators: 2, auto_complete: 1 },
                 satisfaction_survey: { enabled: 1, show_after_evaluation: 1, send_to_admin_group: 1 },
@@ -350,6 +350,15 @@ class ArzyabiModule {
                 const text = message.text.toLowerCase().trim();
                 if (text === 'تکلیف' || text === 'تمرین') {
                     console.log('✅ [ARZYABI] Practice detected: text only');
+                    return true;
+                }
+            }
+
+            // روش 5: متن ریپلای به صوت (مثل "تکلیف" ریپلای به صوت)
+            if (message.text && message.reply_to_message && message.reply_to_message.voice && detection?.text_reply_to_voice === 1) {
+                const text = message.text.toLowerCase().trim();
+                if (text.includes('تکلیف') || text.includes('تمرین') || text.includes('قرآن آموز')) {
+                    console.log('✅ [ARZYABI] Practice detected: text reply to voice message');
                     return true;
                 }
             }
