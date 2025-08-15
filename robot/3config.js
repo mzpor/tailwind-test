@@ -30,9 +30,54 @@ const GROUP_NAMES = {
 const ROLE_DISPLAY_NAMES = {
 SCHOOL_ADMIN: 'مدیر',COACH:'مربی',ASSISTANT:'کمک‌‌‌مربی',STUDENT: 'قرآن‌آموز'  
   
-// SCHOOL_ADMIN:'مدیر', COACH: 'راهبر', ASSISTANT:'دبیر',  STUDENT:'فعال'
-    
+  // SCHOOL_ADMIN:'مدیر', COACH: 'راهبر', ASSISTANT:'دبیر',  STUDENT:'فعال'
+};
 
+// ===== کانفیگ کارگاه‌ها =====
+const WORKSHOP_CONFIG = {
+  // فیلدهای اجباری/اختیاری (0 = اختیاری، 1 = اجباری)
+  REQUIRED_FIELDS: {
+    INSTRUCTOR_NAME: 1,    // نام مربی - اجباری
+    PHONE: 0,              // تلفن - اختیاری  
+    COST: 1,               // هزینه - اجباری
+    LINK: 1                 // لینک - اجباری
+    
+    // INSTRUCTOR_NAME: 1,    // نام راهبر - اجباری
+    // PHONE: 0,              // تلفن راهبر - اختیاری  
+    // COST: 1,               // استان - اجباری
+    // LINK: 1                 // لینک گروه - اجباری
+  },
+  
+  // نام‌های ظاهری فیلدها
+  FIELD_DISPLAY_NAMES: {
+    INSTRUCTOR_NAME: 'نام مربی',     // نام مربی
+    PHONE: 'تلفن مربی',             // تلفن مربی
+    COST: 'هزینه',                   // هزینه
+    LINK: 'لینک گروه'                // لینک گروه
+    
+    // INSTRUCTOR_NAME: 'نام راهبر',     // نام راهبر
+    // PHONE: 'تلفن راهبر',             // تلفن راهبر
+    // COST: 'استان',                   // استان
+    // LINK: 'لینک گروه'                // لینک گروه
+  },
+  
+  // نام ظاهری کارگاه
+  WORKSHOP_DISPLAY_NAME: 'کارگاه',     // کارگاه
+    
+  // WORKSHOP_DISPLAY_NAME: 'کلاس',     // کلاس
+  
+  // مقادیر پیش‌فرض
+  DEFAULTS: {
+    CAPACITY: 20,                     // ظرفیت: 20 نفر
+    DURATION: '3 ماه',                // مدت: 3 ماه
+    LEVEL: 'همه سطوح',
+    DESCRIPTION: 'توضیحات موجود نیست'
+    
+    // CAPACITY: 30,                     // ظرفیت: 30 نفر
+    // DURATION: '1 ماه',                // مدت: 1 ماه
+    // LEVEL: 'همه سطوح',
+    // DESCRIPTION: 'توضیحات موجود نیست'
+  }
 };
 
 // ===== کنترل نمایش دکمه‌ها در پنل مدیر =====
@@ -1670,6 +1715,8 @@ module.exports = {
   OSATD_MANAGEMENT_CONFIG,
   isOsatdManagementEnabled,
   hasOsatdManagementAccess,
+  // ===== کانفیگ کارگاه‌ها =====
+  WORKSHOP_CONFIG,
   // ===== کانفیگ سیستم ارزیابی =====
   EVALUATION_SYSTEM_CONFIG,
   isEvaluationSystemEnabled,

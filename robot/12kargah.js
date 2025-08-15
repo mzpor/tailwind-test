@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const { hasPermission } = require('./6mid');
-const { addCoachByPhone, removeCoachByPhone } = require('./3config.js');
+const { addCoachByPhone, removeCoachByPhone, WORKSHOP_CONFIG } = require('./3config.js');
 
 class KargahModule {
   constructor() {
@@ -145,9 +145,9 @@ class KargahModule {
     
     let text = '';
     if (!this.workshops || Object.keys(this.workshops).length === 0) {
-      text = '🏭 *مدیریت کارگاه‌ها*\n\n❌ هیچ کارگاهی ثبت نشده است.\nبرای شروع، کارگاه جدید اضافه کنید:';
+      text = `🏭 *مدیریت ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}‌ها*\n\n❌ هیچ ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}ی ثبت نشده است.\nبرای شروع، ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME} جدید اضافه کنید:`;
     } else {
-      text = '🏭 *مدیریت کارگاه‌ها*\n\n📋 لیست کارگاه‌های ثبت شده:\n';
+      text = `🏭 *مدیریت ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}‌ها*\n\n📋 لیست ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}های ثبت شده:\n`;
       for (const [coachId, workshop] of Object.entries(this.workshops.coach)) {
         const instructorName = workshop.name || 'نامشخص';
         const cost = workshop.cost || 'نامشخص';
@@ -156,7 +156,7 @@ class KargahModule {
         // نمایش نام مربی به جای ID کارگاه
         text += `${emoji} *${instructorName}* - ${cost}\n`;
       }
-      text += '\nبرای مشاهده جزئیات و ویرایش، روی کارگاه مورد نظر کلیک کنید:';
+      text += `\nبرای مشاهده جزئیات و ویرایش، روی ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME} مورد نظر کلیک کنید:`;
     }
     
     const replyMarkup = this.getWorkshopManagementKeyboard();
@@ -270,9 +270,9 @@ class KargahModule {
   async handleListWorkshops(chatId, messageId, callbackQueryId) {
     let text = '';
     if (!this.workshops.coach || Object.keys(this.workshops.coach).length === 0) {
-      text = '📋 *لیست کارگاه‌ها*\n\n❌ هیچ کارگاهی ثبت نشده است.';
+      text = `📋 *لیست ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}‌ها*\n\n❌ هیچ ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}ی ثبت نشده است.`;
     } else {
-      text = '📋 *لیست کارگاه‌ها*\n\n';
+      text = `📋 *لیست ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}‌ها*\n\n`;
       for (const [coachId, coach] of Object.entries(this.workshops.coach)) {
         const instructorName = coach.name || 'نامشخص';
         const cost = coach.cost || 'نامشخص';
@@ -296,7 +296,7 @@ class KargahModule {
     console.log(`🔍 [KARGAH] User state set. isUserInState(${userId}): ${this.isUserInState(userId)}`);
     console.log(`🔍 [KARGAH] Current userStates:`, this.userStates);
     
-    const text = '📝 *اضافه کردن کارگاه جدید*\n\nلطفاً نام مربی را وارد کنید:';
+    const text = `📝 *اضافه کردن ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME} جدید*\n\nلطفاً ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.INSTRUCTOR_NAME} را وارد کنید:`;
     const keyboard = [[{ text: '🔙 بازگشت', callback_data: 'kargah_list' }]];
     await this.editMessageWithInlineKeyboard(chatId, messageId, text, keyboard);
     return true;
@@ -315,7 +315,7 @@ class KargahModule {
       if (userState === 'kargah_add_instructor') {
         // ساده‌سازی اعتبارسنجی نام مربی - فقط بررسی خالی نبودن
         if (!text || text.trim().length === 0) {
-          await this.sendMessage(chatId, '❌ نام مربی نمی‌تواند خالی باشد. لطفاً نام مربی را وارد کنید:');
+          await this.sendMessage(chatId, `❌ ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.INSTRUCTOR_NAME} نمی‌تواند خالی باشد. لطفاً ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.INSTRUCTOR_NAME} را وارد کنید:`);
           return true;
         }
         
@@ -323,7 +323,7 @@ class KargahModule {
         this.tempData[userId].instructor_name = text.trim();
         this.userStates[userId] = 'kargah_add_cost';
         
-        const responseText = `✅ نام مربی ثبت شد: *${text.trim()}*\n\n💰 لطفاً هزینه کارگاه را وارد کنید:\n\n📝 مثال‌های صحیح:\n• 500,000 تومان\n• 750000 تومان\n• ۱,۰۰۰,۰۰۰ تومان\n• 1000000 تومان`;
+        const responseText = `✅ ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.INSTRUCTOR_NAME} ثبت شد: *${text.trim()}*\n\n💰 لطفاً ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.COST} ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME} را وارد کنید:\n\n📝 مثال‌های صحیح:\n• 500,000 تومان\n• 750000 تومان\n• ۱,۰۰۰,۰۰۰ تومان\n• 1000000 تومان`;
         await this.sendMessage(chatId, responseText);
         
       } else if (userState === 'kargah_add_cost') {
@@ -337,7 +337,7 @@ class KargahModule {
         this.tempData[userId].cost = normalizedCost;
         this.userStates[userId] = 'kargah_add_phone';
         
-        const responseText = `✅ هزینه ثبت شد: *${normalizedCost}*\n\n📱 لطفاً شماره تلفن مربی را وارد کنید (اختیاری):\n\n📝 مثال‌های صحیح:\n• 09123456789\n• 0912 345 6789\n• 0 برای رد کردن`;
+        const responseText = `✅ ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.COST} ثبت شد: *${normalizedCost}*\n\n📱 لطفاً ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.PHONE} را وارد کنید (اختیاری):\n\n📝 مثال‌های صحیح:\n• 09123456789\n• 0912 345 6789\n• 0 برای رد کردن`;
         await this.sendMessage(chatId, responseText);
         
       } else if (userState === 'kargah_add_phone') {
@@ -358,8 +358,8 @@ class KargahModule {
         this.tempData[userId].instructor_phone = instructorPhone;
         this.userStates[userId] = 'kargah_add_link';
         
-        const phoneStatus = instructorPhone ? `✅ تلفن مربی: *${instructorPhone}*` : '⏭️ تلفن مربی رد شد';
-        const responseText = `${phoneStatus}\n\n🔗 لطفاً لینک گروه تلگرام را وارد کنید:\n\n📝 مثال‌های صحیح:\n• https://t.me/workshop_group\n• https://t.me/+abcdefghijk\n• t.me/workshop_group`;
+        const phoneStatus = instructorPhone ? `✅ ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.PHONE}: *${instructorPhone}*` : `⏭️ ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.PHONE} رد شد`;
+        const responseText = `${phoneStatus}\n\n🔗 لطفاً ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.LINK} را وارد کنید:\n\n📝 مثال‌های صحیح:\n• https://t.me/workshop_group\n• https://t.me/+abcdefghijk\n• t.me/workshop_group`;
         await this.sendMessage(chatId, responseText);
         
       } else if (userState === 'kargah_add_link') {
@@ -367,8 +367,8 @@ class KargahModule {
         this.tempData[userId].link = text;
         
         // نمایش خلاصه کارگاه قبل از ذخیره
-        const phoneDisplay = this.tempData[userId].instructor_phone ? `\n📱 *تلفن مربی:* ${this.tempData[userId].instructor_phone}` : '\n📱 *تلفن مربی:* وارد نشده';
-        const summaryText = `📋 *خلاصه کارگاه جدید*\n\n👨‍🏫 *نام مربی:* ${this.tempData[userId].instructor_name}${phoneDisplay}\n💰 *هزینه:* ${this.tempData[userId].cost}\n🔗 *لینک گروه:* ${this.tempData[userId].link}\n\n✅ آیا می‌خواهید این کارگاه را ذخیره کنید؟`;
+        const phoneDisplay = this.tempData[userId].instructor_phone ? `\n📱 *${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.PHONE}:* ${this.tempData[userId].instructor_phone}` : `\n📱 *${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.PHONE}:* وارد نشده`;
+        const summaryText = `📋 *خلاصه ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME} جدید*\n\n👨‍🏫 *${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.INSTRUCTOR_NAME}:* ${this.tempData[userId].instructor_name}${phoneDisplay}\n💰 *${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.COST}:* ${this.tempData[userId].cost}\n🔗 *${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.LINK}:* ${this.tempData[userId].link}\n\n✅ آیا می‌خواهید این ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME} را ذخیره کنید؟`;
         
         const keyboard = [
           [{ text: '✅ بله، ذخیره کن', callback_data: 'kargah_confirm_save' }],
@@ -392,7 +392,7 @@ class KargahModule {
         delete this.tempData[userId];
       }
       
-      const responseText = '❌ خطا در اضافه کردن کارگاه. لطفاً دوباره تلاش کنید.';
+      const responseText = `❌ خطا در اضافه کردن ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}. لطفاً دوباره تلاش کنید.`;
       const replyMarkup = this.getWorkshopManagementKeyboard();
       await this.sendMessageWithInlineKeyboard(chatId, responseText, replyMarkup.inline_keyboard);
       return false;
@@ -886,10 +886,10 @@ class KargahModule {
         phone: workshopData.instructor_phone,
         cost: workshopData.cost,
         link: workshopData.link,
-        description: workshopData.description || 'توضیحات موجود نیست',
-        capacity: workshopData.capacity || 20,
-        duration: workshopData.duration || '3 ماه',
-        level: workshopData.level || 'همه سطوح'
+        description: workshopData.description || WORKSHOP_CONFIG.DEFAULTS.DESCRIPTION,
+        capacity: workshopData.capacity || WORKSHOP_CONFIG.DEFAULTS.CAPACITY,
+        duration: workshopData.duration || WORKSHOP_CONFIG.DEFAULTS.DURATION,
+        level: workshopData.level || WORKSHOP_CONFIG.DEFAULTS.LEVEL
       };
       
       // اطمینان از وجود بخش coach
@@ -915,7 +915,7 @@ class KargahModule {
       }
       
       // نمایش پیام موفقیت
-      const responseText = `✅ کارگاه *${workshopData.instructor_name}* با موفقیت اضافه شد!\n\n🆔 *کد کارگاه:* coach_${coachId}\n👨‍🏫 *مربی:* ${workshopData.instructor_name}\n💰 *هزینه:* ${workshopData.cost}\n🔗 *لینک:* ${workshopData.link}`;
+      const responseText = `✅ ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME} *${workshopData.instructor_name}* با موفقیت اضافه شد!\n\n🆔 *کد ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME}:* coach_${coachId}\n👨‍🏫 *${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.INSTRUCTOR_NAME}:* ${workshopData.instructor_name}\n💰 *${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.COST}:* ${workshopData.cost}\n🔗 *${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.LINK}:* ${workshopData.link}`;
       const replyMarkup = this.getWorkshopManagementKeyboard();
       await this.editMessageWithInlineKeyboard(chatId, messageId, responseText, replyMarkup.inline_keyboard);
       
@@ -940,7 +940,7 @@ class KargahModule {
       this.userStates[userId] = 'kargah_add_instructor';
       this.tempData[userId] = {};
       
-      const text = '📝 *اضافه کردن کارگاه جدید*\n\nلطفاً نام مربی را وارد کنید:';
+      const text = `📝 *اضافه کردن ${WORKSHOP_CONFIG.WORKSHOP_DISPLAY_NAME} جدید*\n\nلطفاً ${WORKSHOP_CONFIG.FIELD_DISPLAY_NAMES.INSTRUCTOR_NAME} را وارد کنید:`;
       const keyboard = [[{ text: '🔙 بازگشت', callback_data: 'kargah_list' }]];
       await this.editMessageWithInlineKeyboard(chatId, messageId, text, keyboard);
       
