@@ -189,19 +189,36 @@ class ArzyabiModule {
 
     // ===== مدیریت زمان‌بندی تمرین =====
     isPracticeTime() {
-        if (!this.practiceData.practice_schedule.enabled) {
+        try {
+            // بارگذاری کانفیگ
+            const { isPracticeScheduleEnabled, getPracticeSchedule } = require('./3config');
+            
+            // بررسی فعال بودن سیستم ارزیابی
+            if (!isPracticeScheduleEnabled()) {
+                return false;
+            }
+
+            // دریافت تنظیمات از کانفیگ
+            const schedule = getPracticeSchedule();
+            if (!schedule) {
+                return false;
+            }
+
+            const now = new Date();
+            const currentDay = now.getDay(); // 0 = یکشنبه، 1 = دوشنبه، ...
+            const currentHour = now.getHours();
+
+            // تبدیل به روزهای هفته فارسی
+            const persianDay = (currentDay + 1) % 7; // 0 = شنبه، 1 = یکشنبه، ...
+            
+            const isActiveDay = schedule.days.includes(persianDay);
+            const isActiveHour = schedule.hours.includes(currentHour);
+            
+            return isActiveDay && isActiveHour;
+        } catch (error) {
+            console.error('❌ [ARZYABI] Error in isPracticeTime:', error.message);
             return false;
         }
-
-        const now = new Date();
-        const currentDay = now.getDay(); // 0 = یکشنبه، 1 = دوشنبه، ...
-        const currentHour = now.getHours();
-
-        // تبدیل به روزهای هفته فارسی
-        const persianDay = (currentDay + 1) % 7; // 0 = شنبه، 1 = یکشنبه، ...
-        
-        return this.practiceData.practice_schedule.days.includes(persianDay) &&
-               this.practiceData.practice_schedule.hours.includes(currentHour);
     }
 
     // ===== پردازش تمرین ارسالی =====
@@ -250,28 +267,58 @@ class ArzyabiModule {
 
     // ===== تشخیص تمرین از پیام =====
     isPracticeMessage(message) {
-        // روش 1: صوت با کپشن "تکلیف"
-        if (message.voice && message.caption) {
-            const caption = message.caption.toLowerCase().trim();
-            return caption.includes('تکلیف') || caption.includes('تمرین');
-        }
+        try {
+            // بارگذاری کانفیگ
+            const { 
+                isVoiceWithCaptionEnabled, 
+                isVoiceWithReplyTaskEnabled, 
+                isVoiceWithReplyStudentEnabled, 
+                isTextOnlyEnabled 
+            } = require('./3config');
 
-        // روش 2: صوت با ریپلای به متن "تکلیف" یا "قرآن آموز"
-        if (message.voice && message.reply_to_message) {
-            const replyText = message.reply_to_message.text || '';
-            const replyLower = replyText.toLowerCase().trim();
-            return replyLower.includes('تکلیف') || 
-                   replyLower.includes('تمرین') || 
-                   replyLower.includes('قرآن آموز');
-        }
+            // روش 1: صوت با کپشن "تکلیف"
+            if (message.voice && message.caption && isVoiceWithCaptionEnabled()) {
+                const caption = message.caption.toLowerCase().trim();
+                if (caption.includes('تکلیف') || caption.includes('تمرین')) {
+                    console.log('✅ [ARZYABI] Practice detected: voice with caption');
+                    return true;
+                }
+            }
 
-        // روش 3: متن "تکلیف" یا "تمرین" (برای تست)
-        if (message.text) {
-            const text = message.text.toLowerCase().trim();
-            return text === 'تکلیف' || text === 'تمرین';
-        }
+            // روش 2: صوت با ریپلای به متن "تکلیف"
+            if (message.voice && message.reply_to_message && isVoiceWithReplyTaskEnabled()) {
+                const replyText = message.reply_to_message.text || '';
+                const replyLower = replyText.toLowerCase().trim();
+                if (replyLower.includes('تکلیف') || replyLower.includes('تمرین')) {
+                    console.log('✅ [ARZYABI] Practice detected: voice with reply to task');
+                    return true;
+                }
+            }
 
-        return false;
+            // روش 3: صوت با ریپلای به "قرآن آموز"
+            if (message.voice && message.reply_to_message && isVoiceWithReplyStudentEnabled()) {
+                const replyText = message.reply_to_message.text || '';
+                const replyLower = replyText.toLowerCase().trim();
+                if (replyLower.includes('قرآن آموز')) {
+                    console.log('✅ [ARZYABI] Practice detected: voice with reply to student');
+                    return true;
+                }
+            }
+
+            // روش 4: متن "تکلیف" یا "تمرین" (برای تست)
+            if (message.text && isTextOnlyEnabled()) {
+                const text = message.text.toLowerCase().trim();
+                if (text === 'تکلیف' || text === 'تمرین') {
+                    console.log('✅ [ARZYABI] Practice detected: text only');
+                    return true;
+                }
+            }
+
+            return false;
+        } catch (error) {
+            console.error('❌ [ARZYABI] Error in isPracticeMessage:', error.message);
+            return false;
+        }
     }
 
     // ===== پردازش پیام تمرین =====

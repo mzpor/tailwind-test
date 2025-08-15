@@ -70,6 +70,56 @@ const OSATD_MANAGEMENT_CONFIG = {
   }
 };
 
+// ===== کانفیگ سیستم ارزیابی و تمرین =====
+const EVALUATION_SYSTEM_CONFIG = {
+  enabled: 1,  // 0 = غیرفعال (کل سیستم ارزیابی غیرفعال)، 1 = فعال
+  
+  // قابلیت‌های تشخیص تمرین
+  practice_detection: {
+    voice_with_caption: 1,    // 0 = غیرفعال، 1 = فعال (صوت با کپشن "تکلیف")
+    voice_with_reply_task: 1, // 0 = غیرفعال، 1 = فعال (صوت با ریپلای به "تکلیف")
+    voice_with_reply_student: 1, // 0 = غیرفعال، 1 = فعال (صوت با ریپلای به "قرآن آموز")
+    text_only: 0              // 0 = غیرفعال، 1 = فعال (متن ساده "تکلیف" یا "تمرین")
+  },
+  
+  // تنظیمات زمان تمرین
+  practice_schedule: {
+    enabled: 1,           // 0 = غیرفعال، 1 = فعال
+    hours: [14, 15, 16], // ساعت 2 تا 5 عصر
+    days: [0, 1, 2, 3, 4] // شنبه تا چهارشنبه
+  },
+  
+  // تنظیمات ارزیابی
+  evaluation: {
+    enabled: 1,           // 0 = غیرفعال، 1 = فعال
+    min_evaluators: 2,    // حداقل تعداد ارزیابی‌کنندگان
+    auto_complete: 1      // 0 = دستی، 1 = خودکار
+  },
+  
+  // تنظیمات نظرسنجی
+  satisfaction_survey: {
+    enabled: 1,                    // 0 = غیرفعال، 1 = فعال
+    show_after_evaluation: 1,     // 0 = غیرفعال، 1 = فعال
+    send_to_admin_group: 1        // 0 = غیرفعال، 1 = فعال
+  },
+  
+  // تنظیمات گزارش‌گیری
+  reporting: {
+    daily_reports: 1,     // 0 = غیرفعال، 1 = فعال
+    weekly_reports: 1,    // 0 = غیرفعال، 1 = فعال
+    monthly_reports: 1,   // 0 = غیرفعال، 1 = فعال
+    send_to_admin_group: 1 // 0 = غیرفعال، 1 = فعال
+  },
+  
+  // دسترسی‌ها
+  access: {
+    admin: 1,        // مدیر مدرسه
+    instructor: 1,   // مربی
+    assistant: 1,    // کمک مربی
+    regular: 0       // کاربران عادی
+  }
+};
+
 // ===== کنترل دسترسی کاربران =====
 const USER_ACCESS_CONFIG = {
   allowUserReset: 1,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
@@ -1095,6 +1145,137 @@ const hasOsatdManagementAccess = (userRole) => {
   return true;
 };
 
+// ===== توابع مدیریت کانفیگ سیستم ارزیابی =====
+
+// بررسی فعال بودن کل سیستم ارزیابی
+const isEvaluationSystemEnabled = () => {
+  return EVALUATION_SYSTEM_CONFIG.enabled === 1;
+};
+
+// بررسی فعال بودن قابلیت تشخیص تمرین
+const isPracticeDetectionEnabled = (detectionType) => {
+  if (!isEvaluationSystemEnabled()) {
+    return false;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.practice_detection[detectionType] === 1;
+};
+
+// بررسی فعال بودن قابلیت‌های مختلف تشخیص
+const isVoiceWithCaptionEnabled = () => isPracticeDetectionEnabled('voice_with_caption');
+const isVoiceWithReplyTaskEnabled = () => isPracticeDetectionEnabled('voice_with_reply_task');
+const isVoiceWithReplyStudentEnabled = () => isPracticeDetectionEnabled('voice_with_reply_student');
+const isTextOnlyEnabled = () => isPracticeDetectionEnabled('text_only');
+
+// بررسی فعال بودن زمان تمرین
+const isPracticeScheduleEnabled = () => {
+  if (!isEvaluationSystemEnabled()) {
+    return false;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.practice_schedule.enabled === 1;
+};
+
+// دریافت تنظیمات زمان تمرین
+const getPracticeSchedule = () => {
+  if (!isPracticeScheduleEnabled()) {
+    return null;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.practice_schedule;
+};
+
+// بررسی فعال بودن سیستم ارزیابی
+const isEvaluationEnabled = () => {
+  if (!isEvaluationSystemEnabled()) {
+    return false;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.evaluation.enabled === 1;
+};
+
+// دریافت حداقل تعداد ارزیابی‌کنندگان
+const getMinEvaluators = () => {
+  if (!isEvaluationEnabled()) {
+    return 1;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.evaluation.min_evaluators;
+};
+
+// بررسی فعال بودن نظرسنجی رضایت
+const isSatisfactionSurveyEnabled = () => {
+  if (!isEvaluationSystemEnabled()) {
+    return false;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.satisfaction_survey.enabled === 1;
+};
+
+// بررسی نمایش نظرسنجی بعد از ارزیابی
+const shouldShowSatisfactionAfterEvaluation = () => {
+  if (!isSatisfactionSurveyEnabled()) {
+    return false;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.satisfaction_survey.show_after_evaluation === 1;
+};
+
+// بررسی ارسال نظرسنجی به گروه ادمین
+const shouldSendSatisfactionToAdmin = () => {
+  if (!isSatisfactionSurveyEnabled()) {
+    return false;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.satisfaction_survey.send_to_admin_group === 1;
+};
+
+// بررسی فعال بودن گزارش‌گیری
+const isReportingEnabled = (reportType) => {
+  if (!isEvaluationSystemEnabled()) {
+    return false;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.reporting[reportType] === 1;
+};
+
+// بررسی دسترسی کاربر به سیستم ارزیابی
+const hasEvaluationAccess = (userRole) => {
+  if (!isEvaluationSystemEnabled()) {
+    return false;
+  }
+  
+  return EVALUATION_SYSTEM_CONFIG.access[userRole] === 1;
+};
+
+// تغییر وضعیت قابلیت تشخیص تمرین
+const setPracticeDetectionStatus = (detectionType, enabled) => {
+  if (EVALUATION_SYSTEM_CONFIG.practice_detection.hasOwnProperty(detectionType)) {
+    EVALUATION_SYSTEM_CONFIG.practice_detection[detectionType] = enabled ? 1 : 0;
+    console.log(`🔄 [EVALUATION] Practice detection ${detectionType} set to: ${enabled ? 'enabled' : 'disabled'}`);
+    return true;
+  }
+  console.warn(`⚠️ [EVALUATION] Practice detection type ${detectionType} not found in config`);
+  return false;
+};
+
+// تغییر وضعیت سیستم ارزیابی
+const setEvaluationSystemStatus = (enabled) => {
+  EVALUATION_SYSTEM_CONFIG.enabled = enabled ? 1 : 0;
+  console.log(`🔄 [EVALUATION] Evaluation system set to: ${enabled ? 'enabled' : 'disabled'}`);
+  return true;
+};
+
+// تغییر تنظیمات زمان تمرین
+const updatePracticeSchedule = (enabled, hours, days) => {
+  EVALUATION_SYSTEM_CONFIG.practice_schedule.enabled = enabled ? 1 : 0;
+  if (hours) EVALUATION_SYSTEM_CONFIG.practice_schedule.hours = hours;
+  if (days) EVALUATION_SYSTEM_CONFIG.practice_schedule.days = days;
+  
+  console.log(`🔄 [EVALUATION] Practice schedule updated: enabled=${enabled}, hours=${hours}, days=${days}`);
+  return true;
+};
+
 // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
 
 // اضافه کردن مربی بر اساس شماره تلفن
@@ -1357,5 +1538,25 @@ module.exports = {
   // ===== کانفیگ مدیریت استادها =====
   OSATD_MANAGEMENT_CONFIG,
   isOsatdManagementEnabled,
-  hasOsatdManagementAccess
+  hasOsatdManagementAccess,
+  // ===== کانفیگ سیستم ارزیابی =====
+  EVALUATION_SYSTEM_CONFIG,
+  isEvaluationSystemEnabled,
+  isPracticeDetectionEnabled,
+  isVoiceWithCaptionEnabled,
+  isVoiceWithReplyTaskEnabled,
+  isVoiceWithReplyStudentEnabled,
+  isTextOnlyEnabled,
+  isPracticeScheduleEnabled,
+  getPracticeSchedule,
+  isEvaluationEnabled,
+  getMinEvaluators,
+  isSatisfactionSurveyEnabled,
+  shouldShowSatisfactionAfterEvaluation,
+  shouldSendSatisfactionToAdmin,
+  isReportingEnabled,
+  hasEvaluationAccess,
+  setPracticeDetectionStatus,
+  setEvaluationSystemStatus,
+  updatePracticeSchedule
 };
