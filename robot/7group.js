@@ -63,8 +63,38 @@ function isGroupAdmin(userId) {
 }
 
 async function handleGroupJoin(chat) {
-  console.log('🤖 [GROUP] handleGroupJoin called');
-  console.log('🤖 [GROUP] Chat object:', JSON.stringify(chat, null, 2));
+  console.log('🤖 [GROUP] ===== BOT JOINED GROUP =====');
+  console.log('🤖 [GROUP] Chat ID:', chat.id);
+  console.log('🤖 [GROUP] Chat Title:', chat.title);
+  console.log('🤖 [GROUP] Chat Type:', chat.type);
+  console.log('🤖 [GROUP] Chat Username:', chat.username || 'بدون یوزرنیم');
+  console.log('🤖 [GROUP] Chat Invite Link:', chat.invite_link || 'بدون لینک');
+  console.log('🤖 [GROUP] Chat Description:', chat.description || 'بدون توضیحات');
+  console.log('🤖 [GROUP] Chat Member Count:', chat.member_count || 'نامشخص');
+  console.log('🤖 [GROUP] Chat Slow Mode:', chat.slow_mode_delay || 'غیرفعال');
+  console.log('🤖 [GROUP] Chat Join By Link:', chat.join_by_link || false);
+  console.log('🤖 [GROUP] Chat Join Date:', chat.date ? new Date(chat.date * 1000).toLocaleString('fa-IR') : 'نامشخص');
+  console.log('🤖 [GROUP] Full Chat Object:', JSON.stringify(chat, null, 2));
+  
+  // اضافه کردن گروه به groups_config.json
+  try {
+    const { setGroupStatus } = require('./3config');
+    // فعال کردن گروه و تنظیم نام آن
+    setGroupStatus(chat.id, true, 'bot_join');
+    
+    // به‌روزرسانی نام گروه در groups_config.json
+    const { loadGroupsConfig, saveGroupsConfig } = require('./3config');
+    const groupsConfig = loadGroupsConfig();
+    if (groupsConfig.groups[chat.id]) {
+      groupsConfig.groups[chat.id].name = chat.title;
+      saveGroupsConfig(groupsConfig);
+      console.log(`✅ [GROUP] Group ${chat.id} name updated to: ${chat.title}`);
+    }
+    
+    console.log(`✅ [GROUP] Group ${chat.id} (${chat.title}) added to groups_config.json`);
+  } catch (error) {
+    console.error('❌ [GROUP] Error adding group to config:', error.message);
+  }
   
   // بررسی وضعیت گزارش از فایل مشترک
   const { getReportsEnabled, isGroupEnabled } = require('./3config');
@@ -91,6 +121,8 @@ async function handleGroupJoin(chat) {
     console.error('❌ [GROUP] Error sending bot join report:', error.message);
     console.error('❌ [GROUP] Error stack:', error.stack);
   }
+  
+  console.log('🤖 [GROUP] ===== END BOT JOIN =====');
 }
 
 // دریافت لیست اعضای گروه و دسته‌بندی

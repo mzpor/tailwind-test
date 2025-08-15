@@ -1,4 +1,34 @@
 
+📥 [BALE] getUpdates SUCCESS
+📥 [BALE] Updates count: 1
+📥 [BALE] First update: {
+  "update_id": 7972,
+  "message": {
+    "message_id": 0,
+    "from": {
+      "id": 1114227010,
+      "is_bot": false,
+      "first_name": "محمد همراه ۱",
+      "last_name": "",
+      "username": "mzpor1"
+    },
+    "date": 1755241149,
+    "chat": {
+      "id": 6376631022,
+      "type": "group",
+      "title": "ربات ۳"
+    },
+    "new_chat_members": [
+      {
+        "id": 1778171143,
+        "is_bot": true,
+        "first_name": "mtbot",
+        "last_name": "",
+        "username": "mtelbot"
+      }
+    ]
+  }
+}
 گیت 
 چهارشنبه 
 

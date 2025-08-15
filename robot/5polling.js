@@ -47,44 +47,126 @@ const registrationModule = new SmartRegistrationModule();
 // ایجاد یک instance واحد از PaymentModule
 const paymentModule = new PaymentModule();
 
+// تابع گزارش هوشمند ورود ربات به گروه
+async function reportBotJoinToGroup(chat) {
+  try {
+    const { BOT_JOIN_REPORT_CONFIG } = require('./3config');
+    
+    // اگر گزارش غیرفعال است، خروج
+    if (!BOT_JOIN_REPORT_CONFIG.enabled) {
+      console.log('📝 Bot join reporting is disabled');
+      return;
+    }
+    
+    console.log(`🤖 Reporting bot join to group ${chat.id} (${chat.title})`);
+    
+    // دریافت اطلاعات کامل گروه
+    const { getChat, getChatAdministrators } = require('./4bale');
+    
+    // دریافت تعداد اعضا
+    let memberCount = 0;
+    try {
+      const chatInfo = await getChat(chat.id);
+      memberCount = chatInfo.member_count || 0;
+      console.log(`✅ Got member count: ${memberCount}`);
+    } catch (error) {
+      console.log('⚠️ Could not get member count:', error.message);
+    }
+    
+    // دریافت لیست ادمین‌ها
+    let admins = [];
+    try {
+      const adminsResponse = await getChatAdministrators(chat.id);
+      if (adminsResponse && adminsResponse.length > 0) {
+        admins = adminsResponse.filter(member => 
+          member.status === 'administrator' || member.status === 'creator'
+        ).map(admin => {
+          const name = admin.user.first_name + (admin.user.last_name ? ' ' + admin.user.last_name : '');
+          return `${name} (@${admin.user.username || 'بدون یوزرنیم'})`;
+        });
+        console.log(`✅ Got ${admins.length} admins`);
+      }
+    } catch (error) {
+      console.log('⚠️ Could not get admins list:', error.message);
+    }
+    
+    // ساخت پیام گزارش
+    let reportText = `🤖 **ربات وارد گروه شد!**\n\n`;
+    reportText += `📛 **نام گروه:** ${chat.title}\n`;
+    reportText += `🆔 **آیدی گروه:** ${chat.id}\n`;
+    
+    if (chat.invite_link) {
+      reportText += `🔗 **لینک گروه:** ${chat.invite_link}\n`;
+    }
+    
+    reportText += `👥 **تعداد اعضا:** ${memberCount}\n`;
+    reportText += `📅 **نوع گروه:** ${chat.type}\n`;
+    
+    if (BOT_JOIN_REPORT_CONFIG.details_level === 'full' && admins.length > 0) {
+      reportText += `\n👑 **ادمین‌ها:**\n`;
+      admins.forEach((admin, index) => {
+        reportText += `${index + 1}. ${admin}\n`;
+      });
+    }
+    
+    reportText += `\n⏰ **زمان ورود:** ${new Date().toLocaleString('fa-IR')}`;
+    
+    // ارسال گزارش به گروه گزارش
+    const reportGroupId = BOT_JOIN_REPORT_CONFIG.report_to_group;
+    console.log(`📤 Sending report to group ${reportGroupId}`);
+    await sendMessage(reportGroupId, reportText);
+    
+    console.log(`✅ Bot join report sent to group ${reportGroupId}`);
+    
+  } catch (error) {
+    console.error(`❌ Error reporting bot join:`, error.message);
+    console.error(`❌ Error stack:`, error.stack);
+  }
+}
+
 // تابع حذف ربات از گروه
 async function removeBotFromGroup(groupId) {
   try {
     console.log(`🗑️ Removing bot from group ${groupId}`);
     
     // حذف از groups_config.json
-    const fs = require('fs');
-    const groupsConfigPath = './data/groups_config.json';
-    
-    if (fs.existsSync(groupsConfigPath)) {
-      const groupsConfig = JSON.parse(fs.readFileSync(groupsConfigPath, 'utf8'));
+    try {
+      const { loadGroupsConfig, saveGroupsConfig } = require('./3config');
+      const groupsConfig = loadGroupsConfig();
       if (groupsConfig.groups[groupId]) {
         delete groupsConfig.groups[groupId];
-        fs.writeFileSync(groupsConfigPath, JSON.stringify(groupsConfig, null, 2));
+        saveGroupsConfig(groupsConfig);
         console.log(`✅ Group ${groupId} removed from groups_config.json`);
       }
+    } catch (error) {
+      console.error(`❌ Error removing from groups_config.json:`, error.message);
     }
     
     // حذف از members.json
-    const membersPath = './members.json';
-    if (fs.existsSync(membersPath)) {
-      const membersData = JSON.parse(fs.readFileSync(membersPath, 'utf8'));
+    try {
+      const { loadMembersData, saveMembersData } = require('./7group');
+      const membersData = loadMembersData();
       if (membersData.groups[groupId]) {
         delete membersData.groups[groupId];
-        fs.writeFileSync(membersPath, JSON.stringify(membersData, null, 2));
+        saveMembersData(membersData);
         console.log(`✅ Group ${groupId} removed from members.json`);
       }
+    } catch (error) {
+      console.error(`❌ Error removing from members.json:`, error.message);
     }
     
     // حذف از attendance.json
-    const attendancePath = './attendance.json';
-    if (fs.existsSync(attendancePath)) {
-      const attendanceData = JSON.parse(fs.readFileSync(attendancePath, 'utf8'));
-      if (attendanceData.groups[groupId]) {
+    try {
+      const { AttendanceManager } = require('./10attendance_manager');
+      const attendanceManager = new AttendanceManager(groupId);
+      const attendanceData = attendanceManager.loadAttendanceData();
+      if (attendanceData.groups && attendanceData.groups[groupId]) {
         delete attendanceData.groups[groupId];
-        fs.writeFileSync(attendancePath, JSON.stringify(attendanceData, null, 2));
+        attendanceManager.saveAttendanceData(attendanceData);
         console.log(`✅ Group ${groupId} removed from attendance.json`);
       }
+    } catch (error) {
+      console.error(`❌ Error removing from attendance.json:`, error.message);
     }
     
     console.log(`✅ Bot successfully removed from group ${groupId}`);
@@ -1190,6 +1272,8 @@ function startPolling() {
             // اگر عضو جدید ربات باشد، گزارش ورود ربات
             if (msg.new_chat_member.is_bot) {
               await handleGroupJoin(msg.chat);
+              // گزارش هوشمند ورود ربات
+              await reportBotJoinToGroup(msg.chat);
             }
             continue;
           }

@@ -47,6 +47,13 @@ const USER_ACCESS_CONFIG = {
   allowUserReset: 1,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
 };
 
+// ===== کنترل گزارش ورود ربات به گروه‌ها =====
+const BOT_JOIN_REPORT_CONFIG = {
+  enabled: 1,  // 0: غیرفعال، 1: فعال
+  report_to_group: "5668045453",  // گروه گزارش
+  details_level: "full"  // basic/full
+};
+
 // ===== سیستم کانفیگ گروه‌ها =====
 const GROUPS_CONFIG_FILE = path.join(__dirname, 'data', 'groups_config.json');
 
@@ -1257,6 +1264,8 @@ module.exports = {
   GROUP_VISIBILITY_CONFIG,
   // ===== توابع کنترل دسترسی کاربران =====
   USER_ACCESS_CONFIG,
+  // ===== توابع کنترل گزارش ورود ربات =====
+  BOT_JOIN_REPORT_CONFIG,
   // ===== توابع مدیریت کانفیگ گروه‌ها =====
   loadGroupsConfig,
   saveGroupsConfig,
