@@ -136,24 +136,46 @@ async function deleteMessage(chat_id, message_id) {
 }
 
 async function getChatAdministrators(chat_id) {
-  const res = await axios.get(`${API_URL()}/getChatAdministrators`, { 
-    params: { chat_id },
-    timeout: 10000
-  });
-  return res.data.result || [];
+  console.log('👥 [BALE] getChatAdministrators STARTED');
+  console.log(`👥 [BALE] ChatId: ${chat_id}`);
+  
+  try {
+    const res = await axios.get(`${API_URL()}/getChatAdministrators`, { 
+      params: { chat_id },
+      timeout: 10000
+    });
+    console.log('👥 [BALE] getChatAdministrators SUCCESS');
+    console.log(`👥 [BALE] Admins count: ${res.data.result?.length || 0}`);
+    return res.data.result || [];
+  } catch (error) {
+    console.error('❌ [BALE] getChatAdministrators ERROR:', error.message);
+    console.error('❌ [BALE] Error response:', error.response?.data);
+    throw error;
+  }
 }
 
 async function getChatMember(chat_id, user_id = null) {
+  console.log('👤 [BALE] getChatMember STARTED');
+  console.log(`👤 [BALE] ChatId: ${chat_id}, UserId: ${user_id}`);
+  
   const params = { chat_id };
   if (user_id) {
     params.user_id = user_id;
   }
   
-  const res = await axios.get(`${API_URL()}/getChatMember`, { 
-    params,
-    timeout: 10000
-  });
-  return res.data.result || [];
+  try {
+    const res = await axios.get(`${API_URL()}/getChatMember`, { 
+      params,
+      timeout: 10000
+    });
+    console.log('👤 [BALE] getChatMember SUCCESS');
+    console.log('👤 [BALE] Member info:', JSON.stringify(res.data.result, null, 2));
+    return res.data.result || [];
+  } catch (error) {
+    console.error('❌ [BALE] getChatMember ERROR:', error.message);
+    console.error('❌ [BALE] Error response:', error.response?.data);
+    throw error;
+  }
 }
 
 async function answerCallbackQuery(callback_query_id, text = null, show_alert = false) {

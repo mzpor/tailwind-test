@@ -195,6 +195,69 @@ async function checkBotAdminStatus(chatId) {
     return false;
   }
 }
+
+// تابع گزارش دوره‌ای وضعیت ربات
+async function reportBotStatus() {
+  try {
+    const { BOT_STATUS_REPORT_CONFIG, loadGroupsConfig } = require('./3config');
+    
+    // اگر گزارش غیرفعال است، خروج
+    if (!BOT_STATUS_REPORT_CONFIG.enabled) {
+      return;
+    }
+    
+    console.log('🤖 [STATUS] ===== BOT STATUS REPORT =====');
+    
+    // دریافت لیست گروه‌های فعال
+    const groupsConfig = loadGroupsConfig();
+    const activeGroups = Object.keys(groupsConfig.groups).filter(groupId => 
+      groupsConfig.groups[groupId].enabled === 1
+    );
+    
+    console.log(`🤖 [STATUS] Active groups count: ${activeGroups.length}`);
+    
+    // بررسی وضعیت ربات در هر گروه
+    for (const groupId of activeGroups) {
+      try {
+        const groupInfo = groupsConfig.groups[groupId];
+        const isAdmin = await checkBotAdminStatus(groupId);
+        
+        if (BOT_STATUS_REPORT_CONFIG.report_level === 'basic') {
+          console.log(`🤖 [STATUS] Group: ${groupInfo.name || groupId} (${groupId}) - Bot Admin: ${isAdmin ? '✅ بله' : '❌ خیر'}`);
+        } else {
+          // گزارش کامل
+          const { getChat } = require('./4bale');
+          let memberCount = 'نامشخص';
+          let groupType = 'نامشخص';
+          
+          try {
+            const chatInfo = await getChat(groupId);
+            memberCount = chatInfo.member_count || 'نامشخص';
+            groupType = chatInfo.type || 'نامشخص';
+          } catch (error) {
+            console.log(`⚠️ [STATUS] Could not get group info for ${groupId}:`, error.message);
+          }
+          
+          console.log(`🤖 [STATUS] Group: ${groupInfo.name || groupId} (${groupId})`);
+          console.log(`🤖 [STATUS] Bot Admin: ${isAdmin ? '✅ بله' : '❌ خیر'}`);
+          console.log(`🤖 [STATUS] Group Members: ${memberCount}`);
+          console.log(`🤖 [STATUS] Group Type: ${groupType}`);
+          console.log(`🤖 [STATUS] Last Update: ${groupInfo.lastUpdate || 'نامشخص'}`);
+          console.log(`🤖 [STATUS] Updated By: ${groupInfo.updatedBy || 'نامشخص'}`);
+          console.log('🤖 [STATUS] ---');
+        }
+      } catch (error) {
+        console.error(`❌ [STATUS] Error checking group ${groupId}:`, error.message);
+      }
+    }
+    
+    console.log(`🤖 [STATUS] Report Time: ${new Date().toLocaleString('fa-IR')}`);
+    console.log('🤖 [STATUS] ===== END REPORT =====');
+    
+  } catch (error) {
+    console.error('❌ [STATUS] Error in status report:', error.message);
+  }
+}
 let consecutiveErrors = 0;
 let lastStartupMessage = 0;
 let lastPanelMessage = 0;
@@ -631,6 +694,12 @@ async function handleRoleMessage(msg, role) {
       await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
       return; // ادامه حلقه بدون ارسال پیام معمولی
     }
+  } else if (msg.text === '/g') {
+    // گزارش کامل اطلاعات گروه
+    await logGroupDetails(msg);
+  } else if (msg.text === '/l') {
+    // لیست اعضا بر اساس ID
+    await listMembersByID(msg);
   } else if (msg.text === '🏫 مدیریت گروه‌ها') {
     // if (!canSendMessage(msg.chat.id, 'group_management', 5000)) {
     //   return; // پیام را نادیده بگیر
@@ -1330,6 +1399,9 @@ function startPolling() {
             continue;
           }
           
+          // 🔄 جمع‌آوری خودکار اطلاعات کاربران از پیام‌های گروهی
+          await autoCollectUserInfo(msg);
+          
           // دستورات غیرمجاز برای اعضا
           if (msg.text === '/ربات' || msg.text === '/لیست') {
             await sendMessage(msg.chat.id, '⚠️ این دستورات فقط برای ادمین‌ها و مربی‌ها است.');
@@ -1443,6 +1515,9 @@ function startPolling() {
   
   // شروع polling
   poll();
+  
+  // راه‌اندازی تایمر دوره‌ای برای گزارش وضعیت ربات
+  startStatusReportTimer();
 }
 
 // مدیریت callback های مدیریت گروه‌ها
@@ -1946,7 +2021,314 @@ function createMemberStatusKeyboard(groupId, memberId, memberName) {
   ];
 }
 
+// راه‌اندازی تایمر دوره‌ای برای گزارش وضعیت ربات
+let statusReportTimer = null;
+
+function startStatusReportTimer() {
+  try {
+    const { BOT_STATUS_REPORT_CONFIG } = require('./3config');
+    
+    if (!BOT_STATUS_REPORT_CONFIG.enabled) {
+      console.log('🤖 [STATUS] Status report timer is disabled');
+      return;
+    }
+    
+    const intervalMs = BOT_STATUS_REPORT_CONFIG.interval_seconds * 1000;
+    console.log(`🤖 [STATUS] Starting status report timer every ${BOT_STATUS_REPORT_CONFIG.interval_seconds} seconds (${intervalMs}ms)`);
+    
+    statusReportTimer = setInterval(async () => {
+      await reportBotStatus();
+    }, intervalMs);
+    
+    console.log('🤖 [STATUS] Status report timer started successfully');
+    
+  } catch (error) {
+    console.error('❌ [STATUS] Error starting status report timer:', error.message);
+  }
+}
+
+function stopStatusReportTimer() {
+  if (statusReportTimer) {
+    clearInterval(statusReportTimer);
+    statusReportTimer = null;
+    console.log('🤖 [STATUS] Status report timer stopped');
+  }
+}
+
+// تابع گزارش کامل اطلاعات گروه
+async function logGroupDetails(msg) {
+  try {
+    console.log('🔍 [/g] ===== /g COMMAND DETECTED =====');
+    console.log(`🔍 [/g] Full message object:`, JSON.stringify(msg, null, 2));
+    console.log(`🔍 [/g] User ID: ${msg.from.id}`);
+    console.log(`🔍 [/g] User Name: ${msg.from.first_name} ${msg.from.last_name || ''}`);
+    console.log(`🔍 [/g] Username: @${msg.from.username || 'بدون یوزرنیم'}`);
+    console.log(`🔍 [/g] Chat ID: ${msg.chat.id}`);
+    console.log(`🔍 [/g] Chat Type: ${msg.chat.type}`);
+    
+    // دریافت اطلاعات کامل گروه
+    try {
+      console.log(`🔍 [/g] Calling getChat(${msg.chat.id})...`);
+      const chatInfo = await getChat(msg.chat.id);
+      console.log(`🔍 [/g] Group Title: ${chatInfo.title || 'نامشخص'}`);
+      console.log(`🔍 [/g] Group Username: @${chatInfo.username || 'بدون یوزرنیم'}`);
+      console.log(`🔍 [/g] Group Invite Link: ${chatInfo.invite_link || 'بدون لینک'}`);
+      console.log(`🔍 [/g] Group Description: ${chatInfo.description || 'بدون توضیحات'}`);
+      console.log(`🔍 [/g] Group Member Count: ${chatInfo.member_count || 'نامشخص'}`);
+      console.log(`🔍 [/g] Group Slow Mode: ${chatInfo.slow_mode_delay || 'غیرفعال'}`);
+      console.log(`🔍 [/g] Group Join By Link: ${chatInfo.join_by_link || false}`);
+      console.log(`🔍 [/g] Group Join Date: ${chatInfo.date ? new Date(chatInfo.date * 1000).toLocaleString('fa-IR') : 'نامشخص'}`);
+      console.log(`🔍 [/g] Full Chat Object:`, JSON.stringify(chatInfo, null, 2));
+    } catch (error) {
+      console.log(`⚠️ [/g] Could not get group info:`, error.message);
+      console.log(`⚠️ [/g] Error details:`, error);
+    }
+    
+    // دریافت اطلاعات کاربر در گروه
+    try {
+      console.log(`🔍 [/g] Calling getChatMember(${msg.chat.id}, ${msg.from.id})...`);
+      const { getChatMember } = require('./4bale');
+      const memberInfo = await getChatMember(msg.chat.id, msg.from.id);
+      console.log(`🔍 [/g] User Status: ${memberInfo.status}`);
+      console.log(`🔍 [/g] User Permissions:`, JSON.stringify(memberInfo, null, 2));
+      
+      // بررسی اجازه‌های کاربر
+      if (memberInfo.status === 'administrator' || memberInfo.status === 'creator') {
+        console.log(`🔍 [/g] User is admin with permissions:`);
+        if (memberInfo.can_manage_chat) console.log(`  - تغییر اطلاعات: بله`);
+        if (memberInfo.can_delete_messages) console.log(`  - حذف پیام: بله`);
+        if (memberInfo.can_manage_video_chats) console.log(`  - مدیریت ویدیو چت: بله`);
+        if (memberInfo.can_restrict_members) console.log(`  - محدود کردن اعضا: بله`);
+        if (memberInfo.can_promote_members) console.log(`  - ارتقا اعضا: بله`);
+        if (memberInfo.can_change_info) console.log(`  - تغییر اطلاعات: بله`);
+        if (memberInfo.can_invite_users) console.log(`  - دعوت کاربران: بله`);
+        if (memberInfo.can_pin_messages) console.log(`  - پین کردن پیام: بله`);
+        if (memberInfo.can_manage_topics) console.log(`  - مدیریت موضوعات: بله`);
+      }
+    } catch (error) {
+      console.log(`⚠️ [/g] Could not get user member info:`, error.message);
+      console.log(`⚠️ [/g] Error details:`, error);
+    }
+    
+    // دریافت لیست ادمین‌ها
+    try {
+      console.log(`🔍 [/g] Calling getChatAdministrators(${msg.chat.id})...`);
+      const { getChatAdministrators } = require('./4bale');
+      const admins = await getChatAdministrators(msg.chat.id);
+      console.log(`🔍 [/g] Group Administrators (${admins.length}):`);
+      admins.forEach((admin, index) => {
+        const adminUser = admin.user;
+        const adminName = adminUser.first_name + (adminUser.last_name ? ' ' + adminUser.last_name : '');
+        console.log(`  ${index + 1}. ${adminName} (@${adminUser.username || 'بدون یوزرنیم'}) - Status: ${admin.status}`);
+        if (admin.status === 'administrator') {
+          console.log(`    Permissions:`, JSON.stringify(admin, null, 2));
+        }
+      });
+    } catch (error) {
+      console.log(`⚠️ [/g] Could not get administrators list:`, error.message);
+      console.log(`⚠️ [/g] Error details:`, error);
+    }
+    
+    console.log(`🔍 [/g] Report Time: ${new Date().toLocaleString('fa-IR')}`);
+    console.log('🔍 [/g] ===== END /g REPORT =====');
+    
+  } catch (error) {
+    console.error('❌ [/g] Error in logGroupDetails:', error.message);
+  }
+}
+
+// تابع لیست اعضا بر اساس ID
+async function listMembersByID(msg) {
+  try {
+    console.log('👥 [/l] ===== /l COMMAND DETECTED =====');
+    console.log(`👥 [/l] Chat ID: ${msg.chat.id}`);
+    console.log(`👥 [/l] Chat Type: ${msg.chat.type}`);
+    
+    // بررسی اینکه آیا در گروه هستیم
+    if (msg.chat.type === 'private') {
+      console.log('⚠️ [/l] Command used in private chat, not in group');
+      return;
+    }
+    
+    // دریافت نام گروه
+    let groupTitle = 'نامشخص';
+    try {
+      const chatInfo = await getChat(msg.chat.id);
+      groupTitle = chatInfo.title || 'نامشخص';
+      console.log(`👥 [/l] Group Title: ${groupTitle}`);
+    } catch (error) {
+      console.log(`⚠️ [/l] Could not get group info:`, error.message);
+    }
+    
+    // دریافت لیست ادمین‌ها
+    let admins = [];
+    try {
+      const { getChatAdministrators } = require('./4bale');
+      admins = await getChatAdministrators(msg.chat.id);
+      console.log(`👥 [/l] Found ${admins.length} administrators`);
+    } catch (error) {
+      console.log(`⚠️ [/l] Could not get administrators:`, error.message);
+    }
+    
+    // دریافت لیست اعضای ذخیره شده
+    const { loadMembersData } = require('./7group');
+    const membersData = loadMembersData();
+    const groupMembers = membersData.groups[msg.chat.id] || [];
+    console.log(`👥 [/l] Found ${groupMembers.length} stored members`);
+    
+    // ساخت گزارش
+    let report = `📋 لیست اعضای گروه: ${groupTitle}\n\n`;
+    
+    // ادمین‌ها
+    if (admins.length > 0) {
+      report += `👑 ادمین‌ها (${admins.length}):\n`;
+      admins.forEach((admin, index) => {
+        const adminUser = admin.user;
+        const adminName = adminUser.first_name + (adminUser.last_name ? ' ' + adminUser.last_name : '');
+        report += `${index + 1}. ${adminName} (ID: ${adminUser.id})\n`;
+        if (adminUser.username) {
+          report += `   @${adminUser.username}\n`;
+        }
+        report += `   Status: ${admin.status}\n\n`;
+      });
+    }
+    
+    // اعضای عادی
+    if (groupMembers.length > 0) {
+      report += `👥 اعضای عادی (${groupMembers.length}):\n`;
+      groupMembers.forEach((member, index) => {
+        report += `${index + 1}. ${member.name} (ID: ${member.id})\n`;
+        if (member.username) {
+          report += `   @${member.username}\n`;
+        }
+        report += `   Join Date: ${member.joinDate || 'نامشخص'}\n\n`;
+      });
+    }
+    
+    // آمار کلی
+    const totalMembers = admins.length + groupMembers.length;
+    report += `📊 آمار کلی:\n`;
+    report += `👑 ادمین: ${admins.length}\n`;
+    report += `👥 عضو: ${groupMembers.length}\n`;
+    report += `📊 کل: ${totalMembers}\n\n`;
+    report += `⏰ ${new Date().toLocaleString('fa-IR')}`;
+    
+    // ارسال گزارش
+    console.log(`📤 [/l] Sending members list report`);
+    await sendMessage(msg.chat.id, report);
+    console.log(`✅ [/l] Members list report sent successfully`);
+    
+    // ارسال به گروه گزارش (اگر فعال باشد)
+    try {
+      const { getReportsEnabled } = require('./3config');
+      if (getReportsEnabled()) {
+        const reportText = `📋 دستور /l در گروه ${groupTitle} اجرا شد\n👤 توسط: ${msg.from.first_name} ${msg.from.last_name || ''}\n⏰ ${new Date().toLocaleString('fa-IR')}`;
+        await sendMessage(REPORT_GROUP_ID, reportText);
+        console.log(`📤 [/l] Report sent to report group`);
+      }
+    } catch (error) {
+      console.log(`⚠️ [/l] Could not send report to report group:`, error.message);
+    }
+    
+    console.log('👥 [/l] ===== END /l REPORT =====');
+    
+  } catch (error) {
+    console.error('❌ [/l] Error in listMembersByID:', error.message);
+    // ارسال پیام خطا به کاربر
+    try {
+      await sendMessage(msg.chat.id, '❌ خطا در دریافت لیست اعضا. لطفاً دوباره تلاش کنید.');
+    } catch (sendError) {
+      console.error('❌ [/l] Could not send error message:', sendError.message);
+    }
+  }
+}
+
+// تابع جمع‌آوری خودکار اطلاعات کاربران از پیام‌های گروهی
+async function autoCollectUserInfo(msg) {
+  try {
+    // فقط در گروه‌ها و سوپرگروه‌ها
+    if (msg.chat.type !== 'group' && msg.chat.type !== 'supergroup') {
+      return;
+    }
+
+    // بررسی اینکه آیا ربات ادمین است
+    const isBotAdmin = await checkBotAdminStatus(msg.chat.id);
+    if (!isBotAdmin) {
+      console.log(`🤖 [AUTO-COLLECT] Bot is not admin in group ${msg.chat.id}, skipping auto-collection`);
+      return;
+    }
+
+    // بررسی اینکه آیا پیام از کاربر معتبر است
+    if (!msg.from || !msg.from.id || !msg.from.first_name) {
+      return;
+    }
+
+    // دریافت اطلاعات کاربر
+    const userId = msg.from.id;
+    const userName = msg.from.first_name + (msg.from.last_name ? ' ' + msg.from.last_name : '');
+    const username = msg.from.username || null;
+
+    console.log(`👤 [AUTO-COLLECT] Auto-collecting user info: ${userName} (ID: ${userId}) in group ${msg.chat.title}`);
+
+    // بررسی اینکه آیا کاربر قبلاً در لیست اعضا وجود دارد
+    const { loadMembersData } = require('./7group');
+    const membersData = loadMembersData();
+    const groupMembers = membersData.groups[msg.chat.id] || [];
+    
+    const existingMember = groupMembers.find(member => member.id === userId);
+    
+    if (!existingMember) {
+      // اضافه کردن کاربر جدید به لیست اعضا
+      console.log(`➕ [AUTO-COLLECT] Adding new user to members list: ${userName}`);
+      
+      const newMember = {
+        id: userId,
+        name: userName,
+        username: username,
+        joinDate: new Date().toISOString(),
+        autoCollected: true,
+        lastMessageDate: new Date().toISOString()
+      };
+
+      groupMembers.push(newMember);
+      membersData.groups[msg.chat.id] = groupMembers;
+
+      // ذخیره اطلاعات جدید
+      const { saveMembersData } = require('./7group');
+      saveMembersData(membersData);
+
+      console.log(`✅ [AUTO-COLLECT] Successfully added user ${userName} to group ${msg.chat.title}`);
+      
+      // ارسال گزارش به گروه گزارش (اگر فعال باشد)
+      try {
+        const { getReportsEnabled } = require('./3config');
+        if (getReportsEnabled()) {
+          const reportText = `👤 کاربر جدید به صورت خودکار اضافه شد\n📛 گروه: ${msg.chat.title}\n👤 کاربر: ${userName} (ID: ${userId})\n⏰ ${new Date().toLocaleString('fa-IR')}`;
+          await sendMessage(REPORT_GROUP_ID, reportText);
+        }
+      } catch (error) {
+        console.log(`⚠️ [AUTO-COLLECT] Could not send report:`, error.message);
+      }
+    } else {
+      // به‌روزرسانی تاریخ آخرین پیام
+      existingMember.lastMessageDate = new Date().toISOString();
+      existingMember.autoCollected = true;
+      
+      // ذخیره تغییرات
+      const { saveMembersData } = require('./7group');
+      saveMembersData(membersData);
+      
+      console.log(`🔄 [AUTO-COLLECT] Updated last message date for existing user: ${userName}`);
+    }
+
+  } catch (error) {
+    console.error('❌ [AUTO-COLLECT] Error in autoCollectUserInfo:', error.message);
+  }
+}
+
 module.exports = { 
   startPolling,
-  testGroupConfig
+  testGroupConfig,
+  startStatusReportTimer,
+  stopStatusReportTimer
 };

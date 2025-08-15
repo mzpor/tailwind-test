@@ -54,6 +54,21 @@ const BOT_JOIN_REPORT_CONFIG = {
   details_level: "full"  // basic/full
 };
 
+// ===== کنترل گزارش دوره‌ای وضعیت ربات =====
+const BOT_STATUS_REPORT_CONFIG = {
+  enabled: 0,  // 0: غیرفعال، 1: فعال
+  interval_seconds: 10,  // هر چند ثانیه چک کند (پیش‌فرض: 10)
+  report_level: "basic"  // basic: فقط admin status, full: همه اطلاعات
+};
+
+// ===== کنترل جمع‌آوری خودکار اطلاعات کاربران =====
+const AUTO_COLLECT_USER_CONFIG = {
+  enabled: 1,  // 0: غیرفعال، 1: فعال
+  collect_from_all_messages: 1,  // 0: فقط پیام‌های متنی، 1: همه پیام‌ها
+  update_existing_users: 1,  // 0: فقط کاربران جدید، 1: به‌روزرسانی همه کاربران
+  report_to_admin: 1  // 0: عدم ارسال گزارش، 1: ارسال گزارش به گروه گزارش
+};
+
 // ===== سیستم کانفیگ گروه‌ها =====
 const GROUPS_CONFIG_FILE = path.join(__dirname, 'data', 'groups_config.json');
 
@@ -1266,6 +1281,10 @@ module.exports = {
   USER_ACCESS_CONFIG,
   // ===== توابع کنترل گزارش ورود ربات =====
   BOT_JOIN_REPORT_CONFIG,
+  // ===== توابع کنترل گزارش دوره‌ای وضعیت ربات =====
+  BOT_STATUS_REPORT_CONFIG,
+  // ===== توابع کنترل جمع‌آوری خودکار اطلاعات کاربران =====
+  AUTO_COLLECT_USER_CONFIG,
   // ===== توابع مدیریت کانفیگ گروه‌ها =====
   loadGroupsConfig,
   saveGroupsConfig,
