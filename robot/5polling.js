@@ -1377,6 +1377,10 @@ function startPolling() {
               await sendMessage(msg.chat.id, '⚠️ این دستور برای قرآن آموزان است. ادمین‌ها و مربی‌ها نیازی به /عضو ندارند.');
               continue;
             }
+            if (msg.text === '/جمع‌آوری') {
+              await handleAutoCollectCommand(msg);
+              continue;
+            }
           }
           
           // دستورات اعضا
@@ -2243,9 +2247,61 @@ async function listMembersByID(msg) {
   }
 }
 
+// تابع مدیریت دستور جمع‌آوری خودکار
+async function handleAutoCollectCommand(msg) {
+  try {
+    console.log(`🔧 [AUTO-COLLECT] Auto-collect command detected from ${msg.from.first_name}`);
+    
+    const { AUTO_COLLECT_USER_CONFIG } = require('./3config');
+    
+    let statusText = `🔧 **وضعیت جمع‌آوری خودکار**\n\n`;
+    statusText += `📊 **وضعیت فعلی:** ${AUTO_COLLECT_USER_CONFIG.enabled ? '✅ فعال' : '❌ غیرفعال'}\n`;
+    statusText += `📝 **جمع‌آوری از:** ${AUTO_COLLECT_USER_CONFIG.collect_from_all_messages ? 'همه پیام‌ها' : 'فقط پیام‌های متنی'}\n`;
+    statusText += `🔄 **به‌روزرسانی کاربران موجود:** ${AUTO_COLLECT_USER_CONFIG.update_existing_users ? '✅ فعال' : '❌ غیرفعال'}\n`;
+    statusText += `📤 **گزارش به ادمین:** ${AUTO_COLLECT_USER_CONFIG.report_to_admin ? '✅ فعال' : '❌ غیرفعال'}\n\n`;
+    
+    // آمار کاربران جمع‌آوری شده
+    try {
+      const { loadMembersData } = require('./7group');
+      const membersData = loadMembersData();
+      const groupMembers = membersData.groups[msg.chat.id] || [];
+      const autoCollectedMembers = groupMembers.filter(member => member.autoCollected);
+      
+      statusText += `📈 **آمار گروه:**\n`;
+      statusText += `👥 کل اعضا: ${groupMembers.length}\n`;
+      statusText += `🤖 جمع‌آوری خودکار: ${autoCollectedMembers.length}\n`;
+      statusText += `📅 آخرین به‌روزرسانی: ${autoCollectedMembers.length > 0 ? new Date(autoCollectedMembers[0].lastMessageDate || autoCollectedMembers[0].joinDate).toLocaleString('fa-IR') : 'نامشخص'}\n\n`;
+    } catch (error) {
+      statusText += `⚠️ خطا در دریافت آمار: ${error.message}\n\n`;
+    }
+    
+    statusText += `💡 **راهنما:**\n`;
+    statusText += `• برای تغییر تنظیمات، فایل 3config.js را ویرایش کنید\n`;
+    statusText += `• کانفیگ: AUTO_COLLECT_USER_CONFIG\n`;
+    statusText += `⏰ ${new Date().toLocaleString('fa-IR')}`;
+    
+    await sendMessage(msg.chat.id, statusText);
+    console.log(`✅ [AUTO-COLLECT] Status report sent successfully`);
+    
+  } catch (error) {
+    console.error('❌ [AUTO-COLLECT] Error in handleAutoCollectCommand:', error.message);
+    try {
+      await sendMessage(msg.chat.id, '❌ خطا در نمایش وضعیت جمع‌آوری خودکار');
+    } catch (sendError) {
+      console.error('❌ [AUTO-COLLECT] Could not send error message:', sendError.message);
+    }
+  }
+}
+
 // تابع جمع‌آوری خودکار اطلاعات کاربران از پیام‌های گروهی
 async function autoCollectUserInfo(msg) {
   try {
+    // بررسی کانفیگ
+    const { AUTO_COLLECT_USER_CONFIG } = require('./3config');
+    if (!AUTO_COLLECT_USER_CONFIG.enabled) {
+      return; // اگر غیرفعال است، خروج
+    }
+
     // فقط در گروه‌ها و سوپرگروه‌ها
     if (msg.chat.type !== 'group' && msg.chat.type !== 'supergroup') {
       return;
@@ -2260,6 +2316,11 @@ async function autoCollectUserInfo(msg) {
 
     // بررسی اینکه آیا پیام از کاربر معتبر است
     if (!msg.from || !msg.from.id || !msg.from.first_name) {
+      return;
+    }
+
+    // بررسی نوع پیام (اگر فقط پیام‌های متنی)
+    if (!AUTO_COLLECT_USER_CONFIG.collect_from_all_messages && !msg.text) {
       return;
     }
 
@@ -2300,16 +2361,19 @@ async function autoCollectUserInfo(msg) {
       console.log(`✅ [AUTO-COLLECT] Successfully added user ${userName} to group ${msg.chat.title}`);
       
       // ارسال گزارش به گروه گزارش (اگر فعال باشد)
-      try {
-        const { getReportsEnabled } = require('./3config');
-        if (getReportsEnabled()) {
-          const reportText = `👤 کاربر جدید به صورت خودکار اضافه شد\n📛 گروه: ${msg.chat.title}\n👤 کاربر: ${userName} (ID: ${userId})\n⏰ ${new Date().toLocaleString('fa-IR')}`;
-          await sendMessage(REPORT_GROUP_ID, reportText);
+      if (AUTO_COLLECT_USER_CONFIG.report_to_admin) {
+        try {
+          const { getReportsEnabled } = require('./3config');
+          if (getReportsEnabled()) {
+            const reportText = `👤 کاربر جدید به صورت خودکار اضافه شد\n📛 گروه: ${msg.chat.title}\n👤 کاربر: ${userName} (ID: ${userId})\n⏰ ${new Date().toLocaleString('fa-IR')}`;
+            await sendMessage(REPORT_GROUP_ID, reportText);
+            console.log(`📤 [AUTO-COLLECT] Report sent to report group`);
+          }
+        } catch (error) {
+          console.log(`⚠️ [AUTO-COLLECT] Could not send report:`, error.message);
         }
-      } catch (error) {
-        console.log(`⚠️ [AUTO-COLLECT] Could not send report:`, error.message);
       }
-    } else {
+    } else if (AUTO_COLLECT_USER_CONFIG.update_existing_users) {
       // به‌روزرسانی تاریخ آخرین پیام
       existingMember.lastMessageDate = new Date().toISOString();
       existingMember.autoCollected = true;
