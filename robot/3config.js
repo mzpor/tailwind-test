@@ -46,6 +46,142 @@ const GROUP_VISIBILITY_CONFIG = {
 const USER_ACCESS_CONFIG = {
   allowUserReset: 1,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
 };
+
+// ===== سیستم کانفیگ گروه‌ها =====
+const GROUPS_CONFIG_FILE = path.join(__dirname, 'data', 'groups_config.json');
+
+// تابع بارگذاری کانفیگ گروه‌ها
+const loadGroupsConfig = () => {
+  try {
+    if (fs.existsSync(GROUPS_CONFIG_FILE)) {
+      const data = fs.readFileSync(GROUPS_CONFIG_FILE, 'utf8');
+      const config = JSON.parse(data);
+      console.log('✅ [CONFIG] Groups config loaded successfully');
+      return config;
+    } else {
+      // ایجاد فایل پیش‌فرض
+      const defaultConfig = {
+        groups: {},
+        config: {
+          defaultEnabled: 1,
+          lastUpdate: new Date().toISOString(),
+          updatedBy: 'system'
+        }
+      };
+      saveGroupsConfig(defaultConfig);
+      return defaultConfig;
+    }
+  } catch (error) {
+    console.error('❌ [CONFIG] Error loading groups config:', error);
+    return {
+      groups: {},
+      config: {
+        defaultEnabled: 1,
+        lastUpdate: new Date().toISOString(),
+        updatedBy: 'system'
+      }
+    };
+  }
+};
+
+// تابع ذخیره کانفیگ گروه‌ها
+const saveGroupsConfig = (config) => {
+  try {
+    // اطمینان از وجود پوشه data
+    const dataDir = path.dirname(GROUPS_CONFIG_FILE);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(GROUPS_CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
+    console.log('✅ [CONFIG] Groups config saved successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error saving groups config:', error);
+    return false;
+  }
+};
+
+// تابع بررسی فعال بودن گروه
+const isGroupEnabled = (groupId) => {
+  try {
+    const config = loadGroupsConfig();
+    const group = config.groups[groupId];
+    
+    if (group) {
+      return group.enabled === 1;
+    }
+    
+    // اگر گروه در کانفیگ نباشد، از تنظیمات پیش‌فرض استفاده کن
+    return config.config.defaultEnabled === 1;
+  } catch (error) {
+    console.error(`❌ [CONFIG] Error checking group ${groupId} status:`, error);
+    return true; // در صورت خطا، گروه را فعال در نظر بگیر
+  }
+};
+
+// تابع تغییر وضعیت گروه
+const setGroupStatus = (groupId, enabled, updatedBy = 'unknown') => {
+  try {
+    const config = loadGroupsConfig();
+    
+    if (!config.groups[groupId]) {
+      config.groups[groupId] = {
+        name: `گروه ${groupId}`,
+        enabled: enabled ? 1 : 0,
+        lastUpdate: new Date().toISOString(),
+        updatedBy: updatedBy
+      };
+    } else {
+      config.groups[groupId].enabled = enabled ? 1 : 0;
+      config.groups[groupId].lastUpdate = new Date().toISOString();
+      config.groups[groupId].updatedBy = updatedBy;
+    }
+    
+    config.config.lastUpdate = new Date().toISOString();
+    config.config.updatedBy = updatedBy;
+    
+    const result = saveGroupsConfig(config);
+    if (result) {
+      console.log(`✅ [CONFIG] Group ${groupId} status set to: ${enabled ? 'enabled' : 'disabled'} by ${updatedBy}`);
+    }
+    return result;
+  } catch (error) {
+    console.error(`❌ [CONFIG] Error setting group ${groupId} status:`, error);
+    return false;
+  }
+};
+
+// تابع دریافت لیست تمام گروه‌ها با وضعیت
+const getAllGroupsStatus = () => {
+  try {
+    const config = loadGroupsConfig();
+    return config.groups;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting all groups status:', error);
+    return {};
+  }
+};
+
+// تابع تنظیم وضعیت پیش‌فرض برای گروه‌های جدید
+const setDefaultGroupStatus = (enabled, updatedBy = 'unknown') => {
+  try {
+    const config = loadGroupsConfig();
+    config.config.defaultEnabled = enabled ? 1 : 0;
+    config.config.lastUpdate = new Date().toISOString();
+    config.config.updatedBy = updatedBy;
+    
+    const result = saveGroupsConfig(config);
+    if (result) {
+      console.log(`✅ [CONFIG] Default group status set to: ${enabled ? 'enabled' : 'disabled'} by ${updatedBy}`);
+    }
+    return result;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error setting default group status:', error);
+    return false;
+  }
+};
+
 // نگاشت نام کاربران
 const USER_NAMES = {
  
@@ -1120,5 +1256,12 @@ module.exports = {
   BUTTON_VISIBILITY_CONFIG,
   GROUP_VISIBILITY_CONFIG,
   // ===== توابع کنترل دسترسی کاربران =====
-  USER_ACCESS_CONFIG
+  USER_ACCESS_CONFIG,
+  // ===== توابع مدیریت کانفیگ گروه‌ها =====
+  loadGroupsConfig,
+  saveGroupsConfig,
+  isGroupEnabled,
+  setGroupStatus,
+  getAllGroupsStatus,
+  setDefaultGroupStatus
 };

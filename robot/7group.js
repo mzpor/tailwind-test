@@ -67,9 +67,15 @@ async function handleGroupJoin(chat) {
   console.log('🤖 [GROUP] Chat object:', JSON.stringify(chat, null, 2));
   
   // بررسی وضعیت گزارش از فایل مشترک
-  const { getReportsEnabled } = require('./3config');
+  const { getReportsEnabled, isGroupEnabled } = require('./3config');
   if (!getReportsEnabled()) {
     console.log('📋 [GROUP] Reports disabled, skipping bot join report');
+    return;
+  }
+  
+  // بررسی فعال بودن گروه
+  if (!isGroupEnabled(chat.id)) {
+    console.log(`📋 [GROUP] Group ${chat.id} is disabled, skipping bot join report`);
     return;
   }
   

@@ -15,7 +15,16 @@ const {
   getAvailableRoles,
   getAllUsersWithRoles
 } = require('./6mid');
-const { ROLES, USERS_BY_ROLE, isButtonVisible, setButtonVisibility, getButtonVisibilityConfig } = require('./3config');
+const { 
+  ROLES, 
+  USERS_BY_ROLE, 
+  isButtonVisible, 
+  setButtonVisibility, 
+  getButtonVisibilityConfig,
+  isGroupEnabled,
+  setGroupStatus,
+  getAllGroupsStatus
+} = require('./3config');
 const { 
   getCurrentCoachId, 
   getCurrentAssistantId, 
@@ -214,6 +223,40 @@ function canSendMessage(chatId, messageType, cooldownMs = 30000) {
   
   messageTimestamps[messageType][chatId] = now;
   return true;
+}
+
+// تابع تست کانفیگ گروه‌ها
+function testGroupConfig() {
+  console.log('🧪 [TEST] Testing group configuration...');
+  
+  try {
+    // تست تغییر وضعیت گروه‌ها
+    console.log('🧪 [TEST] Setting group 5668045453 to disabled (0)...');
+    setGroupStatus(5668045453, false, 'test_user');
+    
+    console.log('🧪 [TEST] Setting group 5417069312 to enabled (1)...');
+    setGroupStatus(5417069312, true, 'test_user');
+    
+    // تست بررسی وضعیت
+    console.log('🧪 [TEST] Checking group 5668045453 status...');
+    const group1Status = isGroupEnabled(5668045453);
+    console.log(`🧪 [TEST] Group 5668045453 enabled: ${group1Status}`);
+    
+    console.log('🧪 [TEST] Checking group 5417069312 status...');
+    const group2Status = isGroupEnabled(5417069312);
+    console.log(`🧪 [TEST] Group 5417069312 enabled: ${group2Status}`);
+    
+    // نمایش تمام وضعیت‌ها
+    console.log('🧪 [TEST] All groups status:');
+    const allStatus = getAllGroupsStatus();
+    console.log(JSON.stringify(allStatus, null, 2));
+    
+    console.log('✅ [TEST] Group configuration test completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ [TEST] Group configuration test failed:', error);
+    return false;
+  }
 }
 
 // پاک کردن timestamp های قدیمی برای جلوگیری از مصرف حافظه
@@ -1729,4 +1772,7 @@ function createMemberStatusKeyboard(groupId, memberId, memberName) {
   ];
 }
 
-module.exports = { startPolling };
+module.exports = { 
+  startPolling,
+  testGroupConfig
+};
