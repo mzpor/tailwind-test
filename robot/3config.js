@@ -42,6 +42,23 @@ const GROUP_VISIBILITY_CONFIG = {
   ASSISTANT_SEE_ALL_GROUPS: 0   // 0 = فقط گروه‌های خودش، 1 = همه گروه‌ها
 };
 
+// ===== کانفیگ مدیریت گروه‌ها =====
+const GROUP_MANAGEMENT_CONFIG = {
+  enabled: 1,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
+  visibility: {
+    admin: true,        // مدیر مدرسه
+    instructor: true,   // مربی
+    assistant: true,    // کمک مربی
+    regular: false      // کاربران عادی
+  },
+  permissions: {
+    createGroup: ["admin", "instructor"],
+    editGroup: ["admin", "instructor"],
+    deleteGroup: ["admin"],
+    viewGroups: ["admin", "instructor", "assistant"]
+  }
+};
+
 // ===== کنترل دسترسی کاربران =====
 const USER_ACCESS_CONFIG = {
   allowUserReset: 1,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
@@ -1291,5 +1308,7 @@ module.exports = {
   isGroupEnabled,
   setGroupStatus,
   getAllGroupsStatus,
-  setDefaultGroupStatus
+  setDefaultGroupStatus,
+  // ===== کانفیگ مدیریت گروه‌ها =====
+  GROUP_MANAGEMENT_CONFIG
 };

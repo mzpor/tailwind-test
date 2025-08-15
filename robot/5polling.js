@@ -1343,6 +1343,9 @@ function startPolling() {
               await handleGroupJoin(msg.chat);
               // گزارش هوشمند ورود ربات
               await reportBotJoinToGroup(msg.chat);
+            } else {
+              // اگر کاربر جدید وارد گروه شد
+              await autoCollectNewMember(msg);
             }
             continue;
           }
@@ -1379,6 +1382,10 @@ function startPolling() {
             }
             if (msg.text === '/جمع‌آوری') {
               await handleAutoCollectCommand(msg);
+              continue;
+            }
+            if (msg.text === '/عضو-جدید') {
+              await handleNewMemberCommand(msg);
               continue;
             }
           }
@@ -2387,6 +2394,146 @@ async function autoCollectUserInfo(msg) {
 
   } catch (error) {
     console.error('❌ [AUTO-COLLECT] Error in autoCollectUserInfo:', error.message);
+  }
+}
+
+// تابع جمع‌آوری خودکار اطلاعات کاربران جدید که وارد گروه می‌شوند
+async function autoCollectNewMember(msg) {
+  try {
+    // بررسی کانفیگ
+    const { AUTO_COLLECT_USER_CONFIG } = require('./3config');
+    if (!AUTO_COLLECT_USER_CONFIG.enabled) {
+      return; // اگر غیرفعال است، خروج
+    }
+
+    // فقط در گروه‌ها و سوپرگروه‌ها
+    if (msg.chat.type !== 'group' && msg.chat.type !== 'supergroup') {
+      return;
+    }
+
+    // بررسی اینکه آیا ربات ادمین است
+    const isBotAdmin = await checkBotAdminStatus(msg.chat.id);
+    if (!isBotAdmin) {
+      console.log(`🤖 [NEW-MEMBER] Bot is not admin in group ${msg.chat.id}, skipping new member collection`);
+      return;
+    }
+
+    // بررسی اینکه آیا این یک کاربر جدید است (نه ربات)
+    if (!msg.new_chat_member || msg.new_chat_member.is_bot) {
+      return;
+    }
+
+    // دریافت اطلاعات کاربر جدید
+    const newMember = msg.new_chat_member;
+    const userId = newMember.id;
+    const userName = newMember.first_name + (newMember.last_name ? ' ' + newMember.last_name : '');
+    const username = newMember.username || null;
+
+    console.log(`🆕 [NEW-MEMBER] New member joined: ${userName} (ID: ${userId}) in group ${msg.chat.title}`);
+
+    // بررسی اینکه آیا کاربر قبلاً در لیست اعضا وجود دارد
+    const { loadMembersData } = require('./7group');
+    const membersData = loadMembersData();
+    const groupMembers = membersData.groups[msg.chat.id] || [];
+    
+    const existingMember = groupMembers.find(member => member.id === userId);
+    
+    if (!existingMember) {
+      // اضافه کردن کاربر جدید به لیست اعضا
+      console.log(`➕ [NEW-MEMBER] Adding new member to members list: ${userName}`);
+      
+      const newMemberData = {
+        id: userId,
+        name: userName,
+        username: username,
+        joinDate: new Date().toISOString(),
+        autoCollected: true,
+        joinMethod: 'group_join',
+        lastMessageDate: new Date().toISOString()
+      };
+
+      groupMembers.push(newMemberData);
+      membersData.groups[msg.chat.id] = groupMembers;
+
+      // ذخیره اطلاعات جدید
+      const { saveMembersData } = require('./7group');
+      saveMembersData(membersData);
+
+      console.log(`✅ [NEW-MEMBER] Successfully added new member ${userName} to group ${msg.chat.title}`);
+      
+      // ارسال گزارش به گروه گزارش (اگر فعال باشد)
+      if (AUTO_COLLECT_USER_CONFIG.report_to_admin) {
+        try {
+          const { getReportsEnabled } = require('./3config');
+          if (getReportsEnabled()) {
+            const reportText = `🆕 عضو جدید وارد گروه شد\n📛 گروه: ${msg.chat.title}\n👤 کاربر: ${userName} (ID: ${userId})\n⏰ ${new Date().toLocaleString('fa-IR')}`;
+            await sendMessage(REPORT_GROUP_ID, reportText);
+            console.log(`📤 [NEW-MEMBER] Report sent to report group`);
+          }
+        } catch (error) {
+          console.log(`⚠️ [NEW-MEMBER] Could not send report:`, error.message);
+        }
+      }
+    } else {
+      // به‌روزرسانی اطلاعات کاربر موجود
+      existingMember.joinMethod = 'group_join';
+      existingMember.lastJoinDate = new Date().toISOString();
+      
+      // ذخیره تغییرات
+      const { saveMembersData } = require('./7group');
+      saveMembersData(membersData);
+      
+      console.log(`🔄 [NEW-MEMBER] Updated join info for existing member: ${userName}`);
+    }
+
+  } catch (error) {
+    console.error('❌ [NEW-MEMBER] Error in autoCollectNewMember:', error.message);
+  }
+}
+
+// تابع مدیریت دستور عضو جدید
+async function handleNewMemberCommand(msg) {
+  try {
+    console.log(`🔧 [NEW-MEMBER] New member command detected from ${msg.from.first_name}`);
+    
+    const { AUTO_COLLECT_USER_CONFIG } = require('./3config');
+    
+    let statusText = `🔧 **وضعیت جمع‌آوری خودکار اعضای جدید**\n\n`;
+    statusText += `📊 **وضعیت فعلی:** ${AUTO_COLLECT_USER_CONFIG.enabled ? '✅ فعال' : '❌ غیرفعال'}\n`;
+    statusText += `🆕 **جمع‌آوری از ورود گروه:** ${AUTO_COLLECT_USER_CONFIG.enabled ? '✅ فعال' : '❌ غیرفعال'}\n`;
+    statusText += `📤 **گزارش به ادمین:** ${AUTO_COLLECT_USER_CONFIG.report_to_admin ? '✅ فعال' : '❌ غیرفعال'}\n\n`;
+    
+    // آمار اعضای جدید
+    try {
+      const { loadMembersData } = require('./7group');
+      const membersData = loadMembersData();
+      const groupMembers = membersData.groups[msg.chat.id] || [];
+      const newJoinMembers = groupMembers.filter(member => member.joinMethod === 'group_join');
+      
+      statusText += `📈 **آمار گروه:**\n`;
+      statusText += `👥 کل اعضا: ${groupMembers.length}\n`;
+      statusText += `🆕 ورود خودکار: ${newJoinMembers.length}\n`;
+      statusText += `📅 آخرین ورود: ${newJoinMembers.length > 0 ? new Date(newJoinMembers[0].lastJoinDate || newJoinMembers[0].joinDate).toLocaleString('fa-IR') : 'نامشخص'}\n\n`;
+    } catch (error) {
+      statusText += `⚠️ خطا در دریافت آمار: ${error.message}\n\n`;
+    }
+    
+    statusText += `💡 **راهنما:**\n`;
+    statusText += `• این قابلیت به صورت خودکار ID کاربران جدید را جمع‌آوری می‌کند\n`;
+    statusText += `• فقط زمانی کار می‌کند که ربات ادمین باشد\n`;
+    statusText += `• تنظیمات در AUTO_COLLECT_USER_CONFIG قابل تغییر است\n`;
+    statusText += `⏰ ${new Date().toLocaleString('fa-IR')}`;
+    
+    await sendMessage(msg.chat.id, statusText);
+    console.log(`✅ [NEW-MEMBER] Status report sent successfully`);
+    
+  } catch (error) {
+    console.error('❌ [NEW-MEMBER] Error in handleNewMemberCommand:', error.message);
+    try {
+      await sendMessage(msg.chat.id, '❌ خطا در نمایش وضعیت جمع‌آوری اعضای جدید');
+    } catch (sendError) {
+      console.error('❌ [NEW-MEMBER] Could not send error message:', sendError.message);
+    }
   }
 }
 
