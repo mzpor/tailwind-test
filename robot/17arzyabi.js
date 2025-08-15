@@ -588,10 +588,18 @@ class ArzyabiModule {
         const evaluation = this.evaluationData.completed_evaluations[evaluationId];
         if (!evaluation) return;
 
+        // دریافت ساعت‌های فعال تمرین
+        const { getPracticeHours } = require('./3config');
+        const practiceHours = getPracticeHours();
+        const hoursText = practiceHours.length > 0 ? 
+            practiceHours.map(h => `${h}:00`).join(', ') : 
+            'تنظیم نشده';
+
         const reportText = `📊 **گزارش نظرسنجی رضایت**\n\n` +
             `کاربر: ${userName}\n` +
             `سطح کلی ارزیابی: ${evaluation.overall_level}\n` +
             `رضایت از نمره: ${score}/5\n` +
+            `⏰ ساعت‌های تمرین: ${hoursText}\n` +
             `تاریخ: ${this.getCurrentDate()}`;
 
         // ارسال به گروه گزارش
@@ -613,9 +621,18 @@ class ArzyabiModule {
     // ===== گزارش‌های هفتگی و ماهانه =====
     generateWeeklyReport(weekStartDate) {
         const weekEndDate = this.addDays(weekStartDate, 6);
+        
+        // دریافت ساعت‌های فعال تمرین
+        const { getPracticeHours } = require('./3config');
+        const practiceHours = getPracticeHours();
+        const hoursText = practiceHours.length > 0 ? 
+            practiceHours.map(h => `${h}:00`).join(', ') : 
+            'تنظیم نشده';
+        
         const report = {
             week_start: weekStartDate,
             week_end: weekEndDate,
+            practice_hours: hoursText,
             total_practices: 0,
             total_evaluations: 0,
             total_satisfaction_surveys: 0,
@@ -644,9 +661,17 @@ class ArzyabiModule {
     }
 
     generateMonthlyReport(year, month) {
+        // دریافت ساعت‌های فعال تمرین
+        const { getPracticeHours } = require('./3config');
+        const practiceHours = getPracticeHours();
+        const hoursText = practiceHours.length > 0 ? 
+            practiceHours.map(h => `${h}:00`).join(', ') : 
+            'تنظیم نشده';
+        
         const report = {
             year: year,
             month: month,
+            practice_hours: hoursText,
             total_practices: 0,
             total_evaluations: 0,
             total_satisfaction_surveys: 0,
