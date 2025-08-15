@@ -59,6 +59,17 @@ const GROUP_MANAGEMENT_CONFIG = {
   }
 };
 
+// ===== کانفیگ مدیریت استادها =====
+const OSATD_MANAGEMENT_CONFIG = {
+  enabled: 1,  // 0 = غیرفعال (دکمه استادها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
+  visibility: {
+    admin: 1,        // مدیر مدرسه
+    instructor: 1,   // مربی
+    assistant: 1,    // کمک مربی
+    regular: 0       // کاربران عادی
+  }
+};
+
 // ===== کنترل دسترسی کاربران =====
 const USER_ACCESS_CONFIG = {
   allowUserReset: 1,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
@@ -1069,6 +1080,21 @@ const hasGroupManagementAccess = (userRole) => {
   return true;
 };
 
+// تابع بررسی فعال بودن مدیریت استادها
+const isOsatdManagementEnabled = () => {
+  return OSATD_MANAGEMENT_CONFIG.enabled === 1;
+};
+
+// تابع بررسی دسترسی کاربر به مدیریت استادها
+const hasOsatdManagementAccess = (userRole) => {
+  if (!isOsatdManagementEnabled()) {
+    return false;
+  }
+  
+  // همه نقش‌ها دسترسی دارند
+  return true;
+};
+
 // ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
 
 // اضافه کردن مربی بر اساس شماره تلفن
@@ -1327,5 +1353,9 @@ module.exports = {
   // ===== کانفیگ مدیریت گروه‌ها =====
   GROUP_MANAGEMENT_CONFIG,
   isGroupManagementEnabled,
-  hasGroupManagementAccess
+  hasGroupManagementAccess,
+  // ===== کانفیگ مدیریت استادها =====
+  OSATD_MANAGEMENT_CONFIG,
+  isOsatdManagementEnabled,
+  hasOsatdManagementAccess
 };
