@@ -6,15 +6,11 @@ const path = require('path');
 
 class ArzyabiModule {
     constructor() {
-        this.configFile = path.join(__dirname, 'data', 'evaluation_config.json');
         this.evaluationDataFile = path.join(__dirname, 'data', 'evaluation_data.json');
         this.practiceDataFile = path.join(__dirname, 'data', 'practice_data.json');
         this.satisfactionDataFile = path.join(__dirname, 'data', 'satisfaction_data.json');
         this.weeklyReportFile = path.join(__dirname, 'data', 'weekly_reports.json');
         this.monthlyReportFile = path.join(__dirname, 'data', 'monthly_reports.json');
-        
-        // بارگذاری کانفیگ
-        this.config = this.loadConfig();
         
         // ایجاد فایل‌های داده در صورت عدم وجود
         this.initializeDataFiles();
@@ -23,35 +19,13 @@ class ArzyabiModule {
         this.ensureDataDirectories();
     }
 
-    loadConfig() {
-        try {
-            if (fs.existsSync(this.configFile)) {
-                const configData = fs.readFileSync(this.configFile, 'utf8');
-                return JSON.parse(configData);
-            }
-        } catch (error) {
-            console.error('❌ [ARZYABI] خطا در بارگذاری کانفیگ:', error.message);
-        }
-        
-        // کانفیگ پیش‌فرض در صورت خطا
-        return {
-            evaluation_system: {
-                enabled: 1,
-                practice_detection: { voice_with_caption: 1, voice_with_reply_task: 1, voice_with_reply_student: 1, text_only: 1, text_reply_to_voice: 1 },
-                practice_schedule: { enabled: 1, hours: [14, 15, 16], days: [0, 1, 2, 3, 4] },
-                evaluation: { enabled: 1, min_evaluators: 2, auto_complete: 1 },
-                satisfaction_survey: { enabled: 1, show_after_evaluation: 1, send_to_admin_group: 1 },
-                reporting: { daily_reports: 1, weekly_reports: 1, monthly_reports: 1, send_to_admin_group: 1 },
-                access: { admin: 1, instructor: 1, assistant: 1, regular: 0 }
-            }
-        };
-    }
+
 
     initializeDataFiles() {
         // ایجاد فایل‌های داده با ساختار پیش‌فرض
         const dataFiles = [
             { file: this.evaluationDataFile, data: { pending_evaluations: {}, completed_evaluations: {}, evaluators: {} } },
-            { file: this.practiceDataFile, data: { daily_practices: {}, practice_schedule: this.config.evaluation_system.practice_schedule } },
+            { file: this.practiceDataFile, data: { daily_practices: {} } },
             { file: this.satisfactionDataFile, data: { surveys: {} } },
             { file: this.weeklyReportFile, data: { reports: {}, last_update: null } },
             { file: this.monthlyReportFile, data: { reports: {}, last_update: null } }
@@ -124,24 +98,14 @@ class ArzyabiModule {
                 this.practiceData = JSON.parse(fs.readFileSync(this.practiceDataFile, 'utf8'));
             } else {
                 this.practiceData = {
-                    daily_practices: {},
-                    practice_schedule: {
-                        enabled: true,
-                        hours: [14, 15, 16], // ساعت 2 تا 5 عصر
-                        days: [0, 1, 2, 3, 4] // شنبه تا چهارشنبه
-                    }
+                    daily_practices: {}
                 };
                 this.savePracticeData();
             }
         } catch (error) {
             console.error('❌ خطا در بارگذاری داده‌های تمرین:', error.message);
             this.practiceData = {
-                daily_practices: {},
-                practice_schedule: {
-                    enabled: true,
-                    hours: [14, 15, 16],
-                    days: [0, 1, 2, 3, 4]
-                }
+                daily_practices: {}
             };
         }
     }
@@ -243,24 +207,9 @@ class ArzyabiModule {
     // ===== مدیریت زمان‌بندی تمرین =====
     isPracticeTime() {
         try {
-            const schedule = this.config.evaluation_system?.practice_schedule;
-            
-            // بررسی فعال بودن سیستم ارزیابی
-            if (!schedule || schedule.enabled !== 1) {
-                return false;
-            }
-
-            const now = new Date();
-            const currentDay = now.getDay(); // 0 = یکشنبه، 1 = دوشنبه، ...
-            const currentHour = now.getHours();
-
-            // تبدیل به روزهای هفته فارسی
-            const persianDay = (currentDay + 1) % 7; // 0 = شنبه، 1 = یکشنبه، ...
-            
-            const isActiveDay = schedule.days.includes(persianDay);
-            const isActiveHour = schedule.hours.includes(currentHour);
-            
-            return isActiveDay && isActiveHour;
+            // استفاده از تابع مرکزی در 3config.js
+            const { isPracticeTime: configIsPracticeTime } = require('./3config');
+            return configIsPracticeTime();
         } catch (error) {
             console.error('❌ [ARZYABI] Error in isPracticeTime:', error.message);
             return false;
@@ -314,10 +263,23 @@ class ArzyabiModule {
     // ===== تشخیص تمرین از پیام =====
     isPracticeMessage(message) {
         try {
-            const detection = this.config.evaluation_system?.practice_detection;
+            // استفاده از توابع مرکزی در 3config.js
+            const { 
+                isPracticeDetectionEnabled,
+                isVoiceWithCaptionEnabled,
+                isVoiceWithReplyTaskEnabled,
+                isVoiceWithReplyStudentEnabled,
+                isTextOnlyEnabled,
+                isTextReplyToVoiceEnabled
+            } = require('./3config');
+
+            // بررسی اینکه آیا سیستم تشخیص تمرین فعال است
+            if (!isPracticeDetectionEnabled()) {
+                return false;
+            }
 
             // روش 1: صوت با کپشن "تکلیف"
-            if (message.voice && message.caption && detection?.voice_with_caption === 1) {
+            if (message.voice && message.caption && isVoiceWithCaptionEnabled()) {
                 const caption = message.caption.toLowerCase().trim();
                 if (caption.includes('تکلیف') || caption.includes('تمرین')) {
                     console.log('✅ [ARZYABI] Practice detected: voice with caption');
@@ -326,7 +288,7 @@ class ArzyabiModule {
             }
 
             // روش 2: صوت با ریپلای به متن "تکلیف"
-            if (message.voice && message.reply_to_message && detection?.voice_with_reply_task === 1) {
+            if (message.voice && message.reply_to_message && isVoiceWithReplyTaskEnabled()) {
                 const replyText = message.reply_to_message.text || '';
                 const replyLower = replyText.toLowerCase().trim();
                 if (replyLower.includes('تکلیف') || replyLower.includes('تمرین')) {
@@ -336,7 +298,7 @@ class ArzyabiModule {
             }
 
             // روش 3: صوت با ریپلای به "قرآن آموز"
-            if (message.voice && message.reply_to_message && detection?.voice_with_reply_student === 1) {
+            if (message.voice && message.reply_to_message && isVoiceWithReplyStudentEnabled()) {
                 const replyText = message.reply_to_message.text || '';
                 const replyLower = replyText.toLowerCase().trim();
                 if (replyLower.includes('قرآن آموز')) {
@@ -346,7 +308,7 @@ class ArzyabiModule {
             }
 
             // روش 4: متن "تکلیف" یا "تمرین" (برای تست)
-            if (message.text && detection?.text_only === 1) {
+            if (message.text && isTextOnlyEnabled()) {
                 const text = message.text.toLowerCase().trim();
                 if (text === 'تکلیف' || text === 'تمرین') {
                     console.log('✅ [ARZYABI] Practice detected: text only');
@@ -355,7 +317,7 @@ class ArzyabiModule {
             }
 
             // روش 5: متن ریپلای به صوت (مثل "تکلیف" ریپلای به صوت)
-            if (message.text && message.reply_to_message && message.reply_to_message.voice && detection?.text_reply_to_voice === 1) {
+            if (message.text && message.reply_to_message && message.reply_to_message.voice && isTextReplyToVoiceEnabled()) {
                 const text = message.text.toLowerCase().trim();
                 if (text.includes('تکلیف') || text.includes('تمرین') || text.includes('قرآن آموز')) {
                     console.log('✅ [ARZYABI] Practice detected: text reply to voice message');
@@ -718,13 +680,9 @@ class ArzyabiModule {
 
     // ===== تنظیمات =====
     updatePracticeSchedule(enabled, hours, days) {
-        this.practiceData.practice_schedule = {
-            enabled: enabled,
-            hours: hours || [14, 15, 16],
-            days: days || [0, 1, 2, 3, 4]
-        };
-        this.savePracticeData();
-        return { success: true, message: "✅ تنظیمات زمان تمرین به‌روزرسانی شد." };
+        // تنظیمات تمرین حالا از 3config.js خوانده می‌شود
+        console.log('✅ [ARZYABI] Practice schedule settings are now managed centrally via 3config.js');
+        return { success: true, message: "✅ تنظیمات زمان تمرین از پنل مدیر مدیریت می‌شود." };
     }
 
     updateSatisfactionSettings(enabled, showAfterEvaluation) {
@@ -784,25 +742,43 @@ class ArzyabiModule {
 
     // ===== نمایش وضعیت زمان تمرین =====
     getPracticeTimeStatus() {
-        const now = new Date();
-        const currentDay = now.getDay();
-        const currentHour = now.getHours();
-        const persianDay = (currentDay + 1) % 7;
-        
-        const isActiveDay = this.practiceData.practice_schedule.days.includes(persianDay);
-        const isActiveHour = this.practiceData.practice_schedule.hours.includes(currentHour);
-        
-        const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
-        const currentDayName = dayNames[persianDay];
-        
-        return {
-            is_active: this.isPracticeTime(),
-            current_day: currentDayName,
-            current_hour: currentHour,
-            is_active_day: isActiveDay,
-            is_active_hour: isActiveHour,
-            schedule: this.practiceData.practice_schedule
-        };
+        try {
+            const { getPracticeDays, getPracticeHours } = require('./3config');
+            const now = new Date();
+            const currentDay = now.getDay();
+            const currentHour = now.getHours();
+            
+            // تبدیل صحیح به روزهای هفته فارسی
+            let persianDay;
+            if (currentDay === 0) persianDay = 1;      // یکشنبه -> 1
+            else if (currentDay === 1) persianDay = 2; // دوشنبه -> 2
+            else if (currentDay === 2) persianDay = 3; // سه‌شنبه -> 3
+            else if (currentDay === 3) persianDay = 4; // چهارشنبه -> 4
+            else if (currentDay === 4) persianDay = 5; // پنج‌شنبه -> 5
+            else if (currentDay === 5) persianDay = 6; // جمعه -> 6
+            else if (currentDay === 6) persianDay = 0; // شنبه -> 0
+            
+            const practiceDays = getPracticeDays();
+            const practiceHours = getPracticeHours();
+            
+            const isActiveDay = practiceDays.includes(persianDay);
+            const isActiveHour = practiceHours.includes(currentHour);
+            
+            const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+            const currentDayName = dayNames[persianDay];
+            
+            return {
+                is_active: this.isPracticeTime(),
+                current_day: currentDayName,
+                current_hour: currentHour,
+                is_active_day: isActiveDay,
+                is_active_hour: isActiveHour,
+                schedule: { days: practiceDays, hours: practiceHours }
+            };
+        } catch (error) {
+            console.error('❌ [ARZYABI] Error in getPracticeTimeStatus:', error.message);
+            return { is_active: false, error: error.message };
+        }
     }
 
     // ===== تنظیم توابع ارسال پیام =====

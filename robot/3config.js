@@ -1132,25 +1132,7 @@ const isEvaluationSystemEnabled = () => {
   return EVALUATION_SYSTEM_CONFIG.evaluation_system?.enabled === 1;
 };
 
-// بررسی فعال بودن قابلیت تشخیص تمرین
-const isPracticeDetectionEnabled = (detectionType) => {
-  if (!isEvaluationSystemEnabled()) {
-    return false;
-  }
-  
-  return EVALUATION_SYSTEM_CONFIG.evaluation_system?.practice_detection?.[detectionType] === 1;
-};
-
-// بررسی فعال بودن قابلیت‌های مختلف تشخیص
-const isVoiceWithCaptionEnabled = () => isPracticeDetectionEnabled('voice_with_caption');
-const isVoiceWithReplyTaskEnabled = () => isPracticeDetectionEnabled('voice_with_reply_task');
-const isVoiceWithReplyStudentEnabled = () => isPracticeDetectionEnabled('voice_with_reply_student');
-const isTextOnlyEnabled = () => isPracticeDetectionEnabled('text_only');
-
-// بررسی فعال بودن تشخیص متن ریپلای به صوت
-const isTextReplyToVoiceEnabled = () => {
-  return EVALUATION_SYSTEM_CONFIG.evaluation_system?.practice_detection?.text_reply_to_voice === 1;
-};
+// بررسی فعال بودن قابلیت تشخیص تمرین - حذف شده، از توابع جدید استفاده می‌شود
 
 // بررسی فعال بودن زمان تمرین
 const isPracticeScheduleEnabled = () => {
@@ -1261,7 +1243,154 @@ const updatePracticeSchedule = (enabled, hours, days) => {
   return true;
 };
 
-// ===== توابع جدید برای مدیریت نقش‌ها بر اساس شماره تلفن =====
+// ===== توابع جدید برای تنظیمات تمرین و ارزیابی =====
+const loadSettings = () => {
+  try {
+    const settingsPath = path.join(__dirname, SETTINGS_CONFIG.SETTINGS_FILE);
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf8');
+      return JSON.parse(data);
+    } else {
+      console.log('⚠️ [CONFIG] Settings file not found, using defaults');
+      return {
+        practice_days: [0, 1, 2, 3, 4, 5, 6],
+        evaluation_days: [0, 1, 2, 3, 4, 5, 6]
+      };
+    }
+  } catch (error) {
+    console.error('❌ [CONFIG] Error loading settings:', error.message);
+    return {
+      practice_days: [0, 1, 2, 3, 4, 5, 6],
+      evaluation_days: [0, 1, 2, 3, 4, 5, 6]
+    };
+  }
+};
+
+const getPracticeDays = () => {
+  try {
+    const settings = loadSettings();
+    return settings.practice_days || [0, 1, 2, 3, 4, 5, 6];
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting practice days:', error.message);
+    return [0, 1, 2, 3, 4, 5, 6]; // پیش‌فرض: همه روزها
+  }
+};
+
+const getEvaluationDays = () => {
+  try {
+    const settings = loadSettings();
+    return settings.evaluation_days || [0, 1, 2, 3, 4, 5, 6];
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting evaluation days:', error.message);
+    return [0, 1, 2, 3, 4, 5, 6]; // پیش‌فرض: همه روزها
+  }
+};
+
+const getPracticeHours = () => {
+  try {
+    const settings = loadSettings();
+    return settings.practice_hours || [14, 15, 16, 17]; // ساعت 2 تا 6 عصر
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting practice hours:', error.message);
+    return [14, 15, 16, 17];
+  }
+};
+
+const isPracticeTime = () => {
+  try {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = یکشنبه، 1 = دوشنبه، ...
+    const currentHour = now.getHours();
+
+    // تبدیل صحیح به روزهای هفته فارسی
+    // JavaScript: 0=یکشنبه, 1=دوشنبه, 2=سه‌شنبه, 3=چهارشنبه, 4=پنج‌شنبه, 5=جمعه, 6=شنبه
+    // تنظیمات: 0=شنبه, 1=یکشنبه, 2=دوشنبه, 3=سه‌شنبه, 4=چهارشنبه, 5=پنج‌شنبه, 6=جمعه
+    let persianDay;
+    if (currentDay === 0) persianDay = 1;      // یکشنبه -> 1
+    else if (currentDay === 1) persianDay = 2; // دوشنبه -> 2
+    else if (currentDay === 2) persianDay = 3; // سه‌شنبه -> 3
+    else if (currentDay === 3) persianDay = 4; // چهارشنبه -> 4
+    else if (currentDay === 4) persianDay = 5; // پنج‌شنبه -> 5
+    else if (currentDay === 5) persianDay = 6; // جمعه -> 6
+    else if (currentDay === 6) persianDay = 0; // شنبه -> 0
+    
+    const practiceDays = getPracticeDays();
+    const practiceHours = getPracticeHours();
+    
+    const isActiveDay = practiceDays.includes(persianDay);
+    const isActiveHour = practiceHours.includes(currentHour);
+    
+    console.log(`🔍 [CONFIG] Practice time check: Day=${currentDay}(${persianDay}), Hour=${currentHour}, ActiveDay=${isActiveDay}, ActiveHour=${isActiveHour}`);
+    
+    return isActiveDay && isActiveHour;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error in isPracticeTime:', error.message);
+    return false;
+  }
+};
+
+// ===== توابع جدید برای تشخیص تمرین =====
+const isPracticeDetectionEnabled = () => {
+  try {
+    const settings = loadSettings();
+    return settings.evaluation_system?.enabled === true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking practice detection enabled:', error.message);
+    return false;
+  }
+};
+
+const isVoiceWithCaptionEnabled = () => {
+  try {
+    const settings = loadSettings();
+    return settings.evaluation_system?.practice_detection?.voice_with_caption === true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking voice with caption enabled:', error.message);
+    return false;
+  }
+};
+
+const isVoiceWithReplyTaskEnabled = () => {
+  try {
+    const settings = loadSettings();
+    return settings.evaluation_system?.practice_detection?.voice_with_reply_task === true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking voice with reply task enabled:', error.message);
+    return false;
+  }
+};
+
+const isVoiceWithReplyStudentEnabled = () => {
+  try {
+    const settings = loadSettings();
+    return settings.evaluation_system?.practice_detection?.voice_with_reply_student === true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking voice with reply student enabled:', error.message);
+    return false;
+  }
+};
+
+const isTextOnlyEnabled = () => {
+  try {
+    const settings = loadSettings();
+    return settings.evaluation_system?.practice_detection?.text_only === true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking text only enabled:', error.message);
+    return false;
+  }
+};
+
+const isTextReplyToVoiceEnabled = () => {
+  try {
+    const settings = loadSettings();
+    return settings.evaluation_system?.practice_detection?.text_reply_to_voice === true;
+  } catch (error) {
+    console.error('❌ [CONFIG] Error checking text reply to voice enabled:', error.message);
+    return false;
+  }
+};
+
+// ===== توابع مدیریت نقش‌ها بر اساس شماره تلفن =====
 
 // اضافه کردن مربی بر اساس شماره تلفن
 const addCoachByPhone = (phoneNumber, instructorName) => {
@@ -1544,5 +1673,10 @@ module.exports = {
   hasEvaluationAccess,
   setPracticeDetectionStatus,
   setEvaluationSystemStatus,
-  updatePracticeSchedule
+  updatePracticeSchedule,
+  // ===== توابع جدید برای تنظیمات تمرین و ارزیابی =====
+  getPracticeDays,
+  getEvaluationDays,
+  isPracticeTime,
+  getPracticeHours
 };
