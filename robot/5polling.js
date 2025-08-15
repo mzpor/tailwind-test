@@ -235,7 +235,7 @@ async function getGroupsList(userId = null) {
   try {
     const membersData = loadMembersData();
     const groups = [];
-    const { getGroupName } = require('./3config.js');
+    const { getGroupName, GROUP_VISIBILITY_CONFIG } = require('./3config.js');
     
     for (const [groupId, members] of Object.entries(membersData.groups)) {
       if (members.length > 0) {
@@ -244,18 +244,32 @@ async function getGroupsList(userId = null) {
           // استفاده از نام گروه از config یا عنوان گروه از API
           const groupTitle = await getGroupName(groupId) || chatInfo.title || `گروه ${groupId}`;
           
-          // اگر userId داده شده و مربی یا کمک مربی است، فقط گروه‌هایی که ادمینه را نشان بده
-          if (userId && (isCoach(userId) || isAssistant(userId))) {
-              // برای مربی و کمک مربی، اگر در GROUP_ADMIN_IDS باشد، همه گروه‌ها را نشان بده
-  if (getCurrentGroupAdminIds().includes(userId)) {
-              groups.push({
-                id: groupId,
-                title: groupTitle,
-                memberCount: members.length
-              });
+          let shouldShowGroup = false;
+          
+          if (userId && isCoach(userId)) {
+            // برای مربی
+            if (GROUP_VISIBILITY_CONFIG.COACH_SEE_ALL_GROUPS === 1) {
+              // اگر 1 باشد، همه گروه‌ها را نشان بده
+              shouldShowGroup = true;
+            } else {
+              // اگر 0 باشد، فقط گروه‌هایی که مربی در آن‌ها ادمین است را نشان بده
+              shouldShowGroup = getCurrentGroupAdminIds().includes(userId);
+            }
+          } else if (userId && isAssistant(userId)) {
+            // برای کمک مربی
+            if (GROUP_VISIBILITY_CONFIG.ASSISTANT_SEE_ALL_GROUPS === 1) {
+              // اگر 1 باشد، همه گروه‌ها را نشان بده
+              shouldShowGroup = true;
+            } else {
+              // اگر 0 باشد، فقط گروه‌هایی که کمک مربی در آن‌ها ادمین است را نشان بده
+              shouldShowGroup = getCurrentGroupAdminIds().includes(userId);
             }
           } else {
             // برای مدیران و ادمین‌های گروه، همه گروه‌ها را نشان بده
+            shouldShowGroup = true;
+          }
+          
+          if (shouldShowGroup) {
             groups.push({
               id: groupId,
               title: groupTitle,
@@ -266,18 +280,27 @@ async function getGroupsList(userId = null) {
           // اگر نتوانستیم اطلاعات گروه را دریافت کنیم، از نام گروه از config استفاده کنیم
           const groupTitle = await getGroupName(groupId) || `گروه ${groupId}`;
           
-          // اگر userId داده شده و مربی یا کمک مربی است، فقط گروه‌هایی که ادمینه را نشان بده
-          if (userId && (isCoach(userId) || isAssistant(userId))) {
-            // برای مربی و کمک مربی، فقط گروه‌های شناخته شده را نشان بده
-            if (getCurrentGroupAdminIds().includes(userId)) {
-              groups.push({
-                id: groupId,
-                title: groupTitle,
-                memberCount: members.length
-              });
+          let shouldShowGroup = false;
+          
+          if (userId && isCoach(userId)) {
+            // برای مربی
+            if (GROUP_VISIBILITY_CONFIG.COACH_SEE_ALL_GROUPS === 1) {
+              shouldShowGroup = true;
+            } else {
+              shouldShowGroup = getCurrentGroupAdminIds().includes(userId);
+            }
+          } else if (userId && isAssistant(userId)) {
+            // برای کمک مربی
+            if (GROUP_VISIBILITY_CONFIG.ASSISTANT_SEE_ALL_GROUPS === 1) {
+              shouldShowGroup = true;
+            } else {
+              shouldShowGroup = getCurrentGroupAdminIds().includes(userId);
             }
           } else {
-            // برای مدیران و ادمین‌های گروه، همه گروه‌ها را نشان بده
+            shouldShowGroup = true;
+          }
+          
+          if (shouldShowGroup) {
             groups.push({
               id: groupId,
               title: groupTitle,

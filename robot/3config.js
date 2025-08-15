@@ -36,6 +36,12 @@ const BUTTON_VISIBILITY_CONFIG = {
   PRACTICE_EVALUATION_DAYS_BUTTON: 0,  // دکمه روزهای تمرین و ارزیابی: 1 = فعال، 0 = غیرفعال
 };
 
+// ===== کنترل نمایش گروه‌ها برای نقش‌های مختلف =====
+const GROUP_VISIBILITY_CONFIG = {
+  COACH_SEE_ALL_GROUPS: 0,      // 0 = فقط گروه‌های خودش، 1 = همه گروه‌ها
+  ASSISTANT_SEE_ALL_GROUPS: 0   // 0 = فقط گروه‌های خودش، 1 = همه گروه‌ها
+};
+
 // ===== کنترل دسترسی کاربران =====
 const USER_ACCESS_CONFIG = {
   allowUserReset: 1,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
@@ -1112,6 +1118,7 @@ module.exports = {
   setButtonVisibility,
   getButtonVisibilityConfig,
   BUTTON_VISIBILITY_CONFIG,
+  GROUP_VISIBILITY_CONFIG,
   // ===== توابع کنترل دسترسی کاربران =====
   USER_ACCESS_CONFIG
 };
