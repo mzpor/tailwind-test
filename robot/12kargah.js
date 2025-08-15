@@ -15,6 +15,41 @@ class KargahModule {
     console.log('✅ KargahModule initialized successfully');
   }
   
+  // متدهای ارسال پیام - برای اتصال از polling.js
+  setSendMessage(sendMessage) {
+    this.sendMessage = sendMessage;
+  }
+  
+  setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard) {
+    this.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
+  }
+  
+  setEditMessageWithInlineKeyboard(editMessageWithInlineKeyboard) {
+    this.editMessageWithInlineKeyboard = editMessageWithInlineKeyboard;
+  }
+  
+  // متد پیش‌فرض برای ارسال پیام با کیبورد
+  async sendMessageWithInlineKeyboard(chatId, text, keyboard) {
+    if (this.sendMessageWithInlineKeyboard) {
+      return await this.sendMessageWithInlineKeyboard(chatId, text, keyboard);
+    } else {
+      // استفاده از متد پیش‌فرض
+      const { sendMessageWithInlineKeyboard } = require('./4bale');
+      return await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+    }
+  }
+  
+  // متد پیش‌فرض برای ویرایش پیام با کیبورد
+  async editMessageWithInlineKeyboard(chatId, messageId, text, keyboard) {
+    if (this.editMessageWithInlineKeyboard) {
+      return await this.editMessageWithInlineKeyboard(chatId, messageId, text, keyboard);
+    } else {
+      // استفاده از متد پیش‌فرض
+      const { editMessageWithInlineKeyboard } = require('./4bale');
+      return await editMessageWithInlineKeyboard(chatId, messageId, text, keyboard);
+    }
+  }
+  
   loadWorkshops() {
     try {
       if (fs.existsSync(this.workshopsFile)) {

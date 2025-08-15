@@ -1,7 +1,7 @@
 //⏰ 09:10:00 🗓️ دوشنبه 13 مرداد 1404
 // ماژول اجرای حلقه اصلی دریافت پیام‌ها و کنترل ورود گروه
 
-const { getUpdates, sendMessage, sendMessageWithInlineKeyboard, deleteMessage, getChat, getChatMember, answerCallbackQuery } = require('./4bale');
+const { getUpdates, sendMessage, sendMessageWithInlineKeyboard, deleteMessage, getChat, getChatMember, answerCallbackQuery, editMessageWithInlineKeyboard } = require('./4bale');
 const { getTimeStamp } = require('./1time');
 const { 
   isAdmin, 
@@ -693,6 +693,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
       }
       
       inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
+      inlineKeyboard.push([{ text: '👨‍🏫 استادها', callback_data: 'osatd_management' }]);
       
       const groupManagementText = hasGroupManagementAccess('SCHOOL_ADMIN') 
         ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
@@ -703,6 +704,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
 ${groupManagementText}• 🏭 کارگاه‌ها
+• 👨‍🏫 استادها
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
@@ -884,9 +886,9 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
       // نمایش پنل کارگاه‌ها
       const kargahModule = require('./12kargah');
       // متصل کردن متدهای ارسال پیام
-      kargahModule.sendMessage = sendMessage;
-      kargahModule.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
-      kargahModule.editMessageWithInlineKeyboard = require('./4bale').editMessageWithInlineKeyboard;
+      kargahModule.setSendMessage(sendMessage);
+      kargahModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+      kargahModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
       const success = await kargahModule.handleKargahCommand(msg.chat.id, msg.from.id);
       
       if (success) {
@@ -912,9 +914,9 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
     console.log(`🔍 [POLLING] Checking kargah state for user ${msg.from.id}`);
     
     // متصل کردن متدهای ارسال پیام
-    kargahModule.sendMessage = sendMessage;
-    kargahModule.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
-    kargahModule.editMessageWithInlineKeyboard = require('./4bale').editMessageWithInlineKeyboard;
+    kargahModule.setSendMessage(sendMessage);
+    kargahModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+    kargahModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
     
     console.log(`🔍 [POLLING] isUserInState result: ${kargahModule.isUserInState(msg.from.id)}`);
     
@@ -1006,11 +1008,12 @@ function startPolling() {
           console.log(`🔄 [POLLING] Callback data === 'practice_evaluation_days_settings': ${callback_query.data === 'practice_evaluation_days_settings'}`);
           
           // حذف پیام قبلی که کیبورد شیشه‌ای داشت - فقط برای callback های غیر کارگاه و غیر بازگشت
-          if (!callback_query.data.startsWith('kargah_') && 
-              !callback_query.data.startsWith('student_') && 
-              !callback_query.data.startsWith('quran_student_') && 
-              callback_query.data !== 'back_to_groups' && 
-              callback_query.data !== 'back_to_main') {
+                  if (!callback_query.data.startsWith('kargah_') &&
+            !callback_query.data.startsWith('student_') &&
+            !callback_query.data.startsWith('quran_student_') &&
+            callback_query.data !== 'back_to_groups' &&
+            callback_query.data !== 'back_to_main' &&
+            callback_query.data !== 'kargah_management') {
             try {
               console.log('🗑️ [POLLING] Attempting to delete previous message...');
               await deleteMessage(callback_query.message.chat.id, callback_query.message.message_id);
@@ -1221,14 +1224,38 @@ function startPolling() {
               // نمایش منوی کارگاه‌ها با استفاده از ماژول کارگاه‌ها
               const kargahModule = require('./12kargah');
               // متصل کردن متدهای ارسال پیام
-              kargahModule.sendMessage = sendMessage;
-              kargahModule.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
-              kargahModule.editMessageWithInlineKeyboard = require('./4bale').editMessageWithInlineKeyboard;
+              kargahModule.setSendMessage(sendMessage);
+              kargahModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+              kargahModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
               const success = await kargahModule.handleKargahCommand(callback_query.message.chat.id, callback_query.from.id);
               
               if (!success) {
                 const config = roleConfig[role];
                 const reply = '❌ خطا در نمایش منوی کارگاه‌ها';
+                await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+              }
+            }
+          } else if (callback_query.data === 'osatd_management') {
+            
+            console.log('🔄 [POLLING] Osatd management callback detected');
+            // بررسی دسترسی کاربر - فقط ادمین‌ها می‌توانند استادها را مدیریت کنند
+            if (!isAdmin(callback_query.from.id)) {
+              const config = roleConfig[role];
+              const reply = '⚠️ فقط مدیر مدرسه می‌تواند استادها را مدیریت کند.';
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+            } else {
+              // نمایش منوی استادها با استفاده از ماژول استادها
+              const osatdModule = require('./10osatd');
+              const result = await osatdModule.handleCoachesCallback({
+                ...callback_query,
+                data: 'coaches_list' // تغییر callback data به coaches_list برای سازگاری
+              });
+              
+              if (result && result.keyboard) {
+                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+              } else {
+                const config = roleConfig[role];
+                const reply = '❌ خطا در نمایش منوی استادها';
                 await safeSendMessage(callback_query.from.id, reply, config.keyboard);
               }
             }
@@ -1270,9 +1297,9 @@ function startPolling() {
             // پردازش callback های کارگاه‌ها
             const kargahModule = require('./12kargah');
             // متصل کردن متدهای ارسال پیام
-            kargahModule.sendMessage = sendMessage;
-            kargahModule.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
-            kargahModule.editMessageWithInlineKeyboard = require('./4bale').editMessageWithInlineKeyboard;
+            kargahModule.setSendMessage(sendMessage);
+            kargahModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+            kargahModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
             const success = await kargahModule.handleCallback(callback_query);
             
             if (!success) {
@@ -1280,6 +1307,36 @@ function startPolling() {
               console.error(`❌ [POLLING] Kargah callback failed for data: ${callback_query.data}`);
             } else {
               console.log('✅ [POLLING] Kargah callback handled successfully');
+            }
+          } else if (callback_query.data.startsWith('coach_') || 
+                     callback_query.data.startsWith('attendance_') || 
+                     callback_query.data.startsWith('report_') || 
+                     callback_query.data === 'coaches_list' ||
+                     callback_query.data === 'back_to_coaches' ||
+                     callback_query.data === 'back_to_workshops' ||
+                     callback_query.data.startsWith('back_to_students_')) {
+            console.log('🔄 [POLLING] Coaches callback detected');
+            console.log(`🔄 [POLLING] Coaches callback data: ${callback_query.data}`);
+            // پردازش callback های استادها و حضور و غیاب
+            const osatdModule = require('./10osatd');
+            const result = await osatdModule.handleCoachesCallback(callback_query);
+            
+            if (result) {
+              if (result.keyboard) {
+                // اگر کیبرد دارد، پیام جدید ارسال کن
+                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+              } else {
+                // اگر فقط متن دارد، پیام را ویرایش کن
+                await editMessageWithInlineKeyboard(
+                  callback_query.message.chat.id,
+                  callback_query.message.message_id,
+                  result.text
+                );
+              }
+              console.log('✅ [POLLING] Coaches callback handled successfully');
+            } else {
+              console.error('❌ [POLLING] Error handling coaches callback');
+              console.error(`❌ [POLLING] Coaches callback failed for data: ${callback_query.data}`);
             }
           } else if (callback_query.data.startsWith('start_registration') || 
                      callback_query.data.startsWith('edit_') || 
@@ -1769,6 +1826,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         }
         
         inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
+        inlineKeyboard.push([{ text: '👨‍🏫 استادها', callback_data: 'osatd_management' }]);
         
         const groupManagementText = hasGroupManagementAccess('SCHOOL_ADMIN') 
           ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
@@ -1779,6 +1837,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
 ${groupManagementText}• 🏭 کارگاه‌ها
+• 👨‍🏫 استادها
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
@@ -1992,9 +2051,9 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
       // پردازش callback های کارگاه‌ها
       const kargahModule = require('./12kargah');
       // متصل کردن متدهای ارسال پیام
-      kargahModule.sendMessage = sendMessage;
-      kargahModule.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
-      kargahModule.editMessageWithInlineKeyboard = require('./4bale').editMessageWithInlineKeyboard;
+      kargahModule.setSendMessage(sendMessage);
+      kargahModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+      kargahModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
       const success = await kargahModule.handleCallback(callback_query);
       
       if (!success) {
