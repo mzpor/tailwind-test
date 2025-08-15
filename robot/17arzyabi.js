@@ -804,6 +804,19 @@ class ArzyabiModule {
             schedule: this.practiceData.practice_schedule
         };
     }
+
+    // ===== تنظیم توابع ارسال پیام =====
+    setSendMessage(sendMessage) {
+        this.sendMessage = sendMessage;
+    }
+
+    setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard) {
+        this.sendMessageWithInlineKeyboard = sendMessageWithInlineKeyboard;
+    }
+
+    setEditMessageWithInlineKeyboard(editMessageWithInlineKeyboard) {
+        this.editMessageWithInlineKeyboard = editMessageWithInlineKeyboard;
+    }
 }
 
 module.exports = { ArzyabiModule };

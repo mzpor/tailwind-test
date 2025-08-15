@@ -1288,8 +1288,10 @@ function startPolling() {
               const reply = '❌ خطا در نمایش منوی استادها';
               await safeSendMessage(callback_query.from.id, reply, config.keyboard);
             }
-          } else if (callback_query.data.startsWith('practice_') || callback_query.data.startsWith('evaluation_') || callback_query.data.startsWith('satisfaction_')) {
-            // پردازش callback های تمرین، ارزیابی و نظرسنجی
+          } else if ((callback_query.data.startsWith('practice_') && !callback_query.data.includes('_days_settings')) || 
+                     (callback_query.data.startsWith('evaluation_') && !callback_query.data.includes('_days_settings')) || 
+                     callback_query.data.startsWith('satisfaction_')) {
+            // پردازش callback های تمرین، ارزیابی و نظرسنجی (به جز تنظیمات روزها)
             console.log(`🎯 [POLLING] Practice/Evaluation/Satisfaction callback detected: ${callback_query.data}`);
             
             // متصل کردن متدهای ارسال پیام به ماژول ارزیابی
@@ -1302,10 +1304,18 @@ function startPolling() {
             // تشخیص نوع callback
             if (callback_query.data.startsWith('satisfaction_')) {
               // نظرسنجی
-              success = await arzyabiModule.handleSatisfactionCallback(callback_query);
+              success = await arzyabiModule.handleSatisfactionCallback(
+                callback_query.data, 
+                callback_query.from.id, 
+                callback_query.from.first_name + (callback_query.from.last_name ? ' ' + callback_query.from.last_name : '')
+              );
             } else {
               // تمرین و ارزیابی
-              success = await arzyabiModule.handleEvaluationCallback(callback_query);
+              success = await arzyabiModule.handleEvaluationCallback(
+                callback_query.data, 
+                callback_query.from.id, 
+                callback_query.from.first_name + (callback_query.from.last_name ? ' ' + callback_query.from.last_name : '')
+              );
             }
             
             if (!success) {

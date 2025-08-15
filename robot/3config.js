@@ -792,7 +792,7 @@ const SETTINGS_CONFIG = {
   ENABLE_SATISFACTION_SURVEY: true, // نظرسنجی رضایت
   
   // فایل ذخیره تنظیمات
-  SETTINGS_FILE: 'settings_data.json',
+  SETTINGS_FILE: 'data/settings.json',
   REPORTS_CONFIG_FILE: 'data/reports_config.json',
   
   // نام‌های روزهای هفته

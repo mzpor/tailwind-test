@@ -1085,44 +1085,44 @@ class SettingsModule {
     // فقط لاگ کنیم - گزارش در داشبورد وضعیت سیستم نمایش داده می‌شود
     console.log(`✅ [SETTINGS] Report status changed to: ${status}`);
     
-             // ارسال event برای SSE clients و داشبورد
-         if (reportEvents) {
-           try {
-             const config = loadReportsConfig();
-             reportEvents.emit('reportChanged', {
-               enabled: config.enabled,
-               lastUpdate: config.lastUpdate,
-               updatedBy: config.updatedBy,
-               updatedFrom: config.updatedFrom,
-               timestamp: Date.now()
-             });
-             console.log('📡 [SETTINGS] SSE event emitted for report change');
-           } catch (error) {
-             console.error('❌ [SETTINGS] Error emitting SSE event:', error);
-           }
-         }
-         
-         // ارسال داشبورد ترکیبی
-         try {
-           const gateway = require('./gateway_bale');
-           if (gateway && gateway.sendCombinedDashboard) {
-             await gateway.sendCombinedDashboard();
-             console.log('📊 [SETTINGS] Combined dashboard sent');
-           }
-         } catch (error) {
-           console.log('⚠️ [SETTINGS] Could not send settings dashboard (gateway might be offline)');
-         }
-         
-         // آپدیت وضعیت ربات و ارسال داشبورد
-         if (updateSystemStatus) {
-           try {
-             updateSystemStatus('robot', true);
-             console.log('📊 [SETTINGS] Robot status updated via settings');
-           } catch (error) {
-             console.error('❌ [SETTINGS] Error updating robot status:', error);
-           }
-         }
+    // ارسال event برای SSE clients و داشبورد
+    if (reportEvents) {
+      try {
+        const config = loadReportsConfig();
+        reportEvents.emit('reportChanged', {
+          enabled: config.enabled,
+          lastUpdate: config.lastUpdate,
+          updatedBy: config.updatedBy,
+          updatedFrom: config.updatedFrom,
+          timestamp: Date.now()
+        });
+        console.log('📡 [SETTINGS] SSE event emitted for report change');
+      } catch (error) {
+        console.error('❌ [SETTINGS] Error emitting SSE event:', error);
+      }
+    }
     
+    // ارسال داشبورد ترکیبی
+    try {
+      const gateway = require('./gateway_bale');
+      if (gateway && gateway.sendCombinedDashboard) {
+        await gateway.sendCombinedDashboard();
+        console.log('📊 [SETTINGS] Combined dashboard sent');
+      }
+    } catch (error) {
+      console.log('⚠️ [SETTINGS] Could not send settings dashboard (gateway might be offline)');
+    }
+    
+    // آپدیت وضعیت ربات و ارسال داشبورد
+    if (updateSystemStatus) {
+      try {
+        updateSystemStatus('robot', true);
+        console.log('📊 [SETTINGS] Robot status updated via settings');
+      } catch (error) {
+        console.error('❌ [SETTINGS] Error updating robot status:', error);
+      }
+    }
+
     const text = `⚙️ *پنل تنظیمات مدیر*
 انتخاب کنید:`;
     
