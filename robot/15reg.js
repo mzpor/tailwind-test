@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sendMessage, answerCallbackQuery } = require('./4bale');
-const { USER_ACCESS_CONFIG, addUserToRole } = require('./3config');
+const { USER_ACCESS_CONFIG, addUserToRole, MAIN_BUTTONS_CONFIG } = require('./3config');
 
 // اضافه کردن ماژول پرداخت
 const PaymentModule = require('./16pay');
@@ -1163,6 +1163,17 @@ class RegistrationModule {
         } else {
             roleText = 'قرآن‌آموز';
             keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
+        }
+        
+        // اضافه کردن دکمه‌های قابل کنترل با کانفیگ
+        if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
+            keyboardRows.push(['ثبت اطلاعات']);
+            console.log(`✅ [15REG] دکمه "ثبت اطلاعات" اضافه شد (REGISTER_INFO: 1)`);
+        }
+        
+        if (MAIN_BUTTONS_CONFIG.SETTINGS === 1) {
+            keyboardRows.push(['تنظیمات']);
+            console.log(`✅ [15REG] دکمه "تنظیمات" اضافه شد (SETTINGS: 1)`);
         }
         
         // اضافه کردن دکمه ریست اگر مجاز باشد

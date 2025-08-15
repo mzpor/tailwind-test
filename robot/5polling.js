@@ -27,7 +27,8 @@ const {
   isGroupManagementEnabled,
   hasGroupManagementAccess,
   isOsatdManagementEnabled,
-  hasOsatdManagementAccess
+  hasOsatdManagementAccess,
+  MAIN_BUTTONS_CONFIG
 } = require('./3config');
 const { 
   getCurrentCoachId, 
@@ -44,6 +45,7 @@ const SmartRegistrationModule = require('./15reg.js');
 const PaymentModule = require('./16pay');
 const { practiceManager } = require('./practice_manager');
 const { ArzyabiModule } = require('./17arzyabi');
+const SabtManager = require('./18sabt');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 // ایجاد یک instance واحد از SmartRegistrationModule
@@ -54,6 +56,9 @@ const paymentModule = new PaymentModule();
 
 // ایجاد یک instance واحد از ArzyabiModule
 const arzyabiModule = new ArzyabiModule();
+
+// ایجاد یک instance واحد از SabtManager
+const sabtManager = new SabtManager();
 
 // تابع گزارش هوشمند ورود ربات به گروه
 async function reportBotJoinToGroup(chat) {
@@ -623,9 +628,9 @@ async function handleRoleMessage(msg, role) {
   } else if (msg.text === 'خروج') {
     reply = `👋 پنل ${config.name} بسته شد\n⏰ ${getTimeStamp()}`;
     keyboard = config.keyboard;
-  } else if (msg.text === 'ربات') {
-    // دستور ربات - برای همه کاربران (معرفی ساده)
-    reply = `🤖 **معرفی ربات قرآنی هوشمند**
+        } else if (msg.text === 'ربات') {
+        // دستور ربات - برای همه کاربران (معرفی ساده)
+        reply = `🤖 **معرفی ربات قرآنی هوشمند**
 
 📚 **قابلیت‌های اصلی:**
 • 👥 حضور و غیاب
@@ -640,7 +645,32 @@ async function handleRoleMessage(msg, role) {
 • برای مدیریت پیشرفته، دسترسی ادمین لازم است
 
 ⏰ ${getTimeStamp()}`;
-    keyboard = config.keyboard;
+        keyboard = config.keyboard;
+      } else if (msg.text === 'ثبت اطلاعات') {
+        // دکمه ثبت اطلاعات - برای مربی و کمک مربی
+        const userRole = getUserRole(msg.from.id);
+        if (userRole === ROLES.COACH || userRole === ROLES.ASSISTANT) {
+          console.log(`📝 [POLLING] ثبت اطلاعات درخواست شد توسط ${userRole}`);
+          const result = sabtManager.startReport(msg.chat.id, msg.from.id, msg.from.first_name || 'کاربر');
+          await sendMessageWithInlineKeyboard(msg.chat.id, result.text, result.keyboard);
+          return; // ادامه حلقه بدون ارسال پیام معمولی
+        } else {
+          reply = '❌ فقط مربی و کمک مربی می‌توانند گزارش ثبت کنند.';
+          keyboard = config.keyboard;
+        }
+      } else if (msg.text === 'تنظیمات') {
+        // دکمه تنظیمات - برای همه کاربران
+        console.log(`⚙️ [POLLING] تنظیمات درخواست شد`);
+        reply = `⚙️ **پنل تنظیمات**
+
+📋 **گزینه‌های موجود:**
+• 🔧 تنظیمات عمومی
+• 📊 تنظیمات گزارش‌گیری
+• 🎯 تنظیمات شخصی
+
+👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**
+⏰ ${getTimeStamp()}`;
+        keyboard = config.keyboard;
       } else if (msg.text === config.panelText) {
       // if (!canSendMessage(msg.chat.id, 'panel', 5000)) {
       //   return; // پیام را نادیده بگیر
@@ -1034,6 +1064,7 @@ function startPolling() {
             !callback_query.data.startsWith('back_to_coaches') &&
             !callback_query.data.startsWith('back_to_workshops') &&
             !callback_query.data.startsWith('back_to_students_') &&
+            !callback_query.data.startsWith('sabt_') &&
             callback_query.data !== 'back_to_groups' &&
             callback_query.data !== 'back_to_main' &&
             callback_query.data !== 'kargah_management') {
@@ -1374,6 +1405,19 @@ function startPolling() {
               console.error(`❌ [POLLING] Kargah callback failed for data: ${callback_query.data}`);
             } else {
               console.log('✅ [POLLING] Kargah callback handled successfully');
+            }
+          } else if (callback_query.data.startsWith('sabt_')) {
+            console.log('📝 [POLLING] Sabt callback detected');
+            console.log(`📝 [POLLING] Sabt callback data: ${callback_query.data}`);
+            // پردازش callback های ثبت اطلاعات
+            const result = sabtManager.handleAnswer(callback_query.message.chat.id, callback_query.data);
+            
+            if (result && result.text) {
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard || []);
+              console.log('✅ [POLLING] Sabt callback handled successfully');
+            } else {
+              console.error('❌ [POLLING] Error handling sabt callback');
+              console.error(`❌ [POLLING] Sabt callback failed for data: ${callback_query.data}`);
             }
           } else if (callback_query.data.startsWith('coach_') || 
                      callback_query.data.startsWith('attendance_') || 

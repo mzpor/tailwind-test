@@ -90,6 +90,12 @@ const BUTTON_VISIBILITY_CONFIG = {
   PRACTICE_EVALUATION_DAYS_BUTTON: 0,  // دکمه روزهای تمرین و ارزیابی: 1 = فعال، 0 = غیرفعال
 };
 
+// ===== کنترل نمایش دکمه‌های اصلی =====
+const MAIN_BUTTONS_CONFIG = {
+  REGISTER_INFO: 1,    // دکمه ثبت اطلاعات (0 = مخفی، 1 = نمایان)
+  SETTINGS: 1          // دکمه تنظیمات (0 = مخفی، 1 = نمایان)
+};
+
 // ===== کنترل نمایش گروه‌ها برای نقش‌های مختلف =====
 const GROUP_VISIBILITY_CONFIG = {
   COACH_SEE_ALL_GROUPS: 0,      // 0 = فقط گروه‌های خودش، 1 = همه گروه‌ها
@@ -1717,6 +1723,8 @@ module.exports = {
   hasOsatdManagementAccess,
   // ===== کانفیگ کارگاه‌ها =====
   WORKSHOP_CONFIG,
+  // ===== کانفیگ دکمه‌های اصلی =====
+  MAIN_BUTTONS_CONFIG,
   // ===== کانفیگ سیستم ارزیابی =====
   EVALUATION_SYSTEM_CONFIG,
   isEvaluationSystemEnabled,
