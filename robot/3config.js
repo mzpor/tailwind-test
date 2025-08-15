@@ -26,6 +26,14 @@ const GROUP_NAMES = {
  // 1114227010: "محمد ۱",
 //  574330749: "محمد زارع ۲",
 //"1790308237": {}  ایرانسل
+// ===== کانفیگ نام‌های ظاهری نقش‌ها =====
+const ROLE_DISPLAY_NAMES = {
+  COACH: 'مربی',           // نام ظاهری مربی
+  ASSISTANT: 'کمک مربی',   // نام ظاهری کمک مربی
+  SCHOOL_ADMIN: 'مدیر مدرسه', // نام ظاهری مدیر
+  STUDENT: 'قرآن آموز'     // نام ظاهری دانشجو
+};
+
 // ===== کنترل نمایش دکمه‌ها در پنل مدیر =====
 const BUTTON_VISIBILITY_CONFIG = {
   ROBOT_BUTTON: 0,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
@@ -742,6 +750,11 @@ function normalizePhoneNumber(phone) {
   
   return normalized;
 }
+
+// تابع دریافت نام ظاهری نقش
+const getRoleDisplayName = (role) => {
+  return ROLE_DISPLAY_NAMES[role] || role;
+};
 //4594690153    گروه ربات 1
 //5417069312    گروه ربات 2
 
@@ -1573,6 +1586,9 @@ module.exports = {
   USER_ROLES,
   GROUP_NAMES,
   USER_NAMES,
+  // ===== کانفیگ نام‌های ظاهری =====
+  ROLE_DISPLAY_NAMES,
+  getRoleDisplayName,
   // ===== ساختار مرکزی جدید =====
   USERS_BY_ROLE,
   USERS,
