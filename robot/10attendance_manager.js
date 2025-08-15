@@ -191,77 +191,70 @@ class AttendanceManager {
   }
 
   // تولید لیست حضور و غیاب
-  getAttendanceList() {
-    if (!this.users.length) {
-      console.warn("Attendance list requested but user list is empty");
-      return "❌ لیست کاربران خالی است!";
-    }
+// ... existing code ...
+getAttendanceList() {
+  if (!this.users.length) {
+    console.warn("Attendance list requested but user list is empty");
+    return "❌ لیست کاربران خالی است!";
+  }
+  
+  try {
+    const currentTime = getTimeStamp();
     
-    try {
-      const currentTime = getTimeStamp();
-      // استفاده از نام واقعی گروه به جای ID
-      let groupName = "کلاس";
-      if (this.currentGroupId) {
-        const { getGroupName } = require('./3config');
-        // اگر getGroupName async است، از نام پیش‌فرض استفاده کن
-        try {
-          // تلاش برای دریافت نام گروه از config
-          const { GROUP_NAMES } = require('./3config');
-          if (GROUP_NAMES[this.currentGroupId]) {
-            groupName = GROUP_NAMES[this.currentGroupId];
-          } else {
-            groupName = `گروه ${this.currentGroupId}`;
-          }
-        } catch (error) {
+    // دریافت نام واقعی گروه
+    let groupName = "کلاس";
+    if (this.currentGroupId) {
+      try {
+        const { GROUP_NAMES } = require('./3config');
+        if (GROUP_NAMES[this.currentGroupId]) {
+          groupName = GROUP_NAMES[this.currentGroupId];
+        } else {
           groupName = `گروه ${this.currentGroupId}`;
         }
+      } catch (error) {
+        groupName = `گروه ${this.currentGroupId}`;
       }
-      
-      let text = `📊 **لیست حضور و غیاب - ${groupName}**\n`;
-      text += `🕐 آخرین بروزرسانی: ${currentTime}\n\n`;
-      
-      // نمایش لیست کاربران
-      for (let i = 0; i < this.users.length; i++) {
-        const user = this.users[i];
-        if (!Number.isInteger(user)) {
-          console.error(`Invalid user type in list: ${typeof user}`);
-          continue;
-        }
-        
-        const status = this.attendanceData[user] || "در انتظار";
-        if (!this.validStatuses.has(status)) {
-          console.warn(`Invalid status for user ${user}: ${status}`);
-          status = "در انتظار";
-        }
-        
-        const icon = this.statusIcons[status] || "⏳";
-        // استفاده از نام واقعی کاربر به جای ID
-        let userName = this.userNamesCache[user];
-        if (!userName) {
-          try {
-            const { getUserName } = require('./3config');
-            userName = getUserName(user);
-          } catch (error) {
-            userName = `کاربر ${user}`;
-          }
-        }
-        text += `${(i + 1).toString().padStart(2)}. ${icon} ${userName} - ${status}\n`;
-      }
-      
-      // محاسبه آمار
-      const stats = this.calculateAttendanceStats();
-      text += `\n📈 **آمار:**\n`;
-      text += `✅ حاضر: ${stats.present} | ⏰ تاخیر: ${stats.late}\n`;
-      text += `❌ غایب: ${stats.absent} | 📄 موجه: ${stats.justified} | ⏳ در انتظار: ${stats.pending}`;
-      
-      console.log("✅ Attendance list generated successfully");
-      return text;
-      
-    } catch (error) {
-      console.error(`Error generating attendance list: ${error.message}`);
-      return "❌ خطا در تولید لیست حضور و غیاب!";
     }
+    
+    let text = `�� **لیست حضور و غیاب - ${groupName}**\n`;
+    text += `🕐 آخرین بروزرسانی: ${currentTime}\n\n`;
+    
+    // دریافت نام واقعی کاربران
+    const membersData = loadMembersData();
+    const members = membersData.groups[this.currentGroupId] || [];
+    
+    // نمایش لیست کاربران با نام واقعی
+    for (let i = 0; i < this.users.length; i++) {
+      const userId = this.users[i];
+      if (!Number.isInteger(userId)) {
+        console.error(`Invalid user type in list: ${typeof userId}`);
+        continue;
+      }
+      
+      const status = this.attendanceData[userId] || "در انتظار";
+      const icon = this.statusIcons[status] || "⏳";
+      
+      // استفاده از نام واقعی کاربر
+      const member = members.find(m => m.id === userId);
+      const userName = member ? member.name : `کاربر ${userId}`;
+      
+      text += `${(i + 1).toString().padStart(2)}. ${icon} ${userName} - ${status}\n`;
+    }
+    
+    // محاسبه آمار
+    const stats = this.calculateAttendanceStats();
+    text += `\n📈 **آمار:**\n`;
+    text += `✅ حاضر: ${stats.present} | ⏰ تاخیر: ${stats.late}\n`;
+    text += `❌ غایب: ${stats.absent} | �� موجه: ${stats.justified} | ⏳ در انتظار: ${stats.pending}`;
+    
+    console.log("✅ Attendance list generated successfully");
+    return text;
+    
+  } catch (error) {
+    console.error(`Error generating attendance list: ${error.message}`);
+    return "❌ خطا در تولید لیست حضور و غیاب!";
   }
+}
 
   // محاسبه آمار حضور و غیاب
   calculateAttendanceStats() {
