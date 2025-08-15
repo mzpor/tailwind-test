@@ -554,14 +554,33 @@ class ArzyabiModule {
 
     // ===== گزارش‌گیری =====
     sendPracticeReportToAdmin(userId, userData, date, time) {
+        // دریافت ساعت‌های فعال تمرین
+        const { getPracticeHours } = require('./3config');
+        const practiceHours = getPracticeHours();
+        const hoursText = practiceHours.length > 0 ? 
+            practiceHours.map(h => `${h}:00`).join(', ') : 
+            'تنظیم نشده';
+        
         const reportText = `📝 **گزارش تمرین جدید**\n\n` +
             `کاربر: ${userData.full_name || userData.first_name || `کاربر ${userId}`}\n` +
             `تاریخ: ${date}\n` +
             `زمان: ${time}\n` +
+            `⏰ ساعت‌های تمرین: ${hoursText}\n` +
             `وضعیت: در انتظار ارزیابی`;
 
-        // اینجا باید به گروه گزارش ارسال شود
-        console.log('📤 گزارش تمرین به گروه گزارش ارسال شد:', reportText);
+        // ارسال به گروه گزارش
+        if (this.sendMessage) {
+            try {
+                const { REPORT_GROUP_ID } = require('./6mid');
+                this.sendMessage(REPORT_GROUP_ID, reportText);
+                console.log('📤 گزارش تمرین به گروه گزارش ارسال شد:', reportText);
+            } catch (error) {
+                console.error('❌ [ARZYABI] Error sending practice report to admin group:', error.message);
+            }
+        } else {
+            console.log('📤 گزارش تمرین به گروه گزارش ارسال شد (sendMessage not set):', reportText);
+        }
+        
         return reportText;
     }
 
@@ -575,8 +594,19 @@ class ArzyabiModule {
             `رضایت از نمره: ${score}/5\n` +
             `تاریخ: ${this.getCurrentDate()}`;
 
-        // اینجا باید به گروه گزارش ارسال شود
-        console.log('📤 گزارش نظرسنجی به گروه گزارش ارسال شد:', reportText);
+        // ارسال به گروه گزارش
+        if (this.sendMessage) {
+            try {
+                const { REPORT_GROUP_ID } = require('./6mid');
+                this.sendMessage(REPORT_GROUP_ID, reportText);
+                console.log('📤 گزارش نظرسنجی به گروه گزارش ارسال شد:', reportText);
+            } catch (error) {
+                console.error('❌ [ARZYABI] Error sending satisfaction report to admin group:', error.message);
+            }
+        } else {
+            console.log('📤 گزارش نظرسنجی به گروه گزارش ارسال شد (sendMessage not set):', reportText);
+        }
+        
         return reportText;
     }
 

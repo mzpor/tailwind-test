@@ -105,6 +105,44 @@ class SettingsModule {
     return { inline_keyboard: keyboard };
   }
   
+  getPracticeHoursKeyboard() {
+    const hours = [
+      { name: "8 صبح", value: 8 },
+      { name: "9 صبح", value: 9 },
+      { name: "10 صبح", value: 10 },
+      { name: "11 صبح", value: 11 },
+      { name: "12 ظهر", value: 12 },
+      { name: "1 بعدازظهر", value: 13 },
+      { name: "2 بعدازظهر", value: 14 },
+      { name: "3 بعدازظهر", value: 15 },
+      { name: "4 بعدازظهر", value: 16 },
+      { name: "5 بعدازظهر", value: 17 },
+      { name: "6 بعدازظهر", value: 18 },
+      { name: "7 بعدازظهر", value: 19 },
+      { name: "8 بعدازظهر", value: 20 },
+      { name: "9 بعدازظهر", value: 21 },
+      { name: "10 بعدازظهر", value: 22 }
+    ];
+    
+    const keyboard = [];
+    hours.forEach(hour => {
+      const isActive = this.settings.practice_hours?.includes(hour.value) || false;
+      const icon = isActive ? '🟢' : '🔴';
+      const text = `${icon} ${hour.name}`;
+      const callbackData = `toggle_practice_hour_${hour.value}`;
+      keyboard.push([{ text, callback_data: callbackData }]);
+    });
+    
+    // دکمه‌های اضافی
+    keyboard.push(
+      [{ text: '✅ همه ساعت‌ها', callback_data: 'select_all_practice_hours' }],
+      [{ text: '❌ هیچ ساعتی', callback_data: 'select_none_practice_hours' }],
+      [{ text: '🔙 بازگشت', callback_data: 'settings_main_menu' }]
+    );
+    
+    return { inline_keyboard: keyboard };
+  }
+  
   getEvaluationDaysKeyboard() {
     const days = [
       { name: "شنبه", value: 0 },
@@ -231,6 +269,7 @@ class SettingsModule {
     
     const keyboard = [
       [{ text: `📅 تمرین (${practiceDaysCount} روز)`, callback_data: 'practice_days_settings' }],
+      [{ text: `⏰ ساعت تمرین (${this.settings.practice_hours?.length || 0} ساعت)`, callback_data: 'practice_hours_settings' }],
       [{ text: `📊 ارزیابی (${evaluationDaysCount} روز)`, callback_data: 'evaluation_days_settings' }],
       [{ text: `👥 حضور و غیاب (${attendanceDaysCount} روز)`, callback_data: 'attendance_days_settings' }]
     ];
@@ -329,6 +368,10 @@ class SettingsModule {
         console.log('📅 [SETTINGS] → practice_days_settings - CLICKED ON PRACTICE DAYS BUTTON');
         console.log('📅 [SETTINGS] About to call handlePracticeDaysSettings...');
         return this.handlePracticeDaysSettings(chatId, messageId, callbackQueryId);
+      } else if (data === 'practice_hours_settings') {
+        console.log('⏰ [SETTINGS] → practice_hours_settings - CLICKED ON PRACTICE HOURS BUTTON');
+        console.log('⏰ [SETTINGS] About to call handlePracticeHoursSettings...');
+        return this.handlePracticeHoursSettings(chatId, messageId, callbackQueryId);
              } else if (data === 'evaluation_days_settings') {
          console.log('📊 [SETTINGS] → evaluation_days_settings - CLICKED ON EVALUATION DAYS BUTTON');
          console.log('📊 [SETTINGS] About to call handleEvaluationDaysSettings...');
@@ -364,6 +407,16 @@ class SettingsModule {
       } else if (data === 'select_none_practice_days') {
         console.log('📅 [SETTINGS] → select_none_practice_days - SELECTING NO PRACTICE DAYS');
         return this.handleSelectNonePracticeDays(chatId, messageId, callbackQueryId);
+      } else if (data.startsWith('toggle_practice_hour_')) {
+        const hourValue = parseInt(data.split('_')[3]);
+        console.log(`⏰ [SETTINGS] → toggle_practice_hour_${hourValue} - TOGGLING PRACTICE HOUR`);
+        return this.handleTogglePracticeHour(chatId, messageId, hourValue, callbackQueryId);
+      } else if (data === 'select_all_practice_hours') {
+        console.log('⏰ [SETTINGS] → select_all_practice_hours - SELECTING ALL PRACTICE HOURS');
+        return this.handleSelectAllPracticeHours(chatId, messageId, callbackQueryId);
+      } else if (data === 'select_none_practice_hours') {
+        console.log('⏰ [SETTINGS] → select_none_practice_hours - SELECTING NO PRACTICE HOURS');
+        return this.handleSelectNonePracticeHours(chatId, messageId, callbackQueryId);
       } else if (data === 'select_all_evaluation_days') {
         console.log('📊 [SETTINGS] → select_all_evaluation_days - SELECTING ALL EVALUATION DAYS');
         return this.handleSelectAllEvaluationDays(chatId, messageId, callbackQueryId);
@@ -482,6 +535,121 @@ class SettingsModule {
     await answerCallbackQuery(callbackQueryId);
     console.log('📅 [SETTINGS] answerCallbackQuery completed');
     console.log('📅 [SETTINGS] handlePracticeDaysSettings COMPLETED');
+  }
+  
+  async handlePracticeHoursSettings(chatId, messageId, callbackQueryId) {
+    console.log('⏰ [SETTINGS] handlePracticeHoursSettings STARTED');
+    console.log(`⏰ [SETTINGS] ChatId: ${chatId}, MessageId: ${messageId}, CallbackQueryId: ${callbackQueryId}`);
+    const activeHours = this.settings.practice_hours?.length || 0;
+    console.log(`⏰ [SETTINGS] Active practice hours: ${activeHours} hours`);
+    console.log(`⏰ [SETTINGS] Practice hours array: ${JSON.stringify(this.settings.practice_hours)}`);
+    const text = `⏰ *تنظیمات ساعت‌های تمرین*
+ساعت‌های فعال: ${activeHours} ساعت`;
+    
+    const replyMarkup = this.getPracticeHoursKeyboard();
+    console.log('⏰ [SETTINGS] Practice hours keyboard generated:', JSON.stringify(replyMarkup, null, 2));
+    
+    try {
+      // اول پیام جدید ارسال کن
+      console.log('⏰ [SETTINGS] Calling sendMessageWithInlineKeyboard...');
+      await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
+      console.log('⏰ [SETTINGS] sendMessageWithInlineKeyboard completed');
+      
+      // بعد پیام قبلی رو حذف کن
+      console.log('⏰ [SETTINGS] Calling deleteMessage...');
+      await deleteMessage(chatId, messageId);
+      console.log('⏰ [SETTINGS] deleteMessage completed');
+    } catch (error) {
+      console.error('❌ [SETTINGS] Error in handlePracticeHoursSettings:', error.message);
+    }
+    
+    await answerCallbackQuery(callbackQueryId);
+    console.log('⏰ [SETTINGS] answerCallbackQuery completed');
+    console.log('⏰ [SETTINGS] handlePracticeHoursSettings COMPLETED');
+  }
+  
+  async handleTogglePracticeHour(chatId, messageId, hourValue, callbackQueryId) {
+    console.log(`⏰ [SETTINGS] handleTogglePracticeHour STARTED for hour: ${hourValue}`);
+    
+    try {
+      if (!this.settings.practice_hours) {
+        this.settings.practice_hours = [];
+      }
+      
+      const hourIndex = this.settings.practice_hours.indexOf(hourValue);
+      if (hourIndex === -1) {
+        // اضافه کردن ساعت
+        this.settings.practice_hours.push(hourValue);
+        this.settings.practice_hours.sort((a, b) => a - b);
+        console.log(`⏰ [SETTINGS] Hour ${hourValue} added to practice hours`);
+      } else {
+        // حذف ساعت
+        this.settings.practice_hours.splice(hourIndex, 1);
+        console.log(`⏰ [SETTINGS] Hour ${hourValue} removed from practice hours`);
+      }
+      
+      // ذخیره تنظیمات
+      await this.saveSettings();
+      console.log(`⏰ [SETTINGS] Settings saved after toggling hour ${hourValue}`);
+      
+      // به‌روزرسانی صفحه
+      const text = `⏰ *تنظیمات ساعت‌های تمرین*
+ساعت‌های فعال: ${this.settings.practice_hours.length} ساعت`;
+      
+      const replyMarkup = this.getPracticeHoursKeyboard();
+      await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
+      await deleteMessage(chatId, messageId);
+      
+      await answerCallbackQuery(callbackQueryId, `⏰ ساعت ${hourValue} ${hourIndex === -1 ? 'فعال' : 'غیرفعال'} شد`);
+      
+    } catch (error) {
+      console.error(`❌ [SETTINGS] Error in handleTogglePracticeHour for hour ${hourValue}:`, error.message);
+      await answerCallbackQuery(callbackQueryId, '❌ خطا در تغییر ساعت');
+    }
+  }
+  
+  async handleSelectAllPracticeHours(chatId, messageId, callbackQueryId) {
+    console.log('⏰ [SETTINGS] handleSelectAllPracticeHours STARTED');
+    
+    try {
+      this.settings.practice_hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+      await this.saveSettings();
+      
+      const text = `⏰ *تنظیمات ساعت‌های تمرین*
+ساعت‌های فعال: ${this.settings.practice_hours.length} ساعت`;
+      
+      const replyMarkup = this.getPracticeHoursKeyboard();
+      await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
+      await deleteMessage(chatId, messageId);
+      
+      await answerCallbackQuery(callbackQueryId, '⏰ همه ساعت‌ها فعال شدند');
+      
+    } catch (error) {
+      console.error('❌ [SETTINGS] Error in handleSelectAllPracticeHours:', error.message);
+      await answerCallbackQuery(callbackQueryId, '❌ خطا در فعال‌سازی همه ساعت‌ها');
+    }
+  }
+  
+  async handleSelectNonePracticeHours(chatId, messageId, callbackQueryId) {
+    console.log('⏰ [SETTINGS] handleSelectNonePracticeHours STARTED');
+    
+    try {
+      this.settings.practice_hours = [];
+      await this.saveSettings();
+      
+      const text = `⏰ *تنظیمات ساعت‌های تمرین*
+ساعت‌های فعال: ${this.settings.practice_hours.length} ساعت`;
+      
+      const replyMarkup = this.getPracticeHoursKeyboard();
+      await sendMessageWithInlineKeyboard(chatId, text, replyMarkup.inline_keyboard);
+      await deleteMessage(chatId, messageId);
+      
+      await answerCallbackQuery(callbackQueryId, '⏰ همه ساعت‌ها غیرفعال شدند');
+      
+    } catch (error) {
+      console.error('❌ [SETTINGS] Error in handleSelectNonePracticeHours:', error.message);
+      await answerCallbackQuery(callbackQueryId, '❌ خطا در غیرفعال‌سازی همه ساعت‌ها');
+    }
   }
   
   async handleEvaluationDaysSettings(chatId, messageId, callbackQueryId) {
