@@ -1310,6 +1310,7 @@ function startPolling() {
             }
           } else if (callback_query.data.startsWith('coach_') || 
                      callback_query.data.startsWith('attendance_') || 
+                     callback_query.data.startsWith('attendance_all_') ||
                      callback_query.data.startsWith('report_') || 
                      callback_query.data === 'coaches_list' ||
                      callback_query.data === 'back_to_coaches' ||

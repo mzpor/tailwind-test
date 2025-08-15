@@ -113,6 +113,8 @@ const getCoachesList = () => {
 // تابع دریافت لیست دانشجویان یک مربی
 const getCoachStudents = (coachId) => {
   try {
+    console.log(`🔍 [OSATD] getCoachStudents called with coachId=${coachId}`);
+    
     const registrations = loadRegistrations();
     const attendance = loadAttendance();
     
@@ -134,6 +136,8 @@ const getCoachStudents = (coachId) => {
     });
     
     console.log(`✅ [OSATD] Found ${students.length} students for coach ${coachId}`);
+    console.log(`🔍 [OSATD] Students:`, students.map(s => `${s.name} (${s.id})`));
+    
     return students;
     
   } catch (error) {
@@ -162,6 +166,36 @@ const updateAttendanceStatus = (studentId, status) => {
   }
 };
 
+// تابع تغییر وضعیت حضور و غیاب همه دانشجویان یک مربی
+const updateAllStudentsAttendance = (coachId, status) => {
+  try {
+    console.log(`🔍 [OSATD] updateAllStudentsAttendance called with coachId=${coachId}, status=${status}`);
+    
+    const students = getCoachStudents(coachId);
+    const attendance = loadAttendance();
+    let updatedCount = 0;
+    
+    console.log(`🔍 [OSATD] Found ${students.length} students for coach ${coachId}`);
+    
+    students.forEach(student => {
+      console.log(`🔍 [OSATD] Updating student ${student.id} (${student.name}) to status: ${status}`);
+      attendance[student.id] = status;
+      updatedCount++;
+    });
+    
+    if (saveAttendance(attendance)) {
+      console.log(`✅ [OSATD] Updated attendance status for ${updatedCount} students of coach ${coachId}: ${status}`);
+      return { success: true, message: `وضعیت حضور و غیاب ${updatedCount} دانشجو با موفقیت به‌روزرسانی شد` };
+    } else {
+      return { success: false, message: 'خطا در ذخیره وضعیت حضور و غیاب' };
+    }
+    
+  } catch (error) {
+    console.error('❌ [OSATD] Error updating all students attendance:', error);
+    return { success: false, message: 'خطا در به‌روزرسانی وضعیت حضور و غیاب همه دانشجویان' };
+  }
+};
+
 // تابع دریافت گزارش حضور و غیاب
 const getAttendanceReport = (coachId) => {
   try {
@@ -170,9 +204,10 @@ const getAttendanceReport = (coachId) => {
     const report = {
       total: students.length,
       present: students.filter(s => s.attendance === 'حاضر').length,
+      late: students.filter(s => s.attendance === 'حضور با تاخیر').length,
       absent: students.filter(s => s.attendance === 'غایب').length,
-      excused: students.filter(s => s.attendance === 'غایب(موجه)').length,
-      late: students.filter(s => s.attendance === 'حاضر(با تاخیر)').length,
+      excused: students.filter(s => s.attendance === 'غیبت(موجه)').length,
+      pending: students.filter(s => s.attendance === 'در انتظار').length,
       students: students
     };
     
@@ -181,7 +216,23 @@ const getAttendanceReport = (coachId) => {
     
   } catch (error) {
     console.error('❌ [OSATD] Error getting attendance report:', error);
-    return { total: 0, present: 0, absent: 0, excused: 0, late: 0, students: [] };
+    return { total: 0, present: 0, late: 0, absent: 0, excused: 0, pending: 0, students: [] };
+  }
+};
+
+// تابع تولید کیبرد گزارش حضور و غیاب
+const generateReportKeyboard = (coachId) => {
+  try {
+    const keyboard = [
+      [{ text: '🔙 بازگشت به لیست دانشجویان', callback_data: `coach_${coachId}` }]
+    ];
+    
+    console.log(`✅ [OSATD] Generated report keyboard for coach ${coachId}`);
+    return keyboard;
+    
+  } catch (error) {
+    console.error('❌ [OSATD] Error generating report keyboard:', error);
+    return [[{ text: '❌ خطا در بارگذاری کیبرد گزارش', callback_data: 'error_report' }]];
   }
 };
 
@@ -225,17 +276,34 @@ const generateStudentsKeyboard = (coachId) => {
       ];
     }
     
-    const keyboard = students.map((student, index) => {
+    const keyboard = [];
+    
+    // لیست دانشجویان (اول)
+    students.forEach((student, index) => {
       const statusEmoji = {
         'حاضر': '✅',
+        'حضور با تاخیر': '⏰',
         'غایب': '❌',
-        'غایب(موجه)': '⚠️',
-        'حاضر(با تاخیر)': '⏰'
+        'غیبت(موجه)': '📄',
+        'در انتظار': '⏳'
       }[student.attendance] || '❓';
       
       const text = `${index + 1}. ${student.name} ${statusEmoji}`;
-      return [{ text: text, callback_data: `student_${student.id}` }];
+      keyboard.push([{ text: text, callback_data: `student_${student.id}` }]);
     });
+    
+    // دکمه‌های عملیات سریع - همه وضعیت‌ها (بعد از دانشجویان)
+    keyboard.push([
+      { text: '✅ حاضر همه', callback_data: `attendance_all_${coachId}_حاضر` },
+      { text: '⏰ تاخیر همه', callback_data: `attendance_all_${coachId}_حضور با تاخیر` }
+    ]);
+    keyboard.push([
+      { text: '❌ غایب همه', callback_data: `attendance_all_${coachId}_غایب` },
+      { text: '📄 موجه همه', callback_data: `attendance_all_${coachId}_غیبت(موجه)` }
+    ]);
+    keyboard.push([
+      { text: '⏳ انتظار همه', callback_data: `attendance_all_${coachId}_در انتظار` }
+    ]);
     
     // دکمه‌های عملیات
     keyboard.push([
@@ -260,9 +328,10 @@ const generateAttendanceKeyboard = (studentId) => {
     
     const keyboard = [
       [{ text: '✅ حاضر', callback_data: `attendance_${studentId}_حاضر` }],
+      [{ text: '⏰ حضور با تاخیر', callback_data: `attendance_${studentId}_حضور با تاخیر` }],
       [{ text: '❌ غایب', callback_data: `attendance_${studentId}_غایب` }],
-      [{ text: '⚠️ غایب(موجه)', callback_data: `attendance_${studentId}_غایب(موجه)` }],
-      [{ text: '⏰ حاضر(با تاخیر)', callback_data: `attendance_${studentId}_حاضر(با تاخیر)` }],
+      [{ text: '📄 غیبت(موجه)', callback_data: `attendance_${studentId}_غیبت(موجه)` }],
+      [{ text: '⏳ در انتظار', callback_data: `attendance_${studentId}_در انتظار` }],
       [{ text: '🔙 بازگشت', callback_data: `back_to_students_${studentId}` }]
     ];
     
@@ -305,8 +374,8 @@ const handleCoachesCallback = async (callbackQuery) => {
       
       return { text, keyboard, parse_mode: 'Markdown' };
       
-    } else if (data.startsWith('attendance_')) {
-      // تغییر وضعیت حضور و غیاب
+    } else if (data.startsWith('attendance_') && !data.startsWith('attendance_all_')) {
+      // تغییر وضعیت حضور و غیاب یک دانشجو
       const parts = data.split('_');
       const studentId = parts[1];
       const status = parts[2];
@@ -314,10 +383,71 @@ const handleCoachesCallback = async (callbackQuery) => {
       const result = updateAttendanceStatus(studentId, status);
       
       if (result.success) {
-        const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}`;
-        return { text, parse_mode: 'Markdown' };
+        // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
+        // باید coachId را از context دریافت کنیم - فعلاً از registrations استفاده می‌کنیم
+        const registrations = loadRegistrations();
+        let coachId = null;
+        
+        // پیدا کردن coachId از طریق دانشجو
+        Object.entries(registrations.userStates).forEach(([userId, userState]) => {
+          if (userId === studentId && userState.data && userState.data.userRole === 'quran_student') {
+            // اگر این دانشجو است، از coaches.json مربی مربوطه را پیدا کنیم
+            const coaches = loadCoaches();
+            if (coaches.length > 0) {
+              coachId = coaches[0].id; // فعلاً اولین مربی را در نظر می‌گیریم
+            }
+          }
+        });
+        
+        if (coachId) {
+          const keyboard = generateStudentsKeyboard(coachId);
+          const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}\n\n📚 *دانشجویان این مربی*\n\nدانشجوی مورد نظر خود را انتخاب کنید:`;
+          
+          return { text, keyboard, parse_mode: 'Markdown' };
+        } else {
+          const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}`;
+          return { text, parse_mode: 'Markdown' };
+        }
       } else {
         const text = `❌ *خطا در به‌روزرسانی*\n\n${result.message}`;
+        return { text, parse_mode: 'Markdown' };
+      }
+      
+    } else if (data.startsWith('attendance_all_')) {
+      // تغییر وضعیت حضور و غیاب همه دانشجویان
+      const parts = data.split('_');
+      // attendance_all_phone_1755212603854_ga1njd27g_حاضر
+      // parts[0] = attendance
+      // parts[1] = all
+      // parts[2] = phone (نوع)
+      // parts[3] = 1755212603854 (شماره)
+      // parts[4] = ga1njd27g (شناسه)
+      // parts[5] = حاضر (وضعیت)
+      
+      if (parts.length >= 6) {
+        const coachType = parts[2];
+        const coachNumber = parts[3];
+        const coachId = `${coachType}_${coachNumber}_${parts[4]}`;
+        const status = parts[5];
+        
+        console.log(`🔍 [OSATD] Parsing attendance_all_: coachId=${coachId}, status=${status}`);
+        console.log(`🔍 [OSATD] Parts:`, parts);
+        
+        const result = updateAllStudentsAttendance(coachId, status);
+        
+        if (result.success) {
+          // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
+          const keyboard = generateStudentsKeyboard(coachId);
+          const text = `✅ *وضعیت حضور و غیاب همه دانشجویان به‌روزرسانی شد*\n\nوضعیت جدید: ${status}\n${result.message}\n\n📚 *دانشجویان این مربی*\n\nدانشجوی مورد نظر خود را انتخاب کنید:`;
+          
+          return { text, keyboard, parse_mode: 'Markdown' };
+        } else {
+          const text = `❌ *خطا در به‌روزرسانی*\n\n${result.message}`;
+          return { text, parse_mode: 'Markdown' };
+        }
+      } else {
+        console.error(`❌ [OSATD] Invalid attendance_all_ callback data: ${data}, parts:`, parts);
+        const text = '❌ *خطا در پردازش درخواست*\n\nفرمت callback data نامعتبر است';
         return { text, parse_mode: 'Markdown' };
       }
       
@@ -326,14 +456,34 @@ const handleCoachesCallback = async (callbackQuery) => {
       const coachId = data.replace('report_', '');
       const report = getAttendanceReport(coachId);
       
-      const text = `📊 *گزارش حضور و غیاب*\n\n` +
-        `👥 کل دانشجویان: ${report.total}\n` +
-        `✅ حاضر: ${report.present}\n` +
-        `❌ غایب: ${report.absent}\n` +
-        `⚠️ غایب(موجه): ${report.excused}\n` +
-        `⏰ حاضر(با تاخیر): ${report.late}`;
+      // دریافت نام مربی
+      const coaches = loadCoaches();
+      const coach = coaches.find(c => c.id === coachId);
+      const coachName = coach ? coach.name : 'مربی';
       
-      return { text, parse_mode: 'Markdown' };
+      const text = `📊 *گزارش حضور و غیاب - ${coachName}*\n\n` +
+        `📝 *لیست دانشجویان:*\n` +
+        report.students.map((student, index) => {
+          const statusEmoji = {
+            'حاضر': '✅',
+            'حضور با تاخیر': '⏰',
+            'غایب': '❌',
+            'غیبت(موجه)': '📄',
+            'در انتظار': '⏳'
+          }[student.attendance] || '❓';
+          
+          return `${index + 1}. ${student.name} - ${statusEmoji} ${student.attendance}`;
+        }).join('\n') + `\n👥 *کل دانشجویان:* ${report.total}\n\n` +
+        `📈 *آمار:*\n` +
+        `✅ حاضر: ${report.present}\n` +
+        `⏰ حضور با تاخیر: ${report.late}\n` +
+        `❌ غایب: ${report.absent}\n` +
+        `📄 غیبت(موجه): ${report.excused}\n` +
+        `⏳ در انتظار: ${report.pending}\n\n\n` +
+        `🗓️ *آخرین بروزرسانی:* ${new Date().toLocaleDateString('fa-IR')} ساعت ${new Date().toLocaleTimeString('fa-IR')}`;
+      
+      const keyboard = generateReportKeyboard(coachId);
+      return { text, keyboard, parse_mode: 'Markdown' };
       
     } else if (data === 'back_to_coaches') {
       // بازگشت به لیست مربی‌ها
@@ -372,12 +522,14 @@ module.exports = {
   getCoachesList,
   getCoachStudents,
   updateAttendanceStatus,
+  updateAllStudentsAttendance,
   getAttendanceReport,
   
   // توابع تولید کیبرد
   generateCoachesKeyboard,
   generateStudentsKeyboard,
   generateAttendanceKeyboard,
+  generateReportKeyboard,
   
   // تابع مدیریت callback
   handleCoachesCallback,
