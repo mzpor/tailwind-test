@@ -25,7 +25,9 @@ const {
   setGroupStatus,
   getAllGroupsStatus,
   isGroupManagementEnabled,
-  hasGroupManagementAccess
+  hasGroupManagementAccess,
+  isOsatdManagementEnabled,
+  hasOsatdManagementAccess
 } = require('./3config');
 const { 
   getCurrentCoachId, 
@@ -693,10 +695,17 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
       }
       
       inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
-      inlineKeyboard.push([{ text: '👨‍🏫 استادها', callback_data: 'osatd_management' }]);
+      // اضافه کردن دکمه استادها فقط اگر فعال باشد
+      if (hasOsatdManagementAccess('SCHOOL_ADMIN')) {
+        inlineKeyboard.push([{ text: '👨‍🏫 استادها', callback_data: 'osatd_management' }]);
+      }
       
       const groupManagementText = hasGroupManagementAccess('SCHOOL_ADMIN') 
         ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
+        : '';
+      
+      const osatdText = hasOsatdManagementAccess('SCHOOL_ADMIN') 
+        ? '• 👨‍🏫 استادها\n' 
         : '';
       
       reply = `🔧 پنل ${config.name}
@@ -704,7 +713,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
 ${groupManagementText}• 🏭 کارگاه‌ها
-• 👨‍🏫 استادها
+${osatdText}
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
@@ -1244,26 +1253,36 @@ function startPolling() {
           } else if (callback_query.data === 'osatd_management') {
             
             console.log('🔄 [POLLING] Osatd management callback detected');
-            // بررسی دسترسی کاربر - فقط ادمین‌ها می‌توانند استادها را مدیریت کنند
-            if (!isAdmin(callback_query.from.id)) {
+            
+            // بررسی کانفیگ - آیا مدیریت استادها فعال است؟
+            if (!isOsatdManagementEnabled()) {
               const config = roleConfig[role];
-              const reply = '⚠️ فقط مدیر مدرسه می‌تواند استادها را مدیریت کند.';
+              const reply = '⚠️ مدیریت استادها در حال حاضر غیرفعال است.';
               await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+              return;
+            }
+            
+            // بررسی دسترسی کاربر
+            if (!hasOsatdManagementAccess('SCHOOL_ADMIN')) {
+              const config = roleConfig[role];
+              const reply = '⚠️ شما دسترسی لازم برای مدیریت استادها را ندارید.';
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+              return;
+            }
+            
+            // نمایش منوی استادها با استفاده از ماژول استادها
+            const osatdModule = require('./10osatd');
+            const result = await osatdModule.handleCoachesCallback({
+              ...callback_query,
+              data: 'coaches_list' // تغییر callback data به coaches_list برای سازگاری
+            });
+            
+            if (result && result.keyboard) {
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
             } else {
-              // نمایش منوی استادها با استفاده از ماژول استادها
-              const osatdModule = require('./10osatd');
-              const result = await osatdModule.handleCoachesCallback({
-                ...callback_query,
-                data: 'coaches_list' // تغییر callback data به coaches_list برای سازگاری
-              });
-              
-              if (result && result.keyboard) {
-                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
-              } else {
-                const config = roleConfig[role];
-                const reply = '❌ خطا در نمایش منوی استادها';
-                await safeSendMessage(callback_query.from.id, reply, config.keyboard);
-              }
+              const config = roleConfig[role];
+              const reply = '❌ خطا در نمایش منوی استادها';
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
             }
           } else           if (callback_query.data.startsWith('settings_') ||
                      callback_query.data.startsWith('toggle_') ||
@@ -1834,10 +1853,17 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         }
         
         inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
-        inlineKeyboard.push([{ text: '👨‍🏫 استادها', callback_data: 'osatd_management' }]);
+        // اضافه کردن دکمه استادها فقط اگر فعال باشد
+        if (hasOsatdManagementAccess('SCHOOL_ADMIN')) {
+          inlineKeyboard.push([{ text: '👨‍🏫 استادها', callback_data: 'osatd_management' }]);
+        }
         
         const groupManagementText = hasGroupManagementAccess('SCHOOL_ADMIN') 
           ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
+          : '';
+        
+        const osatdText = hasOsatdManagementAccess('SCHOOL_ADMIN') 
+          ? '• 👨‍🏫 استادها\n' 
           : '';
         
         const reply = `🔧 پنل مدیر مدرسه
@@ -1845,7 +1871,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
 ${groupManagementText}• 🏭 کارگاه‌ها
-• 👨‍🏫 استادها
+${osatdText}
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
