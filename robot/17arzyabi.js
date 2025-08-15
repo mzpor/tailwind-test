@@ -6,14 +6,67 @@ const path = require('path');
 
 class ArzyabiModule {
     constructor() {
+        this.configFile = path.join(__dirname, 'data', 'evaluation_config.json');
         this.evaluationDataFile = path.join(__dirname, 'data', 'evaluation_data.json');
         this.practiceDataFile = path.join(__dirname, 'data', 'practice_data.json');
         this.satisfactionDataFile = path.join(__dirname, 'data', 'satisfaction_data.json');
         this.weeklyReportFile = path.join(__dirname, 'data', 'weekly_reports.json');
         this.monthlyReportFile = path.join(__dirname, 'data', 'monthly_reports.json');
         
+        // بارگذاری کانفیگ
+        this.config = this.loadConfig();
+        
+        // ایجاد فایل‌های داده در صورت عدم وجود
+        this.initializeDataFiles();
+        
         this.loadAllData();
         this.ensureDataDirectories();
+    }
+
+    loadConfig() {
+        try {
+            if (fs.existsSync(this.configFile)) {
+                const configData = fs.readFileSync(this.configFile, 'utf8');
+                return JSON.parse(configData);
+            }
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در بارگذاری کانفیگ:', error.message);
+        }
+        
+        // کانفیگ پیش‌فرض در صورت خطا
+        return {
+            evaluation_system: {
+                enabled: 1,
+                practice_detection: { voice_with_caption: 1, voice_with_reply_task: 1, voice_with_reply_student: 1, text_only: 0 },
+                practice_schedule: { enabled: 1, hours: [14, 15, 16], days: [0, 1, 2, 3, 4] },
+                evaluation: { enabled: 1, min_evaluators: 2, auto_complete: 1 },
+                satisfaction_survey: { enabled: 1, show_after_evaluation: 1, send_to_admin_group: 1 },
+                reporting: { daily_reports: 1, weekly_reports: 1, monthly_reports: 1, send_to_admin_group: 1 },
+                access: { admin: 1, instructor: 1, assistant: 1, regular: 0 }
+            }
+        };
+    }
+
+    initializeDataFiles() {
+        // ایجاد فایل‌های داده با ساختار پیش‌فرض
+        const dataFiles = [
+            { file: this.evaluationDataFile, data: { pending_evaluations: {}, completed_evaluations: {}, evaluators: {} } },
+            { file: this.practiceDataFile, data: { daily_practices: {}, practice_schedule: this.config.evaluation_system.practice_schedule } },
+            { file: this.satisfactionDataFile, data: { surveys: {} } },
+            { file: this.weeklyReportFile, data: { reports: {}, last_update: null } },
+            { file: this.monthlyReportFile, data: { reports: {}, last_update: null } }
+        ];
+
+        dataFiles.forEach(({ file, data }) => {
+            if (!fs.existsSync(file)) {
+                try {
+                    fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+                    console.log(`✅ [ARZYABI] فایل داده ایجاد شد: ${path.basename(file)}`);
+                } catch (error) {
+                    console.error(`❌ [ARZYABI] خطا در ایجاد فایل ${path.basename(file)}:`, error.message);
+                }
+            }
+        });
     }
 
     ensureDataDirectories() {
@@ -190,17 +243,10 @@ class ArzyabiModule {
     // ===== مدیریت زمان‌بندی تمرین =====
     isPracticeTime() {
         try {
-            // بارگذاری کانفیگ
-            const { isPracticeScheduleEnabled, getPracticeSchedule } = require('./3config');
+            const schedule = this.config.evaluation_system?.practice_schedule;
             
             // بررسی فعال بودن سیستم ارزیابی
-            if (!isPracticeScheduleEnabled()) {
-                return false;
-            }
-
-            // دریافت تنظیمات از کانفیگ
-            const schedule = getPracticeSchedule();
-            if (!schedule) {
+            if (!schedule || schedule.enabled !== 1) {
                 return false;
             }
 
@@ -268,16 +314,10 @@ class ArzyabiModule {
     // ===== تشخیص تمرین از پیام =====
     isPracticeMessage(message) {
         try {
-            // بارگذاری کانفیگ
-            const { 
-                isVoiceWithCaptionEnabled, 
-                isVoiceWithReplyTaskEnabled, 
-                isVoiceWithReplyStudentEnabled, 
-                isTextOnlyEnabled 
-            } = require('./3config');
+            const detection = this.config.evaluation_system?.practice_detection;
 
             // روش 1: صوت با کپشن "تکلیف"
-            if (message.voice && message.caption && isVoiceWithCaptionEnabled()) {
+            if (message.voice && message.caption && detection?.voice_with_caption === 1) {
                 const caption = message.caption.toLowerCase().trim();
                 if (caption.includes('تکلیف') || caption.includes('تمرین')) {
                     console.log('✅ [ARZYABI] Practice detected: voice with caption');
@@ -286,7 +326,7 @@ class ArzyabiModule {
             }
 
             // روش 2: صوت با ریپلای به متن "تکلیف"
-            if (message.voice && message.reply_to_message && isVoiceWithReplyTaskEnabled()) {
+            if (message.voice && message.reply_to_message && detection?.voice_with_reply_task === 1) {
                 const replyText = message.reply_to_message.text || '';
                 const replyLower = replyText.toLowerCase().trim();
                 if (replyLower.includes('تکلیف') || replyLower.includes('تمرین')) {
@@ -296,7 +336,7 @@ class ArzyabiModule {
             }
 
             // روش 3: صوت با ریپلای به "قرآن آموز"
-            if (message.voice && message.reply_to_message && isVoiceWithReplyStudentEnabled()) {
+            if (message.voice && message.reply_to_message && detection?.voice_with_reply_student === 1) {
                 const replyText = message.reply_to_message.text || '';
                 const replyLower = replyText.toLowerCase().trim();
                 if (replyLower.includes('قرآن آموز')) {
@@ -306,7 +346,7 @@ class ArzyabiModule {
             }
 
             // روش 4: متن "تکلیف" یا "تمرین" (برای تست)
-            if (message.text && isTextOnlyEnabled()) {
+            if (message.text && detection?.text_only === 1) {
                 const text = message.text.toLowerCase().trim();
                 if (text === 'تکلیف' || text === 'تمرین') {
                     console.log('✅ [ARZYABI] Practice detected: text only');
@@ -645,7 +685,7 @@ class ArzyabiModule {
 
     getEvaluationsForDate(date) {
         return Object.values(this.evaluationData.completed_evaluations)
-            .filter(eval => eval.completion_time && eval.completion_time.startsWith(date));
+            .filter(evaluation => evaluation.completion_time && evaluation.completion_time.startsWith(date));
     }
 
     getSatisfactionsForDate(date) {
@@ -757,4 +797,4 @@ class ArzyabiModule {
     }
 }
 
-module.exports = ArzyabiModule;
+module.exports = { ArzyabiModule };

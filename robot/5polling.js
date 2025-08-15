@@ -43,6 +43,7 @@ const KargahModule = require('./12kargah');
 const SmartRegistrationModule = require('./15reg.js');
 const PaymentModule = require('./16pay');
 const { practiceManager } = require('./practice_manager');
+const { ArzyabiModule } = require('./17arzyabi');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 // ایجاد یک instance واحد از SmartRegistrationModule
@@ -50,6 +51,9 @@ const registrationModule = new SmartRegistrationModule();
 
 // ایجاد یک instance واحد از PaymentModule
 const paymentModule = new PaymentModule();
+
+// ایجاد یک instance واحد از ArzyabiModule
+const arzyabiModule = new ArzyabiModule();
 
 // تابع گزارش هوشمند ورود ربات به گروه
 async function reportBotJoinToGroup(chat) {
@@ -1284,11 +1288,35 @@ function startPolling() {
               const reply = '❌ خطا در نمایش منوی استادها';
               await safeSendMessage(callback_query.from.id, reply, config.keyboard);
             }
-          } else           if (callback_query.data.startsWith('settings_') ||
+          } else if (callback_query.data.startsWith('practice_') || callback_query.data.startsWith('evaluation_') || callback_query.data.startsWith('satisfaction_')) {
+            // پردازش callback های تمرین، ارزیابی و نظرسنجی
+            console.log(`🎯 [POLLING] Practice/Evaluation/Satisfaction callback detected: ${callback_query.data}`);
+            
+            // متصل کردن متدهای ارسال پیام به ماژول ارزیابی
+            arzyabiModule.setSendMessage(sendMessage);
+            arzyabiModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+            arzyabiModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
+            
+            let success = false;
+            
+            // تشخیص نوع callback
+            if (callback_query.data.startsWith('satisfaction_')) {
+              // نظرسنجی
+              success = await arzyabiModule.handleSatisfactionCallback(callback_query);
+            } else {
+              // تمرین و ارزیابی
+              success = await arzyabiModule.handleEvaluationCallback(callback_query);
+            }
+            
+            if (!success) {
+              console.error('❌ [POLLING] Error handling practice/evaluation/satisfaction callback');
+              console.error(`❌ [POLLING] Callback failed for data: ${callback_query.data}`);
+            } else {
+              console.log('✅ [POLLING] Practice/Evaluation/Satisfaction callback handled successfully');
+            }
+          } else if (callback_query.data.startsWith('settings_') ||
                      callback_query.data.startsWith('toggle_') ||
                      callback_query.data.startsWith('select_') ||
-                     callback_query.data.startsWith('practice_') ||
-                     callback_query.data.startsWith('evaluation_') ||
                      callback_query.data === 'practice_evaluation_days_settings' ||
                      callback_query.data === 'practice_days_settings' ||
                      callback_query.data === 'evaluation_days_settings' ||
@@ -1487,8 +1515,13 @@ function startPolling() {
               continue;
             }
             if (msg.text === '/لیست') {
-              await reportGroupMembers(msg.chat.id, msg.chat.title);
-              await checkAndUpdateMembersList(msg.chat.id, msg.chat.title);
+              // استفاده از ماژول ارزیابی برای نمایش لیست تمرین‌ها
+              const success = await arzyabiModule.handleListCommand(msg.chat.id, msg.chat.title);
+              if (!success) {
+                // اگر ماژول ارزیابی کار نکرد، از روش قدیمی استفاده کن
+                await reportGroupMembers(msg.chat.id, msg.chat.title);
+                await checkAndUpdateMembersList(msg.chat.id, msg.chat.title);
+              }
               continue;
             }
             if (msg.text === '/عضو') {
@@ -1514,9 +1547,9 @@ function startPolling() {
           }
           
           // 🎯 پردازش پیام‌های تمرین (صوتی با کپشن تمرین)
-          if (practiceManager.isPracticeMessage(msg)) {
+          if (arzyabiModule.isPracticeMessage(msg)) {
             console.log(`🎯 [POLLING] Practice message detected in group ${msg.chat.title}`);
-            const success = await practiceManager.handlePracticeMessage(msg);
+            const success = await arzyabiModule.handlePracticeSubmission(msg);
             if (success) {
               console.log('✅ [POLLING] Practice message handled successfully');
             } else {
