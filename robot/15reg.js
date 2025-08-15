@@ -1251,12 +1251,13 @@ class RegistrationModule {
     }
     
     // پردازش دکمه مربی
-    async handleCoachButton(ctx) {
-        const userId = ctx.from.id;
+    async handleCoachButton(msg) {
+        const userId = msg.from.id;
         const userData = this.userStates[userId]?.data;
         
         if (!userData || !userData.phone) {
-            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            const { sendMessage } = require('./4bale');
+            await sendMessage(msg.chat.id, '❌ اطلاعات کاربر یافت نشد');
             return;
         }
         
@@ -1273,20 +1274,21 @@ class RegistrationModule {
         };
         
         // ارسال پیام با کیبرد معمولی
-        ctx.reply(welcomeText, { reply_markup: keyboard });
+        const { sendMessage } = require('./4bale');
+        await sendMessage(msg.chat.id, welcomeText, keyboard);
         
         // کیبرد اینلاین برای گزینه‌های اضافی
         const { sendMessageWithInlineKeyboard } = require('./4bale');
         
         // ارسال پیام با کیبرد اینلاین
         await sendMessageWithInlineKeyboard(
-            ctx.chat.id,
+            msg.chat.id,
             '👆 **گزینه‌های اضافی:**',
             [
-                [{ text: '🎯 مدیریت گروه‌ها', callback_data: 'coach_manage_groups' }],
+                                        [{ text: '🎯 مدیریت گروه‌ها', callback_data: 'coach_groups' }],
                 [{ text: '👨‍🏫 مدیریت کمک مربی', callback_data: 'manage_assistant' }],
                 [{ text: '🔙 بازگشت', callback_data: 'back' }]
-            ]
+        ]
         );
         
         // اضافه کردن ماژول مدیریت کمک مربی
@@ -1340,10 +1342,10 @@ class RegistrationModule {
         } else if (data === 'assistant_manage_groups') {
             console.log(`🎯 [15REG] مدیریت گروه‌های کمک مربی درخواست شد`);
             return await this.handleAssistantManageGroups(chatId, userId, callbackQueryId);
-        } else if (data === 'coach_manage_groups') {
-            console.log(`🎯 [15REG] مدیریت گروه‌های مربی درخواست شد`);
-            return await this.handleCoachManageGroups(chatId, userId, callbackQueryId);
-        } else if (data === 'assistant_back') {
+        }                 else if (data === 'coach_groups') {
+                    console.log(`🎯 [15REG] مدیریت گروه‌های مربی درخواست شد (همان مسیر کمک مربی)`);
+                    return false; // اجازه می‌دهد تا 5polling.js پردازش کند
+                } else if (data === 'assistant_back') {
             console.log(`🔙 [15REG] بازگشت کمک مربی درخواست شد`);
             return await this.handleAssistantBack(chatId, userId, callbackQueryId);
         } else if (data === 'back') {
@@ -1529,12 +1531,13 @@ class RegistrationModule {
     }
     
     // پردازش دکمه کمک مربی
-    async handleAssistantButton(ctx) {
-        const userId = ctx.from.id;
+    async handleAssistantButton(msg) {
+        const userId = msg.from.id;
         const userData = this.userStates[userId]?.data;
         
         if (!userData || !userData.phone) {
-            ctx.reply('❌ اطلاعات کاربر یافت نشد');
+            const { sendMessage } = require('./4bale');
+            await sendMessage(msg.chat.id, '❌ اطلاعات کاربر یافت نشد');
             return;
         }
         
@@ -1555,7 +1558,8 @@ class RegistrationModule {
         };
         
         // ارسال پیام با کیبرد معمولی
-        ctx.reply(welcomeText, { reply_markup: keyboard });
+        const { sendMessage } = require('./4bale');
+        await sendMessage(msg.chat.id, welcomeText, keyboard);
         
         // کیبرد اینلاین برای مدیریت گروه‌ها
         const { sendMessageWithInlineKeyboard } = require('./4bale');

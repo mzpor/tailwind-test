@@ -1000,6 +1000,7 @@ function startPolling() {
                      callback_query.data === 'start_next_month_registration' ||
                      callback_query.data === 'back_to_main' ||
                      callback_query.data === 'manage_assistant' ||
+                     callback_query.data === 'coach_groups' ||
                      callback_query.data.startsWith('assistant_')) {
             console.log('🔄 [POLLING] Registration callback detected');
             console.log(`🔄 [POLLING] Registration callback data: ${callback_query.data}`);
