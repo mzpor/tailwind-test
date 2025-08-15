@@ -30,3 +30,6 @@ src/lib/gateway-config.json
 # Data files (runtime generated)
 robot/data/
 data/
+/src/lib
+/src
+src/lib/gateway-config.json
