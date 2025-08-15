@@ -1521,13 +1521,39 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
       const status = parts[3];
       
       if (attendanceManager.setUserStatus(memberId, status)) {
+        // به جای نمایش صفحه "وضعیت به‌روزرسانی شد"، مستقیماً صفحه مدیریت گروه را نمایش می‌دهیم
         const membersData = loadMembersData();
-        const member = membersData.groups[groupId]?.find(m => m.id === memberId);
+        const members = membersData.groups[groupId] || [];
         
-        await sendMessageWithInlineKeyboard(chatId,
-          `✅ وضعیت به‌روزرسانی شد\n\n👤 ${member?.name || 'عضو'}\n📊 وضعیت جدید: ${status}\n⏰ ${getTimeStamp()}`,
-          [[{ text: '🔙 بازگشت', callback_data: `group_${groupId}` }]]
-        );
+        // تنظیم کاربران در ماژول حضور و غیاب
+        attendanceManager.setUsers(members.map(m => m.id), groupId);
+        
+        // ایجاد کیبورد حضور و غیاب با وضعیت جدید
+        const keyboard = createAttendanceKeyboard(groupId, members);
+        
+        // دریافت نام واقعی گروه
+        let groupDisplayName = `گروه ${groupId}`;
+        try {
+          const { GROUP_NAMES } = require('./3config');
+          if (GROUP_NAMES[groupId]) {
+            groupDisplayName = GROUP_NAMES[groupId];
+          }
+        } catch (error) {
+          console.log(`Could not get group name for ${groupId}:`, error.message);
+        }
+        
+        const text = `👥 مدیریت حضور و غیاب
+
+📛 گروه: ${groupDisplayName}
+👥 تعداد اعضا: ${members.length}
+
+📋 لیست قرآن آموزان:
+${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
+
+👆 لطفاً عضو مورد نظر را انتخاب کنید یا عملیات گروهی را انجام دهید:
+⏰ ${getTimeStamp()}`;
+        
+        await sendMessageWithInlineKeyboard(chatId, text, keyboard);
       } else {
         await sendMessageWithInlineKeyboard(chatId,
           '❌ خطا در تغییر وضعیت',
