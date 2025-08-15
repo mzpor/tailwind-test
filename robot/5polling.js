@@ -1011,6 +1011,13 @@ function startPolling() {
                   if (!callback_query.data.startsWith('kargah_') &&
             !callback_query.data.startsWith('student_') &&
             !callback_query.data.startsWith('quran_student_') &&
+            !callback_query.data.startsWith('coach_') &&
+            !callback_query.data.startsWith('attendance_') &&
+            !callback_query.data.startsWith('report_') &&
+            !callback_query.data.startsWith('coaches_list') &&
+            !callback_query.data.startsWith('back_to_coaches') &&
+            !callback_query.data.startsWith('back_to_workshops') &&
+            !callback_query.data.startsWith('back_to_students_') &&
             callback_query.data !== 'back_to_groups' &&
             callback_query.data !== 'back_to_main' &&
             callback_query.data !== 'kargah_management') {
@@ -1041,7 +1048,6 @@ function startPolling() {
               callback_query.data.startsWith('member_') ||
               callback_query.data.startsWith('status_') ||
               callback_query.data.startsWith('all_') ||
-              callback_query.data.startsWith('report_') ||
               callback_query.data.startsWith('reset_') ||
               callback_query.data === 'groups' ||
               callback_query.data === 'coach_groups' ||
@@ -2375,8 +2381,7 @@ async function handleAutoCollectCommand(msg) {
     let statusText = `🔧 **وضعیت جمع‌آوری خودکار**\n\n`;
     statusText += `📊 **وضعیت فعلی:** ${AUTO_COLLECT_USER_CONFIG.enabled ? '✅ فعال' : '❌ غیرفعال'}\n`;
     statusText += `📝 **جمع‌آوری از:** ${AUTO_COLLECT_USER_CONFIG.collect_from_all_messages ? 'همه پیام‌ها' : 'فقط پیام‌های متنی'}\n`;
-    statusText += `🔄 **به‌روزرسانی کاربران موجود:** ${AUTO_COLLECT_USER_CONFIG.update_existing_users ? '✅ فعال' : '❌ غیرفعال'}\n`;
-    statusText += `📤 **گزارش به ادمین:** ${AUTO_COLLECT_USER_CONFIG.report_to_admin ? '✅ فعال' : '❌ غیرفعال'}\n\n`;
+    statusText += `🔄 **به‌روزرسانی کاربران موجود:** ${AUTO_COLLECT_USER_CONFIG.update_existing_users ? '✅ فعال' : '❌ غیرفعال'}\n\n`;
     
     // آمار کاربران جمع‌آوری شده
     try {
