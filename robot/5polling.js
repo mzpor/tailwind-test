@@ -375,20 +375,25 @@ async function handleRoleMessage(msg, role) {
 
 ⏰ ${getTimeStamp()}`;
     keyboard = config.keyboard;
-  } else if (msg.text === config.panelText) {
-    // if (!canSendMessage(msg.chat.id, 'panel', 5000)) {
-    //   return; // پیام را نادیده بگیر
-    // }
-    
-    // بررسی نقش کاربر برای نمایش پنل مناسب
-    if (isCoach(msg.from.id)) {
-      // پنل مربی - فقط دو گزینه
-      const inlineKeyboard = [
-        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-        [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'coach_groups' }]
-      ];
+      } else if (msg.text === config.panelText) {
+      // if (!canSendMessage(msg.chat.id, 'panel', 5000)) {
+      //   return; // پیام را نادیده بگیر
+      // }
       
-      reply = `👨‍🏫 پنل مربی
+      // بررسی نقش کاربر برای نمایش پنل مناسب
+      if (isCoach(msg.from.id)) {
+        // پنل مربی - استفاده از handleCoachButton از 15reg.js
+        console.log(`🏋️ [POLLING] Coach panel requested, delegating to 15reg.js`);
+        await registrationModule.handleCoachButton(msg);
+        return; // ادامه حلقه بدون ارسال پیام معمولی
+          } else if (isAssistant(msg.from.id)) {
+        // پنل کمک مربی - فقط دو گزینه
+        const inlineKeyboard = [
+          [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
+          [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'assistant_groups' }]
+        ];
+        
+        reply = `👨‍🏫 پنل کمک مربی
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
@@ -396,27 +401,9 @@ async function handleRoleMessage(msg, role) {
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
-      
-      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
-      return; // ادامه حلقه بدون ارسال پیام معمولی
-    } else if (isAssistant(msg.from.id)) {
-      // پنل کمک مربی - فقط دو گزینه
-      const inlineKeyboard = [
-        [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }],
-        [{ text: '🏫 مدیریت گروه‌ها', callback_data: 'assistant_groups' }]
-      ];
-      
-      reply = `👨‍🏫 پنل کمک مربی
-
-📋 گزینه‌های موجود:
-• 🤖 معرفی ربات
-• 🏫 مدیریت گروه‌ها (حضور و غیاب)
-
-👆 لطفاً گزینه مورد نظر را انتخاب کنید:
-⏰ ${getTimeStamp()}`;
-      
-      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
-      return; // ادامه حلقه بدون ارسال پیام معمولی
+        
+        await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+        return; // ادامه حلقه بدون ارسال پیام معمولی
     } else if (getUserRole(msg.from.id) === ROLES.STUDENT) {
       // پنل قرآن آموز - نمایش ساده بدون Inline Keyboard
       reply = `📖 **پنل قرآن آموز**

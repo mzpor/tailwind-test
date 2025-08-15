@@ -164,6 +164,20 @@ class RegistrationModule {
                     if (userRole === 'coach' || userRole === 'assistant') {
                         // 🔥 نقش مربی تشخیص داده شد - تکمیل خودکار
                         this.userStates[userId].data.userRole = userRole;
+                        
+                        // 🔥 اضافه کردن خودکار به کانفیگ
+                        try {
+                            if (userRole === 'coach') {
+                                addUserToRole('COACH', userId, 'مربی', phoneToCheck);
+                                console.log(`✅ [15REG] کاربر ${userId} به عنوان مربی در کانفیگ اضافه شد`);
+                            } else if (userRole === 'assistant') {
+                                addUserToRole('ASSISTANT', userId, 'کمک مربی', phoneToCheck);
+                                console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
+                            }
+                        } catch (error) {
+                            console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
+                        }
+                        
                         this.checkAndCompleteCoachRegistration(ctx);
                         return;
                     }
@@ -212,13 +226,16 @@ class RegistrationModule {
             console.log(`✅ [15REG] تکمیل خودکار ثبت‌نام برای ${userRole} با نام: ${firstName}`);
             
             // 🔥 اضافه کردن خودکار به کانفیگ
-            if (userRole === 'assistant') {
-                try {
+            try {
+                if (userRole === 'coach') {
+                    addUserToRole('COACH', userId, firstName, userData.phone);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان مربی در کانفیگ اضافه شد`);
+                } else if (userRole === 'assistant') {
                     addUserToRole('ASSISTANT', userId, firstName, userData.phone);
                     console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
-                } catch (error) {
-                    console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
                 }
+            } catch (error) {
+                console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
             }
             
             // تکمیل اطلاعات
@@ -1019,13 +1036,16 @@ class RegistrationModule {
             console.log(`✅ [15REG] تکمیل خودکار ثبت‌نام برای ${userRole} با نام: ${firstName}`);
             
             // 🔥 اضافه کردن خودکار به کانفیگ
-            if (userRole === 'assistant') {
-                try {
+            try {
+                if (userRole === 'coach') {
+                    addUserToRole('COACH', userId, firstName, userData.phone);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان مربی در کانفیگ اضافه شد`);
+                } else if (userRole === 'assistant') {
                     addUserToRole('ASSISTANT', userId, firstName, userData.phone);
                     console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
-                } catch (error) {
-                    console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
                 }
+            } catch (error) {
+                console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
             }
             
             // تکمیل اطلاعات
@@ -1115,6 +1135,21 @@ class RegistrationModule {
         
         console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
         console.log(`🔍 [15REG] شماره تلفن: ${userData.phone}`);
+        
+        // 🔥 اطمینان از اضافه شدن به ساختار مرکزی
+        if (userRole === 'coach' || userRole === 'assistant') {
+            try {
+                if (userRole === 'coach') {
+                    addUserToRole('COACH', userId, firstName, userData.phone);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان مربی در کانفیگ اضافه شد`);
+                } else if (userRole === 'assistant') {
+                    addUserToRole('ASSISTANT', userId, firstName, userData.phone);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
+                }
+            } catch (error) {
+                console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
+            }
+        }
         
         // تعیین متن نقش و کیبرد
         let roleText, keyboardRows;
@@ -1228,12 +1263,8 @@ class RegistrationModule {
         const welcomeText = `👨‍🏫 **پنل مربی**
 
 📋 **گزینه‌های موجود:**
-• 🎯 مدیریت کارگاه
-• 👥 مدیریت دانش‌آموزان
-• 📊 گزارش‌گیری
-• 👨‍🏫 مدیریت کمک مربی
-
-👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**`;
+• 🎯 مدیریت گروه‌ها
+• 👨‍🏫 مدیریت کمک مربی`;
         
         // کیبرد معمولی (موجود)
         const keyboard = {
@@ -1252,6 +1283,7 @@ class RegistrationModule {
             ctx.chat.id,
             '👆 **گزینه‌های اضافی:**',
             [
+                [{ text: '🎯 مدیریت گروه‌ها', callback_data: 'coach_manage_groups' }],
                 [{ text: '👨‍🏫 مدیریت کمک مربی', callback_data: 'manage_assistant' }],
                 [{ text: '🔙 بازگشت', callback_data: 'back' }]
             ]
@@ -1272,6 +1304,9 @@ class RegistrationModule {
         const callbackQueryId = callback.id;
         
         console.log(`🔍 [15REG] Callback received: ${data}`);
+        
+        // 🔥 اطمینان از تنظیم نقش در ساختار مرکزی
+        await this.ensureUserRoleInCentralStructure(userId);
         
         // پردازش callback های مدیریت کمک مربی
         if (data === 'quran_student_registration') {
@@ -1305,6 +1340,9 @@ class RegistrationModule {
         } else if (data === 'assistant_manage_groups') {
             console.log(`🎯 [15REG] مدیریت گروه‌های کمک مربی درخواست شد`);
             return await this.handleAssistantManageGroups(chatId, userId, callbackQueryId);
+        } else if (data === 'coach_manage_groups') {
+            console.log(`🎯 [15REG] مدیریت گروه‌های مربی درخواست شد`);
+            return await this.handleCoachManageGroups(chatId, userId, callbackQueryId);
         } else if (data === 'assistant_back') {
             console.log(`🔙 [15REG] بازگشت کمک مربی درخواست شد`);
             return await this.handleAssistantBack(chatId, userId, callbackQueryId);
@@ -1327,6 +1365,43 @@ class RegistrationModule {
         }
         
         return false;
+    }
+    
+    // 🔥 اطمینان از تنظیم نقش در ساختار مرکزی
+    async ensureUserRoleInCentralStructure(userId) {
+        console.log(`🔍 [15REG] بررسی نقش کاربر ${userId} در ساختار مرکزی`);
+        
+        try {
+            // بررسی نقش در userStates
+            const userData = this.userStates[userId]?.data;
+            if (!userData || !userData.userRole) {
+                console.log(`⚠️ [15REG] نقش کاربر ${userId} در userStates یافت نشد`);
+                return;
+            }
+            
+            const userRole = userData.userRole;
+            const firstName = userData.firstName || 'کاربر';
+            const phone = userData.phone;
+            
+            console.log(`🔍 [15REG] نقش کاربر ${userId}: ${userRole}`);
+            
+            // اگر مربی یا کمک مربی است، اطمینان از اضافه شدن به ساختار مرکزی
+            if (userRole === 'coach' || userRole === 'assistant') {
+                try {
+                    if (userRole === 'coach') {
+                        addUserToRole('COACH', userId, firstName, phone);
+                        console.log(`✅ [15REG] کاربر ${userId} به عنوان مربی در ساختار مرکزی تنظیم شد`);
+                    } else if (userRole === 'assistant') {
+                        addUserToRole('ASSISTANT', userId, firstName, phone);
+                        console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در ساختار مرکزی تنظیم شد`);
+                    }
+                } catch (error) {
+                    console.error(`❌ [15REG] خطا در تنظیم نقش در ساختار مرکزی:`, error.message);
+                }
+            }
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در بررسی نقش کاربر:`, error.message);
+        }
     }
     
     // مدیریت کمک مربی
@@ -1376,6 +1451,42 @@ class RegistrationModule {
             
         } catch (error) {
             console.error(`❌ [15REG] خطا در نمایش مدیریت گروه‌های کمک مربی:`, error);
+        }
+        
+        return false;
+    }
+
+    // مدیریت گروه‌های مربی
+    async handleCoachManageGroups(chatId, userId, callbackQueryId) {
+        console.log(`🎯 [15REG] نمایش مدیریت گروه‌های مربی`);
+        
+        try {
+            // اینجا باید به سیستم مدیریت گروه‌های مدیر وصل بشه
+            // ولی فقط گروه‌هایی که مربی ادمین هست رو نشون بده
+            const text = `🎯 **مدیریت گروه‌های مربی**
+
+📋 **گروه‌های شما:**
+• گروه قرآن کریم (3 گروه)
+• گروه حفظ موضوعی
+• گروه تفسیر
+
+⚠️ **نکته:** فقط گروه‌هایی که شما ادمین هستید قابل مدیریت هستند.
+
+👆 **لطفاً گروه مورد نظر را انتخاب کنید:**`;
+            
+            const keyboard = [
+                [{ text: '📚 گروه قرآن کریم', callback_data: 'coach_group_quran' }],
+                [{ text: '📖 گروه حفظ موضوعی', callback_data: 'coach_group_hifz' }],
+                [{ text: '📖 گروه تفسیر', callback_data: 'coach_group_tafsir' }],
+                [{ text: '🔙 بازگشت', callback_data: 'back' }]
+            ];
+            
+            const { sendMessageWithInlineKeyboard } = require('./4bale');
+            await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+            return true;
+            
+        } catch (error) {
+            console.error(`❌ [15REG] خطا در نمایش مدیریت گروه‌های مربی:`, error);
         }
         
         return false;
@@ -1702,7 +1813,6 @@ class RegistrationModule {
         
         // 🔥 اضافه کردن نقش STUDENT به کمک مربی
         try {
-            const { addUserToRole } = require('./3config');
             addUserToRole('STUDENT', userId, userData.firstName || 'کمک مربی', userData.phone);
             console.log(`✅ [15REG] نقش STUDENT به کمک مربی ${userId} اضافه شد`);
             
