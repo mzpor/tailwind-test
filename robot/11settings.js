@@ -481,8 +481,11 @@ class SettingsModule {
       const practiceDaysList = (this.settings.practice_days || []).map(d => dayNames[d]).join('، ') || '---';
       const evaluationDaysList = (this.settings.evaluation_days || []).map(d => dayNames[d]).join('، ') || '---';
       const attendanceDaysList = (this.settings.attendance_days || []).map(d => dayNames[d]).join('، ') || '---';
+      
+      // اضافه کردن ساعت‌های تمرین
+      const practiceHoursList = (this.settings.practice_hours || []).map(h => `${h}:00`).join('، ') || 'تنظیم نشده';
 
-      const reportText = `👥 *برنامه جدید هفته تمرین و ارزیابی و کلاس  با مربیان*\nروزهای تمرین قرآن آموزان: ${practiceDaysList}\nروزهای ارزیابی قرآن آموزان: ${evaluationDaysList}\nروزهای کلاس با مربیان: ${attendanceDaysList}\n\nاعلام در ساعت: ${time}\nتاریخ: ${day} ${month} ${year}`;
+      const reportText = `👥 *برنامه جدید هفته تمرین و ارزیابی و کلاس  با مربیان*\nروزهای تمرین قرآن آموزان: ${practiceDaysList}\nساعت‌های تمرین: ${practiceHoursList}\nروزهای ارزیابی قرآن آموزان: ${evaluationDaysList}\nروزهای کلاس با مربیان: ${attendanceDaysList}\n\nاعلام در ساعت: ${time}\nتاریخ: ${day} ${month} ${year}`;
       
       await sendMessage(REPORT_GROUP_ID, reportText);
       console.log(`✅ [SETTINGS] Attendance days return report sent to group`);
@@ -1025,7 +1028,10 @@ class SettingsModule {
       const evaluationDaysList = (this.settings.evaluation_days || []).map(d => dayNames[d]).join('، ') || '---';
       const attendanceDaysList = (this.settings.attendance_days || []).map(d => dayNames[d]).join('، ') || '---';
 
-      const reportText = `👥 *برنامه جدید هفته تمرین و ارزیابی و کلاس  با مربیان*\nروزهای تمرین قرآن آموزان: ${practiceDaysList}\nروزهای ارزیابی قرآن آموزان: ${evaluationDaysList}\nروزهای کلاس با مربیان: ${attendanceDaysList}\n\nاعلام در ساعت: ${time}\nتاریخ: ${day} ${month} ${year}`;
+      // اضافه کردن ساعت‌های تمرین
+      const practiceHoursList = (this.settings.practice_hours || []).map(h => `${h}:00`).join('، ') || 'تنظیم نشده';
+
+      const reportText = `👥 *برنامه جدید هفته تمرین و ارزیابی و کلاس  با مربیان*\nروزهای تمرین قرآن آموزان: ${practiceDaysList}\nساعت‌های تمرین: ${practiceHoursList}\nروزهای ارزیابی قرآن آموزان: ${evaluationDaysList}\nروزهای کلاس با مربیان: ${attendanceDaysList}\n\nاعلام در ساعت: ${time}\nتاریخ: ${day} ${month} ${year}`;
       
       await sendMessage(REPORT_GROUP_ID, reportText);
       console.log(`✅ [SETTINGS] Attendance days confirmation report sent to group`);
