@@ -278,7 +278,7 @@ const generateStudentsKeyboard = (coachId) => {
     
     const keyboard = [];
     
-    // لیست دانشجویان (اول)
+    // لیست دانشجویان (اول) - با coachId در callback
     students.forEach((student, index) => {
       const statusEmoji = {
         'حاضر': '✅',
@@ -289,7 +289,7 @@ const generateStudentsKeyboard = (coachId) => {
       }[student.attendance] || '❓';
       
       const text = `${index + 1}. ${student.name} ${statusEmoji}`;
-      keyboard.push([{ text: text, callback_data: `student_${student.id}` }]);
+      keyboard.push([{ text: text, callback_data: `student_${student.id}_${coachId}` }]);
     });
     
     // دکمه‌های عملیات سریع - همه وضعیت‌ها (بعد از دانشجویان)
@@ -321,7 +321,7 @@ const generateStudentsKeyboard = (coachId) => {
 };
 
 // تابع تولید کیبرد وضعیت حضور و غیاب
-const generateAttendanceKeyboard = (studentId) => {
+const generateAttendanceKeyboard = (studentId, coachId) => {
   try {
     const attendance = loadAttendance();
     const currentStatus = attendance[studentId] || 'حاضر';
@@ -332,10 +332,10 @@ const generateAttendanceKeyboard = (studentId) => {
       [{ text: '❌ غایب', callback_data: `attendance_${studentId}_غایب` }],
       [{ text: '📄 غیبت(موجه)', callback_data: `attendance_${studentId}_غیبت(موجه)` }],
       [{ text: '⏳ در انتظار', callback_data: `attendance_${studentId}_در انتظار` }],
-      [{ text: '🔙 بازگشت', callback_data: `back_to_students_${studentId}` }]
+      [{ text: '🔙 بازگشت', callback_data: `back_to_students_${coachId}` }]
     ];
     
-    console.log(`✅ [OSATD] Generated attendance keyboard for student ${studentId}`);
+    console.log(`✅ [OSATD] Generated attendance keyboard for student ${studentId} with coachId ${coachId}`);
     return keyboard;
     
   } catch (error) {
@@ -368,8 +368,30 @@ const handleCoachesCallback = async (callbackQuery) => {
       
     } else if (data.startsWith('student_')) {
       // نمایش کیبرد حضور و غیاب برای دانشجو
-      const studentId = data.replace('student_', '');
-      const keyboard = generateAttendanceKeyboard(studentId);
+      const parts = data.split('_');
+      const studentId = parts[1];
+      
+      // ساخت مجدد coachId از parts
+      let coachId = null;
+      if (parts.length >= 5) {
+        // student_1790308237_phone_1755212603854_ga1njd27g
+        // parts[0] = student
+        // parts[1] = 1790308237 (studentId)
+        // parts[2] = phone (نوع)
+        // parts[3] = 1755212603854 (شماره)
+        // parts[4] = ga1njd27g (شناسه)
+        coachId = `${parts[2]}_${parts[3]}_${parts[4]}`;
+      }
+      
+      if (!coachId) {
+        // اگر coachId ساخته نشد، از coaches.json استفاده می‌کنیم
+        const coaches = loadCoaches();
+        if (coaches.length > 0) {
+          coachId = coaches[0].id;
+        }
+      }
+      
+      const keyboard = generateAttendanceKeyboard(studentId, coachId);
       const text = '📝 *تغییر وضعیت حضور و غیاب*\n\nوضعیت جدید را انتخاب کنید:';
       
       return { text, keyboard, parse_mode: 'Markdown' };
@@ -384,20 +406,14 @@ const handleCoachesCallback = async (callbackQuery) => {
       
       if (result.success) {
         // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
-        // باید coachId را از context دریافت کنیم - فعلاً از registrations استفاده می‌کنیم
-        const registrations = loadRegistrations();
+        // coachId را از callback data قبلی دریافت می‌کنیم
+        // فعلاً از coaches.json استفاده می‌کنیم
+        const coaches = loadCoaches();
         let coachId = null;
         
-        // پیدا کردن coachId از طریق دانشجو
-        Object.entries(registrations.userStates).forEach(([userId, userState]) => {
-          if (userId === studentId && userState.data && userState.data.userRole === 'quran_student') {
-            // اگر این دانشجو است، از coaches.json مربی مربوطه را پیدا کنیم
-            const coaches = loadCoaches();
-            if (coaches.length > 0) {
-              coachId = coaches[0].id; // فعلاً اولین مربی را در نظر می‌گیریم
-            }
-          }
-        });
+        if (coaches.length > 0) {
+          coachId = coaches[0].id; // فعلاً اولین مربی را در نظر می‌گیریم
+        }
         
         if (coachId) {
           const keyboard = generateStudentsKeyboard(coachId);
@@ -494,17 +510,24 @@ const handleCoachesCallback = async (callbackQuery) => {
       
     } else if (data === 'back_to_workshops') {
       // بازگشت به منوی کارگاه‌ها
-      return { text: '🔙 بازگشت به منوی کارگاه‌ها', callback_data: 'back_to_workshops' };
+      return { text: '🔙 بازگشت به منوی کارگاه‌ها' };
       
     } else if (data.startsWith('back_to_students_')) {
       // بازگشت به لیست دانشجویان
-      const studentId = data.replace('back_to_students_', '');
-      // اینجا باید coachId را از context دریافت کنیم
-      // فعلاً به لیست مربی‌ها برمی‌گردانیم
-      const keyboard = generateCoachesKeyboard();
-      const text = '👨‍🏫 *لیست مربی‌ها و کارگاه‌ها*\n\nمربی مورد نظر خود را انتخاب کنید:';
+      const coachId = data.replace('back_to_students_', '');
       
-      return { text, keyboard, parse_mode: 'Markdown' };
+      if (coachId) {
+        const keyboard = generateStudentsKeyboard(coachId);
+        const text = '📚 *دانشجویان این مربی*\n\nدانشجوی مورد نظر خود را انتخاب کنید:';
+        
+        return { text, keyboard, parse_mode: 'Markdown' };
+      } else {
+        // اگر coachId پیدا نشد، به لیست مربی‌ها برمی‌گردیم
+        const keyboard = generateCoachesKeyboard();
+        const text = '👨‍🏫 *لیست مربی‌ها و کارگاه‌ها*\n\nمربی مورد نظر خود را انتخاب کنید:';
+        
+        return { text, keyboard, parse_mode: 'Markdown' };
+      }
     }
     
     return null;

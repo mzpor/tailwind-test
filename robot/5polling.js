@@ -1297,7 +1297,7 @@ function startPolling() {
               console.log('✅ [POLLING] Settings callback handled successfully');
               console.log('✅ [POLLING] Settings callback completed for data:', callback_query.data);
             }
-          } else if (callback_query.data.startsWith('kargah_') || callback_query.data.startsWith('student_')) {
+          } else if (callback_query.data.startsWith('kargah_')) {
             console.log('🔄 [POLLING] Kargah callback detected');
             console.log(`🔄 [POLLING] Kargah callback data: ${callback_query.data}`);
             // پردازش callback های کارگاه‌ها
@@ -1318,6 +1318,7 @@ function startPolling() {
                      callback_query.data.startsWith('attendance_') || 
                      callback_query.data.startsWith('attendance_all_') ||
                      callback_query.data.startsWith('report_') || 
+                     callback_query.data.startsWith('student_') ||
                      callback_query.data === 'coaches_list' ||
                      callback_query.data === 'back_to_coaches' ||
                      callback_query.data === 'back_to_workshops' ||
@@ -2054,7 +2055,7 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
         console.error('Error handling settings callback');
       }
       return;
-    } else if (action.startsWith('kargah_') || action.startsWith('student_')) {
+    } else if (action.startsWith('kargah_')) {
       // پردازش callback های کارگاه‌ها
       const kargahModule = require('./12kargah');
       // متصل کردن متدهای ارسال پیام
