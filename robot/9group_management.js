@@ -422,16 +422,17 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
       
       saveAttendanceData(attendanceData);
       
-      const keyboard = [[{
-        text: '🔙 بازگشت',
-        callback_data: `group_${groupId}`
-      }]];
-      
-      const text = `✅ عملیات گروهی انجام شد
+      // به جای رفتن به صفحه جدید، همان صفحه را با وضعیت جدید نمایش می‌دهیم
+      const keyboard = createAttendanceKeyboard(groupId, members);
+      const text = `👥 مدیریت حضور و غیاب
 
-📛 گروه: ${groupId}
+📛 گروه: گروه ${groupId}
 👥 تعداد اعضا: ${members.length}
-📊 عملیات: ${operationText}
+
+📋 لیست قرآن آموزان:
+${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
+
+👆 لطفاً عضو مورد نظر را انتخاب کنید یا عملیات گروهی را انجام دهید:
 ⏰ ${getTimeStamp()}`;
       
       return { text, keyboard };

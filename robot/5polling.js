@@ -1577,10 +1577,20 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
         attendanceManager.setUserStatus(member.id, status);
       });
       
-      await sendMessageWithInlineKeyboard(chatId,
-        `✅ عملیات گروهی انجام شد\n\n📛 گروه: ${groupId}\n👥 تعداد اعضا: ${members.length}\n📊 عملیات: ${operationText}\n⏰ ${getTimeStamp()}`,
-        [[{ text: '🔙 بازگشت', callback_data: `group_${groupId}` }]]
-      );
+      // به جای رفتن به صفحه جدید، همان صفحه را با وضعیت جدید نمایش می‌دهیم
+      const keyboard = createAttendanceKeyboard(groupId, members);
+      const text = `👥 مدیریت حضور و غیاب
+
+📛 گروه: ${groupId}
+👥 تعداد اعضا: ${members.length}
+
+📋 لیست قرآن آموزان:
+${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
+
+👆 لطفاً عضو مورد نظر را انتخاب کنید یا عملیات گروهی را انجام دهید:
+⏰ ${getTimeStamp()}`;
+      
+      await sendMessageWithInlineKeyboard(chatId, text, keyboard);
       
     } else if (action === 'report') {
       // گزارش حضور و غیاب
