@@ -1288,7 +1288,7 @@ function startPolling() {
               const reply = '❌ خطا در نمایش منوی استادها';
               await safeSendMessage(callback_query.from.id, reply, config.keyboard);
             }
-          } else if ((callback_query.data.startsWith('practice_') && !callback_query.data.includes('_days_settings')) || 
+          } else if ((callback_query.data.startsWith('practice_') && !callback_query.data.includes('_days_settings') && !callback_query.data.includes('_hours_settings')) || 
                      (callback_query.data.startsWith('evaluation_') && !callback_query.data.includes('_days_settings')) || 
                      callback_query.data.startsWith('satisfaction_')) {
             // پردازش callback های تمرین، ارزیابی و نظرسنجی (به جز تنظیمات روزها)
@@ -1329,6 +1329,7 @@ function startPolling() {
                      callback_query.data.startsWith('select_') ||
                      callback_query.data === 'practice_evaluation_days_settings' ||
                      callback_query.data === 'practice_days_settings' ||
+                     callback_query.data === 'practice_hours_settings' ||
                      callback_query.data === 'evaluation_days_settings' ||
                      callback_query.data === 'attendance_days_settings') {
             // پردازش callback های تنظیمات
