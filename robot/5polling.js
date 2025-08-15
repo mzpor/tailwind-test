@@ -47,6 +47,53 @@ const registrationModule = new SmartRegistrationModule();
 // ایجاد یک instance واحد از PaymentModule
 const paymentModule = new PaymentModule();
 
+// تابع حذف ربات از گروه
+async function removeBotFromGroup(groupId) {
+  try {
+    console.log(`🗑️ Removing bot from group ${groupId}`);
+    
+    // حذف از groups_config.json
+    const fs = require('fs');
+    const groupsConfigPath = './data/groups_config.json';
+    
+    if (fs.existsSync(groupsConfigPath)) {
+      const groupsConfig = JSON.parse(fs.readFileSync(groupsConfigPath, 'utf8'));
+      if (groupsConfig.groups[groupId]) {
+        delete groupsConfig.groups[groupId];
+        fs.writeFileSync(groupsConfigPath, JSON.stringify(groupsConfig, null, 2));
+        console.log(`✅ Group ${groupId} removed from groups_config.json`);
+      }
+    }
+    
+    // حذف از members.json
+    const membersPath = './members.json';
+    if (fs.existsSync(membersPath)) {
+      const membersData = JSON.parse(fs.readFileSync(membersPath, 'utf8'));
+      if (membersData.groups[groupId]) {
+        delete membersData.groups[groupId];
+        fs.writeFileSync(membersPath, JSON.stringify(membersData, null, 2));
+        console.log(`✅ Group ${groupId} removed from members.json`);
+      }
+    }
+    
+    // حذف از attendance.json
+    const attendancePath = './attendance.json';
+    if (fs.existsSync(attendancePath)) {
+      const attendanceData = JSON.parse(fs.readFileSync(attendancePath, 'utf8'));
+      if (attendanceData.groups[groupId]) {
+        delete attendanceData.groups[groupId];
+        fs.writeFileSync(attendancePath, JSON.stringify(attendanceData, null, 2));
+        console.log(`✅ Group ${groupId} removed from attendance.json`);
+      }
+    }
+    
+    console.log(`✅ Bot successfully removed from group ${groupId}`);
+    
+  } catch (error) {
+    console.error(`❌ Error removing bot from group ${groupId}:`, error.message);
+  }
+}
+
 // تنظیم توکن بات در ماژول پرداخت
 const { BOT_TOKEN } = require('./3config');
 paymentModule.setBotToken(BOT_TOKEN);
@@ -1148,7 +1195,14 @@ function startPolling() {
           }
           
           if (msg.left_chat_member) {
-            await removeMember(msg.chat.id, msg.left_chat_member.id);
+            // اگر ربات از گروه خارج شد
+            if (msg.left_chat_member.id === parseInt(BOT_TOKEN.split(':')[0])) {
+              console.log(`🤖 Bot left group ${msg.chat.id} (${msg.chat.title})`);
+              await removeBotFromGroup(msg.chat.id);
+            } else {
+              // اگر کاربر عادی از گروه خارج شد
+              await removeMember(msg.chat.id, msg.left_chat_member.id);
+            }
             continue;
           }
           
