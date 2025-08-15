@@ -26,3 +26,7 @@ dist-ssr
 # Runtime generated files
 gateway-config.json
 src/lib/gateway-config.json
+
+# Data files (runtime generated)
+robot/data/
+data/
