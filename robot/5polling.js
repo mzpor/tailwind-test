@@ -661,16 +661,28 @@ async function handleRoleMessage(msg, role) {
       } else if (msg.text === 'تنظیمات') {
         // دکمه تنظیمات - برای همه کاربران
         console.log(`⚙️ [POLLING] تنظیمات درخواست شد`);
-        reply = `⚙️ **پنل تنظیمات**
-
-📋 **گزینه‌های موجود:**
-• 🔧 تنظیمات عمومی
-• 📊 تنظیمات گزارش‌گیری
-• 🎯 تنظیمات شخصی
-
-👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**
-⏰ ${getTimeStamp()}`;
-        keyboard = config.keyboard;
+        // بررسی دسترسی کاربر برای تنظیمات - فقط مدیر مدرسه
+        if (!isAdmin(msg.from.id)) {
+          console.log('❌ [POLLING] User is not admin for settings command');
+          reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
+          keyboard = config.keyboard;
+        } else {
+          // نمایش پنل تنظیمات
+          console.log('🔍 [POLLING] User is admin, calling handleSettingsCommand...');
+          const settingsModule = new SettingsModule();
+          console.log('🔍 [POLLING] SettingsModule created');
+          const success = await settingsModule.handleSettingsCommand(msg.chat.id, msg.from.id);
+          console.log('🔍 [POLLING] handleSettingsCommand result:', success);
+          
+          if (success) {
+            console.log('✅ [POLLING] Settings command handled successfully, returning');
+            return; // ادامه حلقه بدون ارسال پیام معمولی
+          } else {
+            console.log('❌ [POLLING] Settings command failed, sending error message');
+            reply = '❌ خطا در نمایش تنظیمات';
+            keyboard = config.keyboard;
+          }
+        }
       } else if (msg.text === config.panelText) {
       // if (!canSendMessage(msg.chat.id, 'panel', 5000)) {
       //   return; // پیام را نادیده بگیر
@@ -795,18 +807,26 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
       }
     }
   } else if (msg.text === 'تنظیمات' || msg.text === '/تنظیمات') {
-    // بررسی دسترسی کاربر برای تنظیمات - فقط مدیر مدرسه
+    console.log('🔍 [POLLING] Settings command detected:', msg.text);
+    console.log(`🔍 [POLLING] User ID: ${msg.from.id}, Chat ID: ${msg.chat.id}`);
+    // دستور تنظیمات - فقط برای مدیر مدرسه
     if (!isAdmin(msg.from.id)) {
-     // reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
+      console.log('❌ [POLLING] User is not admin for settings command');
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
       keyboard = config.keyboard;
     } else {
-      // نمایش منوی تنظیمات با استفاده از ماژول تنظیمات
+      // نمایش پنل تنظیمات
+      console.log('🔍 [POLLING] User is admin, calling handleSettingsCommand...');
       const settingsModule = new SettingsModule();
-      const success = settingsModule.handleSettingsCommand(msg.chat.id, msg.from.id);
+      console.log('🔍 [POLLING] SettingsModule created');
+      const success = await settingsModule.handleSettingsCommand(msg.chat.id, msg.from.id);
+      console.log('🔍 [POLLING] handleSettingsCommand result:', success);
       
       if (success) {
+        console.log('✅ [POLLING] Settings command handled successfully, returning');
         return; // ادامه حلقه بدون ارسال پیام معمولی
       } else {
+        console.log('❌ [POLLING] Settings command failed, sending error message');
         reply = '❌ خطا در نمایش تنظیمات';
         keyboard = config.keyboard;
       }
@@ -898,31 +918,7 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
 👆 **لطفاً گزینه مورد نظر را انتخاب کنید:**
 ⏰ ${getTimeStamp()}`;
     keyboard = config.keyboard;
-  } else if (msg.text === '/تنظیمات' || msg.text === '⚙️ تنظیمات' || msg.text === 'تنظیمات') {
-    console.log('🔍 [POLLING] Settings command detected:', msg.text);
-    console.log(`🔍 [POLLING] User ID: ${msg.from.id}, Chat ID: ${msg.chat.id}`);
-    // دستور تنظیمات - فقط برای مدیر مدرسه
-    if (!isAdmin(msg.from.id)) {
-      console.log('❌ [POLLING] User is not admin for settings command');
-      reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
-      keyboard = config.keyboard;
-    } else {
-      // نمایش پنل تنظیمات
-      console.log('🔍 [POLLING] User is admin, calling handleSettingsCommand...');
-      const settingsModule = new SettingsModule();
-      console.log('🔍 [POLLING] SettingsModule created');
-      const success = settingsModule.handleSettingsCommand(msg.chat.id, msg.from.id);
-      console.log('🔍 [POLLING] handleSettingsCommand result:', success);
-      
-      if (success) {
-        console.log('✅ [POLLING] Settings command handled successfully, returning');
-        return; // ادامه حلقه بدون ارسال پیام معمولی
-      } else {
-        console.log('❌ [POLLING] Settings command failed, sending error message');
-        reply = '❌ خطا در نمایش تنظیمات';
-        keyboard = config.keyboard;
-      }
-    }
+
   } else if (msg.text === '/کارگاه' || msg.text === '🏭 کارگاه‌ها') {
     // دستور کارگاه‌ها - فقط برای مدیر مدرسه
     if (!isAdmin(msg.from.id)) {

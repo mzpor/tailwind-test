@@ -43,6 +43,7 @@ class SettingsModule {
                  // تنظیمات پیش‌فرض
          this.settings = {
            practice_days: [0, 1, 2, 3, 4, 5, 6], // همه روزها فعال
+           practice_hours: [14, 15, 16, 17], // ساعت 2 تا 6 عصر
            evaluation_days: [0, 1, 2, 3, 4, 5, 6], // همه روزها فعال
            attendance_days: [0, 1, 2, 3, 4, 5, 6], // همه روزها فعال
            enable_satisfaction_survey: true,
@@ -54,6 +55,7 @@ class SettingsModule {
       console.error('Error loading settings:', error.message);
       this.settings = {
         practice_days: [0, 1, 2, 3, 4, 5, 6],
+        practice_hours: [14, 15, 16, 17], // ساعت 2 تا 6 عصر
         evaluation_days: [0, 1, 2, 3, 4, 5, 6],
         attendance_days: [0, 1, 2, 3, 4, 5, 6],
         enable_satisfaction_survey: true,

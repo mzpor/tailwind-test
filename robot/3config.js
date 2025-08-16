@@ -85,14 +85,14 @@ const BUTTON_VISIBILITY_CONFIG = {
   ROBOT_BUTTON: 0,  // 1 = نمایش دکمه ربات، 0 = عدم نمایش
   REGISTRATION_BUTTON: 1,  // 1 = نمایش دکمه ثبت‌نام ماه آینده، 0 = عدم نمایش
   // در آینده می‌توان دکمه‌های بیشتری اضافه کرد
-  // SETTINGS_BUTTON: 1,
+  SETTINGS_BUTTON: 1,
   ROLES_BUTTON: 0,  // مدیریت نقش‌ها غیرفعال شده
-  PRACTICE_EVALUATION_DAYS_BUTTON: 0,  // دکمه روزهای تمرین و ارزیابی: 1 = فعال، 0 = غیرفعال
+  PRACTICE_EVALUATION_DAYS_BUTTON: 1,  // دکمه روزهای تمرین و ارزیابی: 1 = فعال، 0 = غیرفعال
 };
 
 // ===== کنترل نمایش دکمه‌های اصلی =====
 const MAIN_BUTTONS_CONFIG = {
-  REGISTER_INFO: 1,    // دکمه ثبت اطلاعات (0 = مخفی، 1 = نمایان)
+  REGISTER_INFO: 0,    // دکمه ثبت اطلاعات (0 = مخفی، 1 = نمایان)
   SETTINGS: 1          // دکمه تنظیمات (0 = مخفی، 1 = نمایان)
 };
 
