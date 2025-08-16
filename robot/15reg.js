@@ -1166,14 +1166,22 @@ class RegistrationModule {
         }
         
         // اضافه کردن دکمه‌های قابل کنترل با کانفیگ
-        if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
+        // بررسی نمایش دکمه ثبت اطلاعات بر اساس نقش کاربر
+        const { isRegisterInfoVisibleForRole } = require('./3config');
+        if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1 && isRegisterInfoVisibleForRole(userRole)) {
             keyboardRows.push(['ثبت اطلاعات']);
-            console.log(`✅ [15REG] دکمه "ثبت اطلاعات" اضافه شد (REGISTER_INFO: 1)`);
+            console.log(`✅ [15REG] دکمه "ثبت اطلاعات" اضافه شد برای نقش ${userRole} (REGISTER_INFO: 1, Role: ${userRole})`);
+        } else {
+            console.log(`⚠️ [15REG] دکمه "ثبت اطلاعات" نمایش داده نمی‌شود برای نقش ${userRole} (REGISTER_INFO: ${MAIN_BUTTONS_CONFIG.REGISTER_INFO}, Role: ${userRole})`);
         }
         
-        if (MAIN_BUTTONS_CONFIG.SETTINGS === 1) {
+        // بررسی نمایش دکمه تنظیمات بر اساس نقش کاربر
+        const { isSettingsVisibleForRole } = require('./3config');
+        if (MAIN_BUTTONS_CONFIG.SETTINGS === 1 && isSettingsVisibleForRole(userRole)) {
             keyboardRows.push(['تنظیمات']);
-            console.log(`✅ [15REG] دکمه "تنظیمات" اضافه شد (SETTINGS: 1)`);
+            console.log(`✅ [15REG] دکمه "تنظیمات" اضافه شد برای نقش ${userRole} (SETTINGS: 1, Role: ${userRole})`);
+        } else {
+            console.log(`⚠️ [15REG] دکمه "تنظیمات" نمایش داده نمی‌شود برای نقش ${userRole} (SETTINGS: ${MAIN_BUTTONS_CONFIG.SETTINGS}, Role: ${userRole})`);
         }
         
         // اضافه کردن دکمه ریست اگر مجاز باشد

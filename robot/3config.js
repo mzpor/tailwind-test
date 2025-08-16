@@ -93,24 +93,70 @@ const BUTTON_VISIBILITY_CONFIG = {
 // ===== کنترل نمایش دکمه‌های اصلی برای هر نقش =====
 const MAIN_BUTTONS_CONFIG = {
   // تنظیمات کلی دکمه‌ها
-  REGISTER_INFO: 1,    // دکمه ثبت اطلاعات (0 = مخفی، 1 = نمایان)
-  SETTINGS: 1,         // دکمه تنظیمات (0 = مخفی، 1 = نمایان)
-  
-  // کنترل نمایش دکمه ثبت اطلاعات برای هر نقش
+  REGISTER_INFO: 0,    // دکمه ثبت اطلاعات (0 = مخفی، 1 = نمایان)
+       // دکمه تنظیمات (0 = مخفی، 1 = نمایان)
+    // کنترل نمایش دکمه ثبت اطلاعات برای هر نقش
   REGISTER_INFO_BY_ROLE: {
-    SCHOOL_ADMIN: 1,    // مدیر مدرسه: 1 = نمایش، 0 = مخفی
-    COACH: 1,           // مربی: 1 = نمایش، 0 = مخفی
-    ASSISTANT: 1,       // کمک مربی: 1 = نمایش، 0 = مخفی
+    SCHOOL_ADMIN: 0,    // مدیر مدرسه: 1 = نمایش، 0 = مخفی
+    COACH: 0,           // مربی: 1 = نمایش، 0 = مخفی
+    ASSISTANT: 0,       // کمک مربی: 1 = نمایش، 0 = مخفی
     STUDENT: 0          // قرآن‌آموز: 1 = نمایش، 0 = مخفی
   },
-  
+  SETTINGS: 1,  
   // کنترل نمایش دکمه تنظیمات برای هر نقش
   SETTINGS_BY_ROLE: {
     SCHOOL_ADMIN: 1,    // مدیر مدرسه: 1 = نمایش، 0 = مخفی
-    COACH: 1,           // مربی: 1 = نمایش، 0 = مخفی
-    ASSISTANT: 1,       // کمک مربی: 1 = نمایش، 0 = مخفی
+    COACH: 0,           // مربی: 1 = نمایش، 0 = مخفی
+    ASSISTANT: 0,       // کمک مربی: 1 = نمایش، 0 = مخفی
     STUDENT: 0          // قرآن‌آموز: 1 = نمایش، 0 = مخفی
   }
+};
+
+// ===== توابع کنترل نمایش دکمه‌های اصلی برای هر نقش =====
+
+// بررسی نمایش دکمه ثبت اطلاعات برای نقش خاص
+const isRegisterInfoVisibleForRole = (role) => {
+  return MAIN_BUTTONS_CONFIG.REGISTER_INFO_BY_ROLE[role] === 1;
+};
+
+// بررسی نمایش دکمه تنظیمات برای نقش خاص
+const isSettingsVisibleForRole = (role) => {
+  return MAIN_BUTTONS_CONFIG.SETTINGS_BY_ROLE[role] === 1;
+};
+
+// تغییر وضعیت نمایش دکمه ثبت اطلاعات برای نقش خاص
+const setRegisterInfoVisibilityForRole = (role, visible) => {
+  if (MAIN_BUTTONS_CONFIG.REGISTER_INFO_BY_ROLE.hasOwnProperty(role)) {
+    MAIN_BUTTONS_CONFIG.REGISTER_INFO_BY_ROLE[role] = visible ? 1 : 0;
+    console.log(`🔄 [MAIN_BUTTONS] Register info visibility for role ${role} set to: ${visible ? 'visible' : 'hidden'}`);
+    return true;
+  }
+  console.warn(`⚠️ [MAIN_BUTTONS] Role ${role} not found in register info config`);
+  return false;
+};
+
+// تغییر وضعیت نمایش دکمه تنظیمات برای نقش خاص
+const setSettingsVisibilityForRole = (role, visible) => {
+  if (MAIN_BUTTONS_CONFIG.SETTINGS_BY_ROLE.hasOwnProperty(role)) {
+    MAIN_BUTTONS_CONFIG.SETTINGS_BY_ROLE[role] = visible ? 1 : 0;
+    console.log(`🔄 [MAIN_BUTTONS] Settings visibility for role ${role} set to: ${visible ? 'visible' : 'hidden'}`);
+    return true;
+  }
+  console.warn(`⚠️ [MAIN_BUTTONS] Role ${role} not found in settings config`);
+  return false;
+};
+
+// دریافت تمام تنظیمات نمایش دکمه‌های اصلی
+const getMainButtonsConfig = () => {
+  return { ...MAIN_BUTTONS_CONFIG };
+};
+
+// دریافت تنظیمات نمایش دکمه‌ها برای نقش خاص
+const getButtonVisibilityForRole = (role) => {
+  return {
+    registerInfo: isRegisterInfoVisibleForRole(role),
+    settings: isSettingsVisibleForRole(role)
+  };
 };
 
 // ===== کنترل نمایش گروه‌ها برای نقش‌های مختلف =====
@@ -1742,6 +1788,13 @@ module.exports = {
   WORKSHOP_CONFIG,
   // ===== کانفیگ دکمه‌های اصلی =====
   MAIN_BUTTONS_CONFIG,
+  // ===== توابع کنترل نمایش دکمه‌های اصلی برای هر نقش =====
+  isRegisterInfoVisibleForRole,
+  isSettingsVisibleForRole,
+  setRegisterInfoVisibilityForRole,
+  setSettingsVisibilityForRole,
+  getMainButtonsConfig,
+  getButtonVisibilityForRole,
   // ===== کانفیگ سیستم ارزیابی =====
   EVALUATION_SYSTEM_CONFIG,
   isEvaluationSystemEnabled,
