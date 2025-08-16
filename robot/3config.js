@@ -225,7 +225,7 @@ const EVALUATION_SYSTEM_CONFIG = loadEvaluationConfig();
 
 // ===== کنترل دسترسی کاربران =====
 const USER_ACCESS_CONFIG = {
-  allowUserReset: 1,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
+  allowUserReset: 0,  // 0 = کاربر نمی‌تواند ریست کند، 1 = کاربر می‌تواند ریست کند
 };
 
 // ===== کنترل گزارش ورود ربات به گروه‌ها =====

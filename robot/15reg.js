@@ -674,33 +674,32 @@ class RegistrationModule {
         console.log(`🔍 [15REG] بررسی نقش برای شماره: ${phoneNumber}`);
         
         try {
-                    // 🔥 نرمال‌سازی شماره تلفن - بهبود یافته
-        const normalizePhone = (phone) => {
-            const digits = phone.replace(/\D/g, '');
-            // اگر 11 رقم یا بیشتر، 10 رقم آخر
-            // اگر کمتر، همان عدد
-            return digits.length >= 11 ? digits.slice(-10) : digits;
-        };
-        const normalizedPhone = normalizePhone(phoneNumber);
+            // 🔥 استفاده از سیستم مرکزی تشخیص نقش از 3config.js
+            const { isPhoneCoach, getCoachByPhone } = require('./3config');
+            
+            // بررسی مربی بودن
+            if (isPhoneCoach(phoneNumber)) {
+                const coach = getCoachByPhone(phoneNumber);
+                if (coach) {
+                    console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (${coach.name})`);
+                    return 'coach';
+                }
+            }
+            
+            // 🔥 بررسی کمک مربی بودن - از workshops.json
+            const normalizePhone = (phone) => {
+                const digits = phone.replace(/\D/g, '');
+                // اگر 11 رقم یا بیشتر، 10 رقم آخر
+                // اگر کمتر، همان عدد
+                return digits.length >= 11 ? digits.slice(-10) : digits;
+            };
+            const normalizedPhone = normalizePhone(phoneNumber);
             console.log(`🔧 [15REG] شماره نرمال‌سازی شده: ${normalizedPhone}`);
             
-            // بارگذاری workshops.json
+            // بارگذاری workshops.json برای کمک مربی‌ها
             const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
             if (fs.existsSync(workshopsFile)) {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
-                
-                // بررسی مربی‌ها
-                if (workshopsData.coach) {
-                    for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
-                        if (coach.phone && coach.phone !== "0" && coach.phone.trim() !== "") {
-                            const normalizedCoachPhone = normalizePhone(coach.phone);
-                            if (normalizedPhone.includes(normalizedCoachPhone)) {
-                                console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (کارگاه ${coachId})`);
-                                return 'coach';  // مربی
-                            }
-                        }
-                    }
-                }
                 
                 // بررسی کمک مربی‌ها
                 if (workshopsData.assistant) {
@@ -714,13 +713,11 @@ class RegistrationModule {
                         }
                     }
                 }
-                
-                console.log(`✅ [15REG] نقش تشخیص داده شد: قرآن‌آموز (شماره در کارگاه‌ها یافت نشد)`);
-                return 'quran_student';  // قرآن‌آموز
-            } else {
-                console.log(`⚠️ [15REG] فایل workshops.json یافت نشد`);
-                return 'quran_student';  // پیش‌فرض
             }
+            
+            console.log(`✅ [15REG] نقش تشخیص داده شد: قرآن‌آموز (شماره در کارگاه‌ها یافت نشد)`);
+            return 'quran_student';  // قرآن‌آموز
+            
         } catch (error) {
             console.error(`❌ [15REG] خطا در بررسی نقش:`, error.message);
             return 'quran_student';  // پیش‌فرض در صورت خطا

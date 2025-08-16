@@ -1,22 +1,25 @@
 {
   "userStates": {
     "123": {
-      "step": "waiting_for_name",
+      "step": "completed",
       "data": {
-        "phone": "09123456789",
-        "userRole": "quran_student"
+        "phone": "09339253803",
+        "fullName": "ایرانسل",
+        "firstName": "ایرانسل",
+        "lastName": "",
+        "userRole": "assistant"
       }
     },
     "574330749": {
       "step": "completed",
       "data": {
         "phone": "989942878984",
-        "fullName": "همرادو همراه ۲",
-        "firstName": "همرادو همراه ۲",
+        "fullName": "مربی",
+        "firstName": "مربی",
         "lastName": "",
         "userRole": "coach"
       },
-      "timestamp": 1755214330517
+      "timestamp": 1755358540230
     },
     "1790308237": {
       "step": "completed",
@@ -30,14 +33,17 @@
       "timestamp": 1755250091223
     },
     "2045777722": {
-      "step": "waiting_for_name",
+      "step": "completed",
       "data": {
         "phone": "989222507759",
-        "userRole": "quran_student"
+        "userRole": "quran_student",
+        "fullName": "رایتل محمد محمد",
+        "firstName": "رایتل",
+        "lastName": "محمد محمد"
       },
-      "timestamp": 1755357947456
+      "timestamp": 1755358141060
     },
     "1755170093362": {}
   },
-  "lastUpdated": "2025-08-16T15:25:50.552Z"
+  "lastUpdated": "2025-08-16T15:35:44.197Z"
 }
