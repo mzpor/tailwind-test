@@ -6,23 +6,42 @@ const path = require('path');
 const fs = require('fs');
 
 // فایل‌های مورد نیاز
-const COACHES_FILE = path.join(__dirname, 'data', 'coaches.json');
+const WORKSHOPS_FILE = path.join(__dirname, 'data', 'workshops.json');
 const REGISTRATION_FILE = path.join(__dirname, 'data', 'smart_registration.json');
 const ATTENDANCE_FILE = path.join(__dirname, 'data', 'attendance_data.json');
 
 // ===== ساختار داده‌ها =====
 
-// تابع بارگذاری مربی‌ها
+// تابع بارگذاری مربی‌ها از workshops.json
 const loadCoaches = () => {
   try {
-    if (fs.existsSync(COACHES_FILE)) {
-      const data = fs.readFileSync(COACHES_FILE, 'utf8');
-      const coaches = JSON.parse(data);
-      console.log(`✅ [OSATD] Loaded ${coaches.length} coaches from file`);
+    if (fs.existsSync(WORKSHOPS_FILE)) {
+      const data = fs.readFileSync(WORKSHOPS_FILE, 'utf8');
+      const workshops = JSON.parse(data);
+      
+      // تبدیل ساختار workshops به لیست مربی‌ها
+      const coaches = [];
+      if (workshops.coach) {
+        Object.entries(workshops.coach).forEach(([id, coach]) => {
+          coaches.push({
+            id: id,
+            name: coach.name,
+            phone: coach.phone,
+            cost: coach.cost,
+            link: coach.link,
+            description: coach.description,
+            capacity: coach.capacity,
+            duration: coach.duration,
+            level: coach.level
+          });
+        });
+      }
+      
+      console.log(`✅ [OSATD] Loaded ${coaches.length} coaches from workshops.json`);
       return coaches;
     }
   } catch (error) {
-    console.error('❌ [OSATD] Error loading coaches:', error);
+    console.error('❌ [OSATD] Error loading coaches from workshops:', error);
   }
   return [];
 };
@@ -87,8 +106,11 @@ const getCoachesList = () => {
       let studentCount = 0;
       
       Object.values(registrations.userStates).forEach(userState => {
-        if (userState.data && userState.data.userRole === 'quran_student') {
-          // اگر کاربر قرآن‌آموز است، به عنوان دانشجوی این مربی در نظر بگیر
+        if (userState.data && 
+            userState.data.userRole === 'quran_student' && 
+            userState.data.coachId === coach.id &&
+            userState.data.paymentStatus === 'paid') {
+          // فقط دانشجویانی که در این کارگاه ثبت‌نام کرده‌اند و پرداخت کرده‌اند
           studentCount++;
         }
       });
@@ -121,14 +143,19 @@ const getCoachStudents = (coachId) => {
     const students = [];
     
     Object.entries(registrations.userStates).forEach(([userId, userState]) => {
-      if (userState.data && userState.data.userRole === 'quran_student') {
-        // دریافت وضعیت حضور و غیاب
+      if (userState.data && 
+          userState.data.userRole === 'quran_student' && 
+          userState.data.coachId === coachId &&
+          userState.data.paymentStatus === 'paid') {
+        // فقط دانشجویانی که در این کارگاه ثبت‌نام کرده‌اند و پرداخت کرده‌اند
         const attendanceStatus = attendance[userId] || 'حاضر';
         
         students.push({
           id: userId,
           name: userState.data.fullName || userState.data.firstName || `دانشجو ${userId}`,
           phone: userState.data.phone || '',
+          workshopId: userState.data.workshopId || '',
+          month: userState.data.month || '',
           attendance: attendanceStatus,
           registrationDate: userState.timestamp
         });

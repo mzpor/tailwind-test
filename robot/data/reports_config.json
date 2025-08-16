@@ -1,19 +1,19 @@
 {
   "enabled": true,
-  "lastUpdate": "2025-08-16T16:47:02.609Z",
+  "lastUpdate": "2025-08-16T17:38:59.838Z",
   "updatedBy": "admin",
   "updatedFrom": "ربات",
   "robotOnline": true,
-  "lastRobotPing": "2025-08-16T17:22:25.737Z",
+  "lastRobotPing": "2025-08-16T17:38:27.771Z",
   "systemStatus": {
     "robot": true,
     "gateway": true,
     "website": true,
-    "lastUpdate": "2025-08-16T17:22:25.753Z",
+    "lastUpdate": "2025-08-16T17:38:27.797Z",
     "lastChange": {
       "system": "gateway",
       "status": true,
-      "timestamp": "2025-08-16T17:22:25.753Z",
+      "timestamp": "2025-08-16T17:38:27.797Z",
       "action": "آنلاین شد"
     }
   },
