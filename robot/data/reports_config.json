@@ -7,14 +7,14 @@
   "lastRobotPing": "2025-08-16T13:28:24.712Z",
   "systemStatus": {
     "robot": false,
-    "gateway": false,
+    "gateway": true,
     "website": true,
-    "lastUpdate": "2025-08-16T13:28:24.719Z",
+    "lastUpdate": "2025-08-16T13:35:40.821Z",
     "lastChange": {
-      "system": "robot",
-      "status": false,
-      "timestamp": "2025-08-16T13:28:24.719Z",
-      "action": "آفلاین شد"
+      "system": "gateway",
+      "status": true,
+      "timestamp": "2025-08-16T13:35:40.821Z",
+      "action": "آنلاین شد"
     }
   },
   "websiteLog": [
