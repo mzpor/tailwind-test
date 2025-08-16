@@ -28,9 +28,9 @@ const GROUP_NAMES = {
 //"1790308237": {}  ایرانسل
 // ===== کانفیگ نام‌های ظاهری نقش‌ها =====
 const ROLE_DISPLAY_NAMES = {
-  //SCHOOL_ADMIN: 'مدیر',COACH:'مربی',ASSISTANT:'کمک‌‌‌مربی',STUDENT: 'قرآن‌آموز'  
+  SCHOOL_ADMIN: 'مدیر',COACH:'مربی',ASSISTANT:'کمک‌‌‌مربی',STUDENT: 'قرآن‌آموز'  
   
-   SCHOOL_ADMIN:'مدیر', COACH: 'راهبر', ASSISTANT:'دبیر',  STUDENT:'فعال'
+   //SCHOOL_ADMIN:'مدیر', COACH: 'راهبر', ASSISTANT:'دبیر',  STUDENT:'فعال'
 };
 
 // ===== کانفیگ کارگاه‌ها =====
@@ -167,7 +167,7 @@ const GROUP_VISIBILITY_CONFIG = {
 
 // ===== کانفیگ مدیریت گروه‌ها =====
 const GROUP_MANAGEMENT_CONFIG = {
-  enabled: 1,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
+  enabled: 0,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
   visibility: {
     admin: 1,        // مدیر مدرسه
     instructor: 1,   // مربی
