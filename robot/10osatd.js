@@ -459,44 +459,40 @@ const handleCoachesCallback = async (callbackQuery) => {
         return { text, parse_mode: 'Markdown' };
       }
       
-    } else if (data.startsWith('attendance_all_')) {
-      // تغییر وضعیت حضور و غیاب همه دانشجویان
-      const parts = data.split('_');
-      // attendance_all_phone_1755212603854_ga1njd27g_حاضر
-      // parts[0] = attendance
-      // parts[1] = all
-      // parts[2] = phone (نوع)
-      // parts[3] = 1755212603854 (شماره)
-      // parts[4] = ga1njd27g (شناسه)
-      // parts[5] = حاضر (وضعیت)
-      
-      if (parts.length >= 6) {
-        const coachType = parts[2];
-        const coachNumber = parts[3];
-        const coachId = `${coachType}_${coachNumber}_${parts[4]}`;
-        const status = parts[5];
-        
-        console.log(`🔍 [OSATD] Parsing attendance_all_: coachId=${coachId}, status=${status}`);
-        console.log(`🔍 [OSATD] Parts:`, parts);
-        
-        const result = updateAllStudentsAttendance(coachId, status);
-        
-        if (result.success) {
-          // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
-          const keyboard = generateStudentsKeyboard(coachId);
-          const { getRoleDisplayName } = require('./3config');
-          const text = `✅ *وضعیت حضور و غیاب همه ${getRoleDisplayName('STUDENT')}ان به‌روزرسانی شد*\n\nوضعیت جدید: ${status}\n${result.message}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
-          
-          return { text, keyboard, parse_mode: 'Markdown' };
-        } else {
-          const text = `❌ *خطا در به‌روزرسانی*\n\n${result.message}`;
-          return { text, parse_mode: 'Markdown' };
-        }
-      } else {
-        console.error(`❌ [OSATD] Invalid attendance_all_ callback data: ${data}, parts:`, parts);
-        const text = '❌ *خطا در پردازش درخواست*\n\nفرمت callback data نامعتبر است';
-        return { text, parse_mode: 'Markdown' };
-      }
+         } else if (data.startsWith('attendance_all_')) {
+       // تغییر وضعیت حضور و غیاب همه دانشجویان
+       const parts = data.split('_');
+       // فرمت جدید: attendance_all_3_حاضر
+       // parts[0] = attendance
+       // parts[1] = all
+       // parts[2] = 3 (coachId)
+       // parts[3] = حاضر (وضعیت)
+       
+       if (parts.length >= 4) {
+         const coachId = parts[2];
+         const status = parts[3];
+         
+         console.log(`🔍 [OSATD] Parsing attendance_all_: coachId=${coachId}, status=${status}`);
+         console.log(`🔍 [OSATD] Parts:`, parts);
+         
+         const result = updateAllStudentsAttendance(coachId, status);
+         
+         if (result.success) {
+           // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
+           const keyboard = generateStudentsKeyboard(coachId);
+           const { getRoleDisplayName } = require('./3config');
+           const text = `✅ *وضعیت حضور و غیاب همه ${getRoleDisplayName('STUDENT')}ان به‌روزرسانی شد*\n\nوضعیت جدید: ${status}\n${result.message}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
+           
+           return { text, keyboard, parse_mode: 'Markdown' };
+         } else {
+           const text = `❌ *خطا در به‌روزرسانی*\n\n${result.message}`;
+           return { text, parse_mode: 'Markdown' };
+         }
+       } else {
+         console.error(`❌ [OSATD] Invalid attendance_all_ callback data: ${data}, parts:`, parts);
+         const text = '❌ *خطا در پردازش درخواست*\n\nفرمت callback data نامعتبر است';
+         return { text, parse_mode: 'Markdown' };
+       }
       
     } else if (data.startsWith('report_')) {
       // نمایش گزارش حضور و غیاب
