@@ -127,13 +127,23 @@ class SettingsModule {
     ];
     
     const keyboard = [];
-    hours.forEach(hour => {
-      const isActive = this.settings.practice_hours?.includes(hour.value) || false;
-      const icon = isActive ? '🟢' : '🔴';
-      const text = `${icon} ${hour.name}`;
-      const callbackData = `toggle_practice_hour_${hour.value}`;
-      keyboard.push([{ text, callback_data: callbackData }]);
-    });
+    
+    // تقسیم ساعت‌ها به سه ستون
+    for (let i = 0; i < hours.length; i += 3) {
+      const row = [];
+      
+      // اضافه کردن ساعت‌های این ردیف
+      for (let j = 0; j < 3 && i + j < hours.length; j++) {
+        const hour = hours[i + j];
+        const isActive = this.settings.practice_hours?.includes(hour.value) || false;
+        const icon = isActive ? '🟢' : '🔴';
+        const text = `${icon} ${hour.name}`;
+        const callbackData = `toggle_practice_hour_${hour.value}`;
+        row.push({ text, callback_data: callbackData });
+      }
+      
+      keyboard.push(row);
+    }
     
     // دکمه‌های اضافی
     keyboard.push(

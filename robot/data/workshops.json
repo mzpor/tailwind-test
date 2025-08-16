@@ -1,14 +1,54 @@
 {
   "coach": {
     "2": {
-      "name": "راهبر علی",
+      "name": "استاد محمد رشوند",
       "phone": "0",
-      "cost": "1000 تومان",
+      "cost": "10,000 تومان",
       "link": "https://t.me/workshop_rashvand",
       "description": "کارگاه تخصصی حفظ قرآن کریم",
       "capacity": 15,
       "duration": "3 ماه",
       "level": "مبتدی تا متوسط"
+    },
+    "3": {
+      "name": "استاد علی حتم خانی",
+      "phone": "0",
+      "cost": "10,000 تومان",
+      "link": "https://t.me/workshop_hatamkhani",
+      "description": "کارگاه تجوید و صوت و لحن",
+      "capacity": 12,
+      "duration": "4 ماه",
+      "level": "متوسط تا پیشرفته"
+    },
+    "4": {
+      "name": "استاد احمد حاجی زاده",
+      "phone": "0",
+      "cost": "10,000 تومان",
+      "link": "https://t.me/workshop_hajizadeh",
+      "description": "کارگاه تفسیر قرآن کریم",
+      "capacity": 20,
+      "duration": "6 ماه",
+      "level": "همه سطوح"
+    },
+    "5": {
+      "name": "استاد محسن قربانیان",
+      "phone": "0",
+      "cost": "10,000 تومان",
+      "link": "https://t.me/workshop_ghorbanian",
+      "description": "کارگاه تخصصی قرائت قرآن",
+      "capacity": 10,
+      "duration": "5 ماه",
+      "level": "پیشرفته"
+    },
+    "6": {
+      "name": "استاد رضا کاظمی",
+      "phone": "0",
+      "cost": "1000 تومان",
+      "link": "ل",
+      "description": "کارگاه مفاهیم و معارف قرآنی",
+      "capacity": 18,
+      "duration": "4 ماه",
+      "level": "متوسط"
     },
     "7": {
       "name": "همرادو همراه ۲",
@@ -21,5 +61,13 @@
       "level": "همه سطوح"
     }
   },
-  "assistant": {}
+  "assistant": {
+    "1755216559316": {
+      "name": "ایرانسل",
+      "firstName": "ایرانسل",
+      "lastName": "",
+      "phone": "09339253803",
+      "created_at": "2025-08-15T00:09:19.316Z"
+    }
+  }
 }
