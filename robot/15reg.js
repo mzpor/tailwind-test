@@ -132,7 +132,7 @@ class RegistrationModule {
         } else if (userState.step === 'discount_code') {
             // مرحله ورود کد تخفیف
             console.log(`🎫 [15REG] کاربر در مرحله ورود کد تخفیف`);
-            await this.handleDiscountCodeInput(ctx, msg.text);
+            await this.handleDiscountCodeInput(ctx, ctx.message.text);
         } else if (userState.step === 'full_name') {
             // 🔥 بررسی معتبر بودن شماره تلفن
             const userData = userState.data;

@@ -1275,9 +1275,18 @@ ${result.message}
 function startPolling() {
   let pollingInterval = 1000; // شروع با 1 ثانیه
   let isFirstRun = true; // برای تشخیص اولین اجرا
+  let lastPollTime = Date.now(); // برای تشخیص گیر کردن حلقه
   
   const poll = async () => {
     try {
+      // بررسی گیر کردن حلقه
+      const currentTime = Date.now();
+      const timeSinceLastPoll = currentTime - lastPollTime;
+      if (timeSinceLastPoll > 30000) { // بیش از 30 ثانیه
+        console.warn(`⚠️ [POLLING] Loop may be stuck! Time since last poll: ${timeSinceLastPoll}ms`);
+      }
+      lastPollTime = currentTime;
+      
       const updates = await getUpdates(lastId + 1);
       consecutiveErrors = 0; // ریست کردن شمارنده خطاها
       handleConnectionStatus(true);
@@ -2435,10 +2444,31 @@ ${code.usedBy.length > 0 ? `• مصرف‌کننده: ${code.usedBy.join(', ')}
       if (consecutiveErrors > 5) {
         logError('خطای polling', `خطاهای متوالی: ${consecutiveErrors}`);
       }
+      
+      // اگر خطاهای متوالی خیلی زیاد شد، polling را ریست کن
+      if (consecutiveErrors > 10) {
+        console.error('🚨 Too many consecutive errors, resetting polling...');
+        consecutiveErrors = 0;
+        pollingInterval = 1000; // ریست به 1 ثانیه
+      }
     }
     
-    // ادامه polling با interval متغیر
-    setTimeout(poll, pollingInterval);
+    // ادامه polling با interval متغیر - اضافه کردن حفاظت
+    const safeInterval = Math.max(1000, Math.min(pollingInterval, 10000)); // بین 1 تا 10 ثانیه
+    
+    // اضافه کردن timeout برای جلوگیری از گیر کردن
+    const pollTimeout = setTimeout(() => {
+      console.warn(`⏰ [POLLING] Poll timeout after ${safeInterval}ms, continuing...`);
+      poll();
+    }, safeInterval);
+    
+    // اگر polling بعد از 30 ثانیه انجام نشد، ادامه بده
+    setTimeout(() => {
+      if (Date.now() - lastPollTime > 30000) {
+        console.error('🚨 [POLLING] Poll loop stuck for more than 30 seconds, forcing continue...');
+        poll();
+      }
+    }, 30000);
   };
   
   // شروع polling
