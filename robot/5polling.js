@@ -64,6 +64,9 @@ const sabtManager = new SabtManager();
 // ایجاد یک instance واحد از DiscountModule
 const discountModule = require('./19discount');
 
+// تعریف userStates برای مدیریت حالت‌های کاربر
+const userStates = {};
+
 // تابع گزارش هوشمند ورود ربات به گروه
 async function reportBotJoinToGroup(chat) {
   try {
@@ -1458,66 +1461,90 @@ function startPolling() {
               await safeSendMessage(callback_query.from.id, reply);
             }
           } else if (callback_query.data === 'generate_discount') {
-            // تولید کد تخفیف جدید
+            // تولید کد تخفیف جدید - فقط مبلغ ثابت
             if (!isAdmin(callback_query.from.id)) {
               await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
               return;
             }
             
+            // تنظیم وضعیت کاربر برای ورود مبلغ تخفیف
+            const userId = callback_query.from.id.toString();
+            if (!userStates[userId]) {
+              userStates[userId] = {};
+            }
+            userStates[userId].step = 'discount_amount_input';
+            userStates[userId].timestamp = Date.now();
+            
             const reply = `🎫 **تولید کد تخفیف جدید**
 
-📝 **لطفاً اطلاعات تخفیف را وارد کنید:**
+💰 **لطفاً مبلغ تخفیف را وارد کنید:**
 
-**نوع تخفیف:**
-• fixed - مبلغ ثابت (مثل 100000 تومان)
-• percentage - درصد (مثل 25 درصد)
+💡 **مثال‌های مختلف:**
+• 10000 (ده هزار تومان)
+• ۱۰۰۰۰ (اعداد فارسی)
+• 50,000 (با کاما)
+• 100000 (صد هزار تومان)
+• 50000 تومان (با واحد)
+• 100 هزار تومان (با کلمه)
 
-**مثال:**
-• /تولید_کد fixed 100000
-• /تولید_کد percentage 25
-
-💡 **نکات:**
-• مبلغ: عدد بدون کاما
-• درصد: عدد 1 تا 100
+📝 **نکات مهم:**
+• فقط مبلغ ثابت (نه درصدی)
+• سیستم به صورت هوشمند اعداد فارسی و انگلیسی را تشخیص می‌دهد
+• کاما، نقطه و فاصله به صورت خودکار حذف می‌شوند
+• کلمات اضافی مثل "تومان"، "هزار" و غیره نادیده گرفته می‌شوند
 • مدت اعتبار: 10 روز
 • یکبار مصرف
+• حداقل: 1,000 تومان
+• حداکثر: 1,000,000 تومان
 
 ⏰ ${getTimeStamp()}`;
             
             await safeSendMessage(callback_query.from.id, reply);
             
           } else if (callback_query.data === 'list_discounts') {
-            // نمایش لیست کدهای تخفیف فعال
+            // نمایش لیست کدهای تخفیف 3 روز گذشته
             if (!isAdmin(callback_query.from.id)) {
               await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
               return;
             }
             
-            const activeCodes = discountModule.getActiveDiscountCodes();
+            const recentCodes = discountModule.getRecentDiscountCodes();
             
-            if (activeCodes.success && activeCodes.codes.length > 0) {
-              let reply = `📋 **کدهای تخفیف فعال**
+            if (recentCodes.success && recentCodes.codes.length > 0) {
+              let reply = `📋 **کدهای تخفیف 3 روز گذشته (${recentCodes.count} کد)**
 
 `;
               
-              activeCodes.codes.forEach((code, index) => {
+              recentCodes.codes.forEach((code, index) => {
                 const expiresAt = new Date(code.expiresAt);
                 const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                const createdAt = new Date(code.createdAt);
+                const createdDaysAgo = Math.ceil((new Date() - createdAt) / (1000 * 60 * 60 * 24));
                 
                 reply += `${index + 1}. **کد:** \`${code.code}\`
-• نوع: ${code.type === 'fixed' ? 'مبلغ ثابت' : 'درصد'}
-• مقدار: ${code.type === 'fixed' ? `${code.value.toLocaleString()} تومان` : `${code.value}%`}
+• مبلغ: ${code.value.toLocaleString()} تومان
+• تولید: ${createdDaysAgo} روز پیش
 • انقضا: ${daysLeft} روز دیگر
 • استفاده: ${code.usedBy.length}/${code.maxUsage}
+${code.usedBy.length > 0 ? `• مصرف‌کننده: ${code.usedBy.join(', ')}` : ''}
 
 `;
               });
               
-              reply += `⏰ ${getTimeStamp()}`;
+              reply += `💡 **نکات:**
+• فقط کدهای 3 روز گذشته نمایش داده می‌شوند
+• کدهای قدیمی‌تر در workshops.json ذخیره می‌شوند
+• کدهای منقضی شده خودکار پاک می‌شوند
+
+⏰ ${getTimeStamp()}`;
             } else {
-              reply = `📋 **کدهای تخفیف فعال**
+              reply = `📋 **کدهای تخفیف 3 روز گذشته**
 
 ❌ هیچ کد تخفیف فعالی یافت نشد.
+
+💡 **نکات:**
+• فقط کدهای 3 روز گذشته نمایش داده می‌شوند
+• کدهای قدیمی‌تر در workshops.json ذخیره می‌شوند
 
 ⏰ ${getTimeStamp()}`;
             }
@@ -1532,19 +1559,27 @@ function startPolling() {
             }
             
             const stats = discountModule.getDiscountStats();
+            const recentCodes = discountModule.getRecentDiscountCodes();
+            const oldCodes = discountModule.getOldDiscountCodes();
             
             if (stats.success) {
               const reply = `📊 **آمار کدهای تخفیف**
 
 🔢 **تعداد:**
 • کل کدها: ${stats.stats.total}
-• فعال: ${stats.stats.active}
+• 3 روز گذشته: ${recentCodes.count}
+• قدیمی‌تر از 3 روز: ${oldCodes.count}
 • استفاده شده: ${stats.stats.used}
 • منقضی شده: ${stats.stats.expired}
 
 📈 **نسبت‌ها:**
 • نرخ استفاده: ${stats.stats.total > 0 ? Math.round((stats.stats.used / stats.stats.total) * 100) : 0}%
 • نرخ فعال: ${stats.stats.total > 0 ? Math.round((stats.stats.active / stats.stats.total) * 100) : 0}%
+
+💡 **نکات:**
+• کدهای 3 روز گذشته در discount_codes.json نگهداری می‌شوند
+• کدهای قدیمی‌تر در workshops.json ذخیره می‌شوند
+• کدهای منقضی شده خودکار پاک می‌شوند
 
 ⏰ ${getTimeStamp()}`;
               
@@ -1567,25 +1602,62 @@ function startPolling() {
             const workshopId = parts[0];
             const discountCode = parts[1];
             
-            // اینجا می‌توانید منطق پرداخت واقعی را اضافه کنید
-            const reply = `🎉 **پرداخت با تخفیف تأیید شد!**
-
-📚 **کارگاه:** ${workshopId}
-🎫 **کد تخفیف:** ${discountCode}
-✅ **ثبت‌نام شما با موفقیت انجام شد**
-
-💡 **نکات:**
-• تخفیف شما اعمال شده است
-• منتظر تماس از سوی استاد باشید
-• شروع کلاس طبق برنامه اعلام شده
-
-⏰ ${getTimeStamp()}`;
+            console.log(`🎫 [POLLING] Processing discount payment for workshop ${workshopId} with code ${discountCode}`);
             
-            const keyboard = [
-              [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
-            ];
-            
-            await sendMessageWithInlineKeyboard(callback_query.from.id, reply, keyboard);
+            try {
+              // خواندن اطلاعات کارگاه
+              const { readJson } = require('./server/utils/jsonStore');
+              const workshops = await readJson('data/workshops.json', { workshops: [] });
+              const workshopData = workshops.workshops.find(w => w.id === workshopId);
+              
+              if (!workshopData) {
+                await safeSendMessage(callback_query.from.id, '❌ **خطا در یافتن اطلاعات کارگاه**\n\n🔍 **کارگاه مورد نظر یافت نشد**\n• لطفاً دوباره تلاش کنید\n• یا با مدیر تماس بگیرید\n\n⏰ ' + getTimeStamp());
+                return;
+              }
+              
+              // خواندن اطلاعات تخفیف کاربر
+              const registrationModule = require('./15reg');
+              const userState = registrationModule.userStates[callback_query.from.id];
+              
+              if (!userState || !userState.data.discountCode || !userState.data.discountedPrice) {
+                await safeSendMessage(callback_query.from.id, '❌ **خطا در اطلاعات تخفیف**\n\n🎫 **اطلاعات تخفیف یافت نشد**\n• لطفاً دوباره از ابتدا کد تخفیف را وارد کنید\n• یا با مدیر تماس بگیرید\n\n⏰ ' + getTimeStamp());
+                return;
+              }
+              
+              // ارسال فاکتور پرداخت با تخفیف
+              const paymentModule = require('./16pay');
+              const paymentInstance = new paymentModule();
+              
+              // تنظیم توکن بات
+              const { BOT_TOKEN } = require('./3config');
+              paymentInstance.setBotToken(BOT_TOKEN);
+              
+              const result = await paymentInstance.sendDiscountedInvoice(
+                callback_query.from.id,
+                workshopId,
+                workshopData,
+                userState.data.discountCode,
+                userState.data.discountAmount,
+                userState.data.discountedPrice
+              );
+              
+              if (result && result.success) {
+                // پاک کردن حالت کاربر
+                delete registrationModule.userStates[callback_query.from.id];
+                
+                await safeSendMessage(callback_query.from.id, '🎉 **فاکتور پرداخت با تخفیف ارسال شد!**\n\n📚 **کارگاه:** ' + (workshopData.name || 'کارگاه') + '\n🎫 **کد تخفیف:** ' + userState.data.discountCode + '\n💰 **مبلغ اصلی:** ' + Math.floor(workshopData.cost ? paymentInstance.extractAmountFromCost(workshopData.cost) / 10 : 0) + ' تومان\n💸 **مبلغ تخفیف:** ' + userState.data.discountAmount + ' تومان\n💳 **مبلغ نهایی:** ' + Math.floor(result.finalPrice / 10) + ' تومان\n\n✅ **فاکتور پرداخت ارسال شد**\n• لطفاً روی فاکتور کلیک کنید\n• اطلاعات خود را تکمیل کنید\n• پرداخت را انجام دهید\n\n⏰ ' + getTimeStamp());
+                
+                console.log(`✅ [POLLING] Discounted invoice sent successfully for workshop ${workshopId}`);
+              } else {
+                await safeSendMessage(callback_query.from.id, '❌ **خطا در ارسال فاکتور پرداخت**\n\n🔧 **مشکل در سیستم پرداخت**\n• لطفاً دوباره تلاش کنید\n• یا با مدیر تماس بگیرید\n\n⏰ ' + getTimeStamp());
+                
+                console.error(`❌ [POLLING] Failed to send discounted invoice:`, result?.error);
+              }
+              
+            } catch (error) {
+              console.error(`❌ [POLLING] Error processing discount payment:`, error);
+              await safeSendMessage(callback_query.from.id, '❌ **خطا در پردازش پرداخت با تخفیف**\n\n🔧 **مشکل در سیستم**\n• لطفاً دوباره تلاش کنید\n• یا با مدیر تماس بگیرید\n\n⏰ ' + getTimeStamp());
+            }
           } else if (callback_query.data === 'school_intro') {
             
             console.log('🔄 [POLLING] School intro callback detected');
@@ -2175,6 +2247,131 @@ function startPolling() {
             const success = await registrationModule.handleStartCommand(msg.chat.id, msg.from.id.toString(), msg.contact);
             if (success) {
               console.log('✅ [POLLING] Contact processed successfully by registration module');
+              continue;
+            }
+          }
+          
+          // 🔥 اولویت 3: بررسی حالت تخفیف برای همه کاربران
+          if (userStates[msg.from.id] && userStates[msg.from.id].step === 'discount_amount_input') {
+            console.log(`💰 [POLLING] Discount amount input detected for user ${msg.from.id}`);
+            
+            try {
+              // استفاده از منطق robust مشابه normalizeCostText در 12kargah.js
+              let amountText = msg.text;
+              
+              // تبدیل اعداد فارسی به انگلیسی
+              const persianToEnglish = {
+                '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4',
+                '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9'
+              };
+              
+              for (const [persian, english] of Object.entries(persianToEnglish)) {
+                amountText = amountText.replace(new RegExp(persian, 'g'), english);
+              }
+              
+              // حذف فاصله‌های اضافی
+              amountText = amountText.trim();
+              
+              // حذف کاما، نقطه و فاصله
+              amountText = amountText.replace(/[,\s.]/g, '');
+              
+              // حذف کلمات اضافی مثل "تومان"، "ریال"، "هزار" و غیره
+              amountText = amountText.replace(/(تومان|ریال|هزار|میلیون|ملیون|هزار|صد|هفتاد|هشتاد|نود|بیست|سی|چهل|پنجاه|شصت)/gi, '');
+              
+              // حذف فاصله‌های باقی‌مانده
+              amountText = amountText.replace(/\s+/g, '');
+              
+              // بررسی اعتبار ورودی
+              if (!amountText || amountText.length < 1) {
+                await safeSendMessage(msg.chat.id, `❌ **خطا در مبلغ تخفیف**
+                
+💰 **لطفاً یک عدد معتبر وارد کنید:**
+• مثال: 10000 (ده هزار تومان)
+• مثال: 50000 (پنجاه هزار تومان)
+• مثال: ۱۰۰۰۰ (اعداد فارسی)
+• مثال: 50,000 (با کاما)
+• فقط اعداد مثبت
+
+⏰ ${getTimeStamp()}`);
+                return;
+              }
+              
+              // تبدیل به عدد
+              const discountAmount = parseInt(amountText);
+              
+              if (isNaN(discountAmount) || discountAmount <= 0) {
+                await safeSendMessage(msg.chat.id, `❌ **خطا در مبلغ تخفیف**
+                
+💰 **لطفاً یک عدد معتبر وارد کنید:**
+• مثال: 10000 (ده هزار تومان)
+• مثال: 50000 (پنجاه هزار تومان)
+• مثال: ۱۰۰۰۰ (اعداد فارسی)
+• مثال: 50,000 (با کاما)
+• فقط اعداد مثبت
+
+⏰ ${getTimeStamp()}`);
+                return;
+              }
+              
+              // بررسی حداقل و حداکثر مبلغ
+              if (discountAmount < 1000) {
+                await safeSendMessage(msg.chat.id, `❌ **مبلغ خیلی کم**
+                
+💰 **حداقل مبلغ تخفیف: 1,000 تومان**
+• لطفاً مبلغ بالاتری وارد کنید
+
+⏰ ${getTimeStamp()}`);
+                return;
+              }
+              
+              if (discountAmount > 1000000) {
+                await safeSendMessage(msg.chat.id, `❌ **مبلغ خیلی زیاد**
+                
+💰 **حداکثر مبلغ تخفیف: 1,000,000 تومان**
+• لطفاً مبلغ کمتری وارد کنید
+
+⏰ ${getTimeStamp()}`);
+                return;
+              }
+              
+              // تولید کد تخفیف
+              const result = discountModule.generateDiscountCode(msg.from.id, discountAmount, 'تخفیف ثابت');
+              
+              if (result && result.success) {
+                const discountCode = result.discountCode;
+                // پاک کردن حالت کاربر
+                delete userStates[msg.from.id];
+                
+                await safeSendMessage(msg.chat.id, `✅ **کد تخفیف تولید شد!**
+
+🎫 **کد تخفیف:** \`${discountCode.code}\`
+💰 **مبلغ تخفیف:** ${discountCode.value.toLocaleString()} تومان
+📅 **تاریخ انقضا:** ${new Date(discountCode.expiresAt).toLocaleDateString('fa-IR')}
+👤 **تولید شده توسط:** ${msg.from.first_name || 'کاربر'}
+
+💡 **نکات:**
+• این کد فقط یکبار قابل استفاده است
+• مدت اعتبار: 10 روز
+• کد در لیست کدهای اخیر نمایش داده می‌شود
+
+⏰ ${getTimeStamp()}`);
+                
+                console.log(`✅ [POLLING] Discount code generated successfully: ${discountCode.code}`);
+                continue;
+              } else {
+                throw new Error('خطا در تولید کد تخفیف');
+              }
+              
+            } catch (error) {
+              console.error(`❌ [POLLING] Error processing discount amount:`, error.message);
+              await safeSendMessage(msg.chat.id, `❌ **خطا در پردازش مبلغ تخفیف**
+
+🔧 **لطفاً دوباره تلاش کنید یا با ادمین تماس بگیرید**
+
+⏰ ${getTimeStamp()}`);
+              
+              // پاک کردن حالت کاربر در صورت خطا
+              delete userStates[msg.from.id];
               continue;
             }
           }

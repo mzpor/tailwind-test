@@ -4,17 +4,17 @@
   "updatedBy": "admin",
   "updatedFrom": "ربات",
   "robotOnline": true,
-  "lastRobotPing": "2025-08-16T18:08:38.068Z",
+  "lastRobotPing": "2025-08-16T19:50:14.113Z",
   "systemStatus": {
     "robot": true,
-    "gateway": true,
+    "gateway": false,
     "website": true,
-    "lastUpdate": "2025-08-16T18:08:38.087Z",
+    "lastUpdate": "2025-08-16T19:50:14.389Z",
     "lastChange": {
       "system": "gateway",
-      "status": true,
-      "timestamp": "2025-08-16T18:08:38.087Z",
-      "action": "آنلاین شد"
+      "status": false,
+      "timestamp": "2025-08-16T19:50:14.389Z",
+      "action": "آفلاین شد"
     }
   },
   "websiteLog": [

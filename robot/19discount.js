@@ -1,5 +1,5 @@
-//🎯 ماژول مدیریت تخفیف - نسخه 1.0.0
-// مدیریت کدهای تخفیف برای کارگاه‌ها
+//🎯 ماژول مدیریت تخفیف - نسخه 2.0.0 (ساده شده)
+// مدیریت کدهای تخفیف برای کارگاه‌ها - فقط مبلغ ثابت
 // قوانین: مدت 10 روزه، یکبار مصرف، یک کاربر
 
 const fs = require('fs');
@@ -9,9 +9,10 @@ const { v4: uuidv4 } = require('uuid');
 class DiscountModule {
   constructor() {
     this.dataFile = path.join(__dirname, 'data', 'discount_codes.json');
+    this.workshopsFile = path.join(__dirname, 'data', 'workshops.json');
     this.discountCodes = {};
     this.loadData();
-    console.log('✅ DiscountModule initialized successfully');
+    console.log('✅ DiscountModule initialized successfully (Fixed Amount Only)');
   }
 
   // بارگذاری داده‌های کدهای تخفیف
@@ -42,11 +43,15 @@ class DiscountModule {
     }
   }
 
-  // تولید کد تخفیف جدید
-  generateDiscountCode(adminId, discountType, discountValue, description = '') {
+  // تولید کد تخفیف جدید - فقط مبلغ ثابت
+  generateDiscountCode(adminId, discountAmount, description = '') {
     try {
-      // تولید کد 8 رقمی رندوم
-      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      // تولید کد 4 رقمی رندوم (اعداد و حروف) - طبق درخواست کاربر
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
       
       // تاریخ انقضا: 10 روز از امروز
       const expiresAt = new Date();
@@ -54,8 +59,8 @@ class DiscountModule {
       
       const discountCode = {
         code: code,
-        type: discountType, // 'fixed' یا 'percentage'
-        value: discountValue, // مبلغ تومان یا درصد
+        type: 'fixed', // فقط مبلغ ثابت
+        value: discountAmount, // مبلغ تومان
         description: description,
         maxUsage: 1, // فقط یکبار استفاده
         usedBy: [], // لیست کاربرانی که استفاده کرده‌اند
@@ -68,7 +73,7 @@ class DiscountModule {
       this.discountCodes[code] = discountCode;
       this.saveData();
       
-      console.log(`🎫 [DISCOUNT] New discount code generated: ${code}`);
+      console.log(`🎫 [DISCOUNT] New fixed discount code generated: ${code} - ${discountAmount.toLocaleString()} تومان`);
       return {
         success: true,
         code: code,
@@ -128,26 +133,16 @@ class DiscountModule {
         };
       }
 
-      // محاسبه قیمت جدید
-      let newPrice = originalPrice;
-      let discountAmount = 0;
-
-      if (discountCode.type === 'fixed') {
-        // تخفیف مبلغ ثابت
-        discountAmount = Math.min(discountCode.value, originalPrice);
-        newPrice = Math.max(0, originalPrice - discountAmount);
-      } else if (discountCode.type === 'percentage') {
-        // تخفیف درصدی
-        discountAmount = Math.floor((originalPrice * discountCode.value) / 100);
-        newPrice = Math.max(0, originalPrice - discountAmount);
-      }
+      // محاسبه قیمت جدید - فقط تخفیف مبلغ ثابت
+      const discountAmount = Math.min(discountCode.value, originalPrice);
+      const newPrice = Math.max(0, originalPrice - discountAmount);
 
       return {
         valid: true,
         originalPrice: originalPrice,
         newPrice: newPrice,
         discountAmount: discountAmount,
-        discountType: discountCode.type,
+        discountType: 'fixed',
         discountValue: discountCode.value,
         message: `✅ کد تخفیف معتبر است! قیمت جدید: ${newPrice.toLocaleString()} تومان`
       };
@@ -203,22 +198,109 @@ class DiscountModule {
     }
   }
 
-  // دریافت لیست کدهای تخفیف فعال
-  getActiveDiscountCodes() {
+  // دریافت کدهای تخفیف 3 روز گذشته
+  getRecentDiscountCodes() {
     try {
-      const activeCodes = Object.values(this.discountCodes).filter(code => code.isActive);
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      
+      const recentCodes = Object.values(this.discountCodes).filter(code => {
+        const createdAt = new Date(code.createdAt);
+        return createdAt >= threeDaysAgo;
+      });
+
       return {
         success: true,
-        codes: activeCodes,
-        count: activeCodes.length
+        codes: recentCodes,
+        count: recentCodes.length
       };
     } catch (error) {
-      console.error('❌ [DISCOUNT] Error getting active discount codes:', error);
+      console.error('❌ [DISCOUNT] Error getting recent discount codes:', error);
       return {
         success: false,
         error: error.message
       };
     }
+  }
+
+  // دریافت کدهای تخفیف قدیمی‌تر از 3 روز
+  getOldDiscountCodes() {
+    try {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      
+      const oldCodes = Object.values(this.discountCodes).filter(code => {
+        const createdAt = new Date(code.createdAt);
+        return createdAt < threeDaysAgo;
+      });
+
+      return {
+        success: true,
+        codes: oldCodes,
+        count: oldCodes.length
+      };
+    } catch (error) {
+      console.error('❌ [DISCOUNT] Error getting old discount codes:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // ذخیره کدهای قدیمی در workshops.json
+  async saveOldCodesToWorkshops() {
+    try {
+      const oldCodes = this.getOldDiscountCodes();
+      if (!oldCodes.success || oldCodes.count === 0) {
+        return { success: true, message: 'هیچ کد قدیمی‌ای برای ذخیره وجود ندارد' };
+      }
+
+      // خواندن فایل workshops.json
+      let workshopsData = {};
+      if (fs.existsSync(this.workshopsFile)) {
+        const workshopsContent = fs.readFileSync(this.workshopsFile, 'utf8');
+        workshopsData = JSON.parse(workshopsContent);
+      }
+
+      // اضافه کردن کدهای قدیمی
+      if (!workshopsData.oldDiscountCodes) {
+        workshopsData.oldDiscountCodes = [];
+      }
+
+      oldCodes.codes.forEach(code => {
+        workshopsData.oldDiscountCodes.push({
+          ...code,
+          movedToWorkshopsAt: new Date().toISOString()
+        });
+      });
+
+      // ذخیره در workshops.json
+      fs.writeFileSync(this.workshopsFile, JSON.stringify(workshopsData, null, 2));
+
+      // حذف کدهای قدیمی از فایل اصلی
+      oldCodes.codes.forEach(code => {
+        delete this.discountCodes[code.code];
+      });
+      this.saveData();
+
+      console.log(`💾 [DISCOUNT] Moved ${oldCodes.count} old discount codes to workshops.json`);
+      return {
+        success: true,
+        message: `${oldCodes.count} کد قدیمی به workshops.json منتقل شد`
+      };
+    } catch (error) {
+      console.error('❌ [DISCOUNT] Error saving old codes to workshops:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // دریافت لیست کدهای تخفیف فعال (برای backward compatibility)
+  getActiveDiscountCodes() {
+    return this.getRecentDiscountCodes();
   }
 
   // غیرفعال کردن کد تخفیف
@@ -315,9 +397,10 @@ class DiscountModule {
 // ایجاد نمونه از کلاس
 const discountModule = new DiscountModule();
 
-// پاک کردن کدهای منقضی شده هر 24 ساعت
-setInterval(() => {
+// پاک کردن کدهای منقضی شده و انتقال کدهای قدیمی هر 24 ساعت
+setInterval(async () => {
   discountModule.cleanupExpiredCodes();
+  await discountModule.saveOldCodesToWorkshops();
 }, 24 * 60 * 60 * 1000);
 
 module.exports = discountModule;

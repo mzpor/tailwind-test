@@ -1,25 +1,30 @@
 {
   "userStates": {
     "574330749": {
-      "step": "phone",
-      "data": {},
-      "timestamp": 1755362909630
-    },
-    "1790308237": {
       "step": "completed",
       "data": {
-        "phone": "989339253803",
-        "fullName": "سل ایرانی",
-        "firstName": "سل",
-        "lastName": "ایرانی",
+        "phone": "989942878984",
         "userRole": "quran_student",
-        "workshopId": "w-1404-01",
-        "month": "1404/05",
-        "paymentStatus": "paid",
-        "coachId": "7",
-        "registrationDate": "2025-08-16"
+        "fullName": "محمد همراه ۲",
+        "firstName": "محمد",
+        "lastName": "همراه ۲"
       },
-      "timestamp": 1755250091223
+      "timestamp": 1755369990869
+    },
+    "1087018405": {
+      "step": "profile",
+      "data": {
+        "phone": "09193690153"
+      },
+      "timestamp": 1755369787167
+    },
+    "1790308237": {
+      "step": "discount_code",
+      "data": {
+        "workshopId": "7",
+        "originalPrice": 9000
+      },
+      "timestamp": 1755372814656
     },
     "1914261376": {
       "step": "completed",
@@ -28,14 +33,9 @@
         "userRole": "quran_student",
         "fullName": "علی محرابی",
         "firstName": "علی",
-        "lastName": "محرابی",
-        "workshopId": "w-1404-03",
-        "month": "1404/05",
-        "paymentStatus": "paid",
-        "coachId": "7",
-        "registrationDate": "2025-08-16"
+        "lastName": "محرابی"
       },
-      "timestamp": 1755359957501
+      "timestamp": 1755369883809
     },
     "2045777722": {
       "step": "completed",
@@ -55,5 +55,5 @@
     },
     "1755170093362": {}
   },
-  "lastUpdated": "2025-08-16T17:22:57.464Z"
+  "lastUpdated": "2025-08-16T19:36:26.038Z"
 }

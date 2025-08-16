@@ -68,16 +68,25 @@ class PaymentModule {
       const costAmount = this.extractAmountFromCost(costText);
       const costInToman = Math.floor(costAmount / 10);
       
+      // بهبود عنوان و توضیحات فاکتور
+      const workshopTitle = `کارگاه شماره ${workshopId} - ${workshopData.name || 'کارگاه'}`;
+      const workshopDescription = `📚 **ثبت‌نام در کارگاه:** ${workshopData.name || 'کارگاه'}
+💰 **مبلغ:** ${costInToman} تومان (بدون تخفیف)
+📖 **توضیحات:** ${workshopData.description || 'توضیحات موجود نیست'}
+⏱️ **مدت:** ${workshopData.duration || 'نامشخص'}
+📊 **سطح:** ${workshopData.level || 'نامشخص'}
+👥 **ظرفیت:** ${workshopData.capacity || 'نامشخص'} نفر`;
+      
       // استفاده از Bale API sendInvoice برای پرداخت درون پلتفرم (دقیقاً مثل پایتون)
       const payload = {
         chat_id: chatId,
-        title: `پرداخت برای ${workshopData.name || 'کارگاه'}`,
-        description: `پرداخت برای ثبت‌نام در کارگاه ${workshopData.name || 'کارگاه'} با مبلغ ${costInToman} تومان`,
+        title: workshopTitle,
+        description: workshopDescription,
         payload: `workshop_${workshopId}_${Date.now()}`,
         provider_token: this.paymentToken,
         currency: "IRR",
         prices: [{
-          label: `کارگاه ${workshopData.name || 'کارگاه'}`,
+          label: `کارگاه شماره ${workshopId} - ${workshopData.name || 'کارگاه'}`,
           amount: costAmount
         }],
         need_phone_number: true
@@ -89,42 +98,116 @@ class PaymentModule {
       console.log(`🔑 [PAYMENT] Bot token: ${this.botToken}`);
       console.log(`💳 [PAYMENT] Payment token: ${this.paymentToken}`);
       console.log(`💰 [PAYMENT] Cost amount: ${costAmount}`);
-      console.log(`📊 [PAYMENT] Workshop data:`, JSON.stringify(workshopData, null, 2));
       
-      // استفاده از 4bale.js که قبلاً کار می‌کرده
-      try {
-        const { sendInvoice } = require('./4bale');
-        const invoiceData = {
-          title: `پرداخت برای ${workshopData.name || 'کارگاه'}`,
-          description: `پرداخت برای ثبت‌نام در کارگاه ${workshopData.name || 'کارگاه'} با مبلغ ${costInToman} تومان`,
-          payload: `workshop_${workshopId}_${Date.now()}`,
-          provider_token: this.paymentToken,
-          currency: "IRR",
-          prices: [{
-            label: `کارگاه ${workshopData.name || 'کارگاه'}`,
-            amount: costAmount
-          }],
-          need_phone_number: true
+      const response = await this.makeRequest(fullUrl, payload);
+      
+      if (response && response.ok) {
+        const result = await response.json();
+        console.log(`✅ [PAYMENT] Invoice sent successfully:`, result);
+        return {
+          success: true,
+          invoiceId: result.result?.invoice_id || 'unknown',
+          result: result
         };
-        
-        console.log(`📤 [PAYMENT] Using 4bale.js sendInvoice with data:`, JSON.stringify(invoiceData, null, 2));
-        const result = await sendInvoice(chatId, invoiceData);
-        
-        if (result) {
-          console.log(`✅ [PAYMENT] Invoice sent successfully via 4bale.js for workshop ${workshopId}`);
-          return true;
-        } else {
-          console.error(`❌ [PAYMENT] Failed to send invoice via 4bale.js`);
-          return false;
+      } else {
+        console.error(`❌ [PAYMENT] Failed to send invoice. Status: ${response?.status}`);
+        if (response) {
+          const errorText = await response.text();
+          console.error(`❌ [PAYMENT] Error response:`, errorText);
         }
-      } catch (error) {
-        console.error(`❌ [PAYMENT] Error using 4bale.js sendInvoice:`, error);
-        return false;
+        return {
+          success: false,
+          error: `Failed to send invoice. Status: ${response?.status}`
+        };
       }
-      
     } catch (error) {
       console.error(`❌ [PAYMENT] Error in sendInvoice:`, error);
-      return false;
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // 💰 ارسال فاکتور پرداخت با تخفیف
+  async sendDiscountedInvoice(chatId, workshopId, workshopData, discountCode, discountAmount, originalPrice) {
+    try {
+      console.log(`🎫 [PAYMENT] Sending discounted payment invoice for workshop ${workshopId} to chat ${chatId}`);
+      console.log(`🎫 [PAYMENT] Discount code: ${discountCode}, Amount: ${discountAmount}, Original: ${originalPrice}`);
+      
+      // تبدیل هزینه به عدد
+      const costText = workshopData.cost || '0 تومان';
+      const costAmount = this.extractAmountFromCost(costText);
+      const costInToman = Math.floor(costAmount / 10);
+      
+      // محاسبه قیمت نهایی با تخفیف
+      const finalPrice = Math.max(0, costAmount - (discountAmount * 10)); // تبدیل تومان به ریال
+      const finalPriceInToman = Math.floor(finalPrice / 10);
+      
+      // بهبود عنوان و توضیحات فاکتور با تخفیف
+      const workshopTitle = `کارگاه شماره ${workshopId} - ${workshopData.name || 'کارگاه'} (با تخفیف)`;
+      const workshopDescription = `📚 **ثبت‌نام در کارگاه:** ${workshopData.name || 'کارگاه'}
+💰 **مبلغ اصلی:** ${costInToman} تومان
+🎫 **کد تخفیف:** ${discountCode}
+💸 **مبلغ تخفیف:** ${discountAmount} تومان
+💳 **مبلغ نهایی:** ${finalPriceInToman} تومان
+📖 **توضیحات:** ${workshopData.description || 'توضیحات موجود نیست'}
+⏱️ **مدت:** ${workshopData.duration || 'نامشخص'}
+📊 **سطح:** ${workshopData.level || 'نامشخص'}
+👥 **ظرفیت:** ${workshopData.capacity || 'نامشخص'} نفر`;
+      
+      // استفاده از Bale API sendInvoice برای پرداخت درون پلتفرم با تخفیف
+      const payload = {
+        chat_id: chatId,
+        title: workshopTitle,
+        description: workshopDescription,
+        payload: `workshop_${workshopId}_discount_${discountCode}_${Date.now()}`,
+        provider_token: this.paymentToken,
+        currency: "IRR",
+        prices: [{
+          label: `کارگاه شماره ${workshopId} - ${workshopData.name || 'کارگاه'} (با تخفیف ${discountAmount} تومان)`,
+          amount: finalPrice
+        }],
+        need_phone_number: true
+      };
+      
+      // ساخت URL کامل با توکن بات
+      const fullUrl = `https://tapi.bale.ai/bot/${this.botToken}/sendInvoice`;
+      console.log(`🔗 [PAYMENT] Using full URL: ${fullUrl}`);
+      console.log(`🔑 [PAYMENT] Bot token: ${this.botToken}`);
+      console.log(`💳 [PAYMENT] Payment token: ${this.paymentToken}`);
+      console.log(`💰 [PAYMENT] Original cost: ${costAmount}, Final cost: ${finalPrice}`);
+      
+      const response = await this.makeRequest(fullUrl, payload);
+      
+      if (response && response.ok) {
+        const result = await response.json();
+        console.log(`✅ [PAYMENT] Discounted invoice sent successfully:`, result);
+        return {
+          success: true,
+          invoiceId: result.result?.invoice_id || 'unknown',
+          result: result,
+          originalPrice: costAmount,
+          discountAmount: discountAmount * 10, // تبدیل به ریال
+          finalPrice: finalPrice
+        };
+      } else {
+        console.error(`❌ [PAYMENT] Failed to send discounted invoice. Status: ${response?.status}`);
+        if (response) {
+          const errorText = await response.text();
+          console.error(`❌ [PAYMENT] Error response:`, errorText);
+        }
+        return {
+          success: false,
+          error: `Failed to send discounted invoice. Status: ${response?.status}`
+        };
+      }
+    } catch (error) {
+      console.error(`❌ [PAYMENT] Error in sendDiscountedInvoice:`, error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 
@@ -211,45 +294,89 @@ class PaymentModule {
       
       console.log(`💸 [PAYMENT] Processing successful payment for user ${userId}:`, successfulPayment);
       
-             // دریافت اطلاعات کارگاه از invoice_payload
-       const invoicePayload = successfulPayment.invoice_payload;
-       console.log(`🔍 [PAYMENT] Invoice payload: ${invoicePayload}`);
-       
-       // استخراج workshopId از payload (workshop_7_1755206650115)
-       const workshopId = invoicePayload.split('_')[1];
-       console.log(`🔍 [PAYMENT] Extracted workshop ID: ${workshopId}`);
-       
-       let workshopData = null;
-       
-                if (workshopId) {
-           // خواندن اطلاعات کارگاه از فایل
-           try {
-             const workshopsPath = path.join(__dirname, 'data', 'workshops.json');
-             const workshopsContent = fs.readFileSync(workshopsPath, 'utf8');
-             const workshops = JSON.parse(workshopsContent);
-             workshopData = workshops.coach[workshopId];
-             console.log(`📚 [PAYMENT] Found workshop data:`, workshopData);
-           } catch (error) {
-             console.error(`❌ [PAYMENT] Error reading workshop data:`, error);
-           }
-         }
+      // دریافت اطلاعات کارگاه از invoice_payload
+      const invoicePayload = successfulPayment.invoice_payload;
+      console.log(`🔍 [PAYMENT] Invoice payload: ${invoicePayload}`);
       
-             const instructorName = workshopData?.name || 'کارگاه';
-       
-       // بررسی لینک کارگاه - اگر لینک معتبر نیست، از لینک پیش‌فرض استفاده کن
-       let groupLink = workshopData?.link || this.groupLink;
-       console.log(`🔍 [PAYMENT] Workshop link check: "${groupLink}"`);
-       
-               // بررسی معتبر بودن لینک
-        if (!groupLink || groupLink.length < 1) {
-          groupLink = "ble.ir/join/Gah9cS9LzQ"; // لینک پیش‌فرض
-          console.log(`⚠️ [PAYMENT] Invalid workshop link, using default: ${groupLink}`);
-        } else {
-          console.log(`✅ [PAYMENT] Using workshop link: ${groupLink}`);
+      // استخراج workshopId از payload (workshop_7_1755206650115)
+      const workshopId = invoicePayload.split('_')[1];
+      console.log(`🔍 [PAYMENT] Extracted workshop ID: ${workshopId}`);
+      
+      let workshopData = null;
+      
+      if (workshopId) {
+        // خواندن اطلاعات کارگاه از فایل
+        try {
+          const workshopsPath = path.join(__dirname, 'data', 'workshops.json');
+          const workshopsContent = fs.readFileSync(workshopsPath, 'utf8');
+          const workshops = JSON.parse(workshopsContent);
+          workshopData = workshops.coach[workshopId];
+          console.log(`📚 [PAYMENT] Found workshop data:`, workshopData);
+        } catch (error) {
+          console.error(`❌ [PAYMENT] Error reading workshop data:`, error);
         }
+      }
+      
+      const instructorName = workshopData?.name || 'کارگاه';
+      
+      // بررسی لینک کارگاه - اگر لینک معتبر نیست، از لینک پیش‌فرض استفاده کن
+      let groupLink = workshopData?.link || this.groupLink;
+      console.log(`🔍 [PAYMENT] Workshop link check: "${groupLink}"`);
+      
+      // بررسی معتبر بودن لینک
+      if (!groupLink || groupLink.length < 1) {
+        groupLink = "ble.ir/join/Gah9cS9LzQ"; // لینک پیش‌فرض
+        console.log(`⚠️ [PAYMENT] Invalid workshop link, using default: ${groupLink}`);
+      } else {
+        console.log(`✅ [PAYMENT] Using workshop link: ${groupLink}`);
+      }
+      
+      // 🔥 ذخیره اطلاعات کارگاه در smart_registration.json
+      try {
+        const { readJson, writeJson } = require('./server/utils/jsonStore');
+        const smartRegPath = 'data/smart_registration.json';
+        const smartReg = await readJson(smartRegPath, { userStates: {} });
+        
+        // بررسی وجود کاربر
+        if (!smartReg.userStates[userId]) {
+          smartReg.userStates[userId] = {
+            step: "completed",
+            data: {},
+            timestamp: Date.now()
+          };
+        }
+        
+        // ذخیره اطلاعات کارگاه
+        const userData = smartReg.userStates[userId].data;
+        userData.workshopId = `w-${workshopId}`;
+        userData.coachId = workshopId;
+        userData.workshopName = workshopData?.name || 'نامشخص';
+        userData.workshopCost = workshopData?.cost || 'نامشخص';
+        userData.workshopDuration = workshopData?.duration || 'نامشخص';
+        userData.workshopLevel = workshopData?.level || 'نامشخص';
+        userData.workshopCapacity = workshopData?.capacity || 'نامشخص';
+        userData.workshopDescription = workshopData?.description || 'توضیحات موجود نیست';
+        userData.paymentStatus = "paid";
+        userData.registrationDate = new Date().toISOString().split('T')[0];
+        userData.discountApplied = false; // بدون تخفیف
+        userData.originalCost = workshopData?.cost || 'نامشخص';
+        
+        // ذخیره فایل
+        await writeJson(smartRegPath, smartReg);
+        console.log(`✅ [PAYMENT] Workshop data saved to smart_registration.json for user ${userId}`);
+        
+      } catch (saveError) {
+        console.error(`❌ [PAYMENT] Error saving workshop data:`, saveError);
+      }
       
       // ارسال پیام‌های موفقیت
-      const successMessage = `💸 پرداخت برای '${instructorName}' با موفقیت انجام شد!`;
+      const successMessage = `💸 **پرداخت موفق!** 
+
+📚 **کارگاه:** شماره ${workshopId} - ${instructorName}
+💰 **مبلغ:** ${workshopData?.cost || 'نامشخص'} (بدون تخفیف)
+✅ **وضعیت:** پرداخت تأیید شد
+📅 **تاریخ ثبت‌نام:** ${new Date().toLocaleDateString('fa-IR')}`;
+
       console.log(`✅ [PAYMENT] Sending success message: ${successMessage}`);
       
       const { sendMessage } = require('./4bale');
@@ -259,7 +386,14 @@ class PaymentModule {
       });
       
       // ارسال لینک گروه
-      const groupMessage = `📎 لینک ورود به گروه: ${groupLink}`;
+      const groupMessage = `📎 **لینک ورود به گروه کارگاه:**
+${groupLink}
+
+📱 **مراحل بعدی:**
+• از طریق لینک بالا وارد گروه کارگاه شوید
+• منتظر تماس از سوی استاد باشید
+• شروع کلاس طبق برنامه اعلام شده`;
+      
       console.log(`🔗 [PAYMENT] Sending group link: ${groupMessage}`);
       
       await sendMessage(chatId, groupMessage, {
@@ -268,7 +402,13 @@ class PaymentModule {
       });
       
       // ارسال پیام تشکر
-      const thankMessage = "🎉 از اینکه همراه شدید، بی‌نهایت سپاسگزاریم!";
+      const thankMessage = `🎉 **از اینکه همراه شدید، بی‌نهایت سپاسگزاریم!**
+
+💡 **نکات مهم:**
+• ثبت‌نام شما در سیستم ذخیره شده است
+• اطلاعات کارگاه در پروفایل شما قابل مشاهده است
+• در صورت نیاز به پشتیبانی، با ادمین تماس بگیرید`;
+      
       console.log(`🙏 [PAYMENT] Sending thank you message: ${thankMessage}`);
       
       await sendMessage(chatId, thankMessage, {

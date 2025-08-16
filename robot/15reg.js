@@ -1353,9 +1353,11 @@ class RegistrationModule {
             coachKeyboard
         );
         
-        // اضافه کردن ماژول مدیریت کمک مربی
-        const AssistantManagerModule = require('./assistant_manager');
-        this.assistantManager = new AssistantManagerModule();
+        // استفاده از ماژول مدیریت کمک مربی موجود
+        if (!this.assistantManager) {
+            const AssistantManagerModule = require('./assistant_manager');
+            this.assistantManager = new AssistantManagerModule();
+        }
         console.log(`✅ [15REG] پنل مربی برای کاربر ${userId} نمایش داده شد`);
     }
     
