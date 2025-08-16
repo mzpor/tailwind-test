@@ -11,6 +11,8 @@ const fs = require('fs');
 //const BOT_TOKEN = '1714651531:y2xOK6EBg5nzVV6fEWGqtOdc3nVqVgOuf4PZVQ7S';
 //BOT_TOKEN = '1714651531:y2xOK6EBg5nzVV6fEWGqtOdc3nVqVgOuf4PZVQ7S'//#یار مدیر  modyar
 BOT_TOKEN = "1778171143:vD6rjJXAYidLL7hQyQkBeu5TJ9KpRd4zAKegqUt3" // #محرابی  mtelbot
+
+BOT_TOKEN="262597677:qzQNXdMMGfmORJsSAJmzEWRsZ68zqOjoVcFibLWC"//jaha
 const BASE_URL = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
 const API_URL = () => BASE_URL;
 
@@ -28,9 +30,9 @@ const GROUP_NAMES = {
 //"1790308237": {}  ایرانسل
 // ===== کانفیگ نام‌های ظاهری نقش‌ها =====
 const ROLE_DISPLAY_NAMES = {
-SCHOOL_ADMIN: 'مدیر',COACH:'مربی',ASSISTANT:'کمک‌‌‌مربی',STUDENT: 'قرآن‌آموز'  
+//SCHOOL_ADMIN: 'مدیر',COACH:'مربی',ASSISTANT:'کمک‌‌‌مربی',STUDENT: 'قرآن‌آموز'  
   
-  // SCHOOL_ADMIN:'مدیر', COACH: 'راهبر', ASSISTANT:'دبیر',  STUDENT:'فعال'
+   SCHOOL_ADMIN:'مدیر', COACH: 'راهبر', ASSISTANT:'دبیر',  STUDENT:'فعال'
 };
 
 // ===== کانفیگ کارگاه‌ها =====
@@ -93,7 +95,7 @@ const BUTTON_VISIBILITY_CONFIG = {
 // ===== کنترل نمایش دکمه‌های اصلی برای هر نقش =====
 const MAIN_BUTTONS_CONFIG = {
   // تنظیمات کلی دکمه‌ها
-  REGISTER_INFO: 0,    // دکمه ثبت اطلاعات (0 = مخفی، 1 = نمایان)
+  REGISTER_INFO: 1,    // دکمه ثبت اطلاعات (0 = مخفی، 1 = نمایان)
        // دکمه تنظیمات (0 = مخفی، 1 = نمایان)
     // کنترل نمایش دکمه ثبت اطلاعات برای هر نقش
   REGISTER_INFO_BY_ROLE: {
@@ -102,7 +104,7 @@ const MAIN_BUTTONS_CONFIG = {
     ASSISTANT: 0,       // کمک مربی: 1 = نمایش، 0 = مخفی
     STUDENT: 0          // قرآن‌آموز: 1 = نمایش، 0 = مخفی
   },
-  SETTINGS: 1,  
+  SETTINGS: 0,  
   // کنترل نمایش دکمه تنظیمات برای هر نقش
   SETTINGS_BY_ROLE: {
     SCHOOL_ADMIN: 1,    // مدیر مدرسه: 1 = نمایش، 0 = مخفی
