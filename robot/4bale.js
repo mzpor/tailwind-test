@@ -80,13 +80,17 @@ async function sendMessageWithInlineKeyboard(chat_id, text, inline_keyboard = nu
   console.log(`📤 [BALE] Inline keyboard:`, JSON.stringify(inline_keyboard, null, 2));
   
   // بررسی callback data ها
-  if (inline_keyboard) {
+  if (inline_keyboard && Array.isArray(inline_keyboard)) {
     console.log('📤 [BALE] Checking callback data in keyboard...');
     inline_keyboard.forEach((row, rowIndex) => {
-      row.forEach((button, buttonIndex) => {
-        console.log(`📤 [BALE] Button [${rowIndex}][${buttonIndex}]: text="${button.text}", callback_data="${button.callback_data}"`);
-      });
+      if (Array.isArray(row)) {
+        row.forEach((button, buttonIndex) => {
+          console.log(`📤 [BALE] Button [${rowIndex}][${buttonIndex}]: text="${button.text}", callback_data="${button.callback_data}"`);
+        });
+      }
     });
+  } else if (inline_keyboard) {
+    console.log('📤 [BALE] Warning: inline_keyboard is not an array:', typeof inline_keyboard);
   }
   
   const payload = { chat_id, text };

@@ -252,7 +252,7 @@ class ArzyabiModule {
         this.savePracticeData();
 
         // ارسال به گروه گزارش
-        this.sendPracticeReportToAdmin(userId, userData, currentDate, currentTime);
+        this.sendPracticeReportToAdmin(userId, userData, null, currentDate, currentTime);
 
         const { getRoleDisplayName } = require('./3config');
         return {
@@ -490,7 +490,7 @@ class ArzyabiModule {
             this.saveEvaluationData();
             
             // ارسال گزارش به گروه گزارش
-            this.sendPracticeReportToAdmin(userId, userData, evaluationId);
+            this.sendPracticeReportToAdmin(userId, userData, evaluationId, this.getCurrentDate(), currentTime);
             
             console.log(`✅ [ARZYABI] تمرین جدید ثبت شد: ${evaluationId}`);
             
@@ -508,24 +508,22 @@ class ArzyabiModule {
 
     // ===== ایجاد کیبورد ارزیابی =====
     createEvaluationKeyboard(evaluationId, studentName) {
-        const keyboard = {
-            inline_keyboard: [
-                [
-                    { text: "نیاز به تلاش بیشتر", callback_data: `evaluate_${evaluationId}_1` },
-                    { text: "متوسط", callback_data: `evaluate_${evaluationId}_2` }
-                ],
-                [
-                    { text: "خوب", callback_data: `evaluate_${evaluationId}_3` },
-                    { text: "عالی", callback_data: `evaluate_${evaluationId}_4` }
-                ],
-                [
-                    { text: "ممتاز", callback_data: `evaluate_${evaluationId}_5` }
-                ]
+        const keyboard = [
+            [
+                { text: "🔴 نیاز به تلاش بیشتر", callback_data: `evaluate_${evaluationId}_1` },
+                { text: "🟡 متوسط", callback_data: `evaluate_${evaluationId}_2` }
+            ],
+            [
+                { text: "🟢 خوب", callback_data: `evaluate_${evaluationId}_3` },
+                { text: "🔵 عالی", callback_data: `evaluate_${evaluationId}_4` }
+            ],
+            [
+                { text: "⭐ ممتاز", callback_data: `evaluate_${evaluationId}_5` }
             ]
-        };
+        ];
 
         return {
-            text: `📝 **ارزیابی تمرین قرآن‌آموز**\n\nقرآن‌آموز: ${studentName}\nلطفاً تمرین ارسالی را ارزیابی کنید:`,
+            text: `📝 **ارزیابی تمرین قرآن‌آموز**\n\n👤 قرآن‌آموز: ${studentName}\n\n📊 لطفاً تمرین ارسالی را ارزیابی کنید:`,
             keyboard: keyboard
         };
     }
@@ -564,9 +562,10 @@ class ArzyabiModule {
 
             console.log(`✅ [ARZYABI] ارزیابی ثبت شد: ${evaluationId} توسط ${evaluatorName}`);
 
+            const scoreText = ["نیاز به تلاش بیشتر", "متوسط", "خوب", "عالی", "ممتاز"][score - 1];
             return {
                 success: true,
-                message: `✅ ارزیابی شما ثبت شد.`
+                message: `✅ ارزیابی شما ثبت شد!\n\n📊 نمره: ${scoreText} (${score}/5)\n👤 قرآن‌آموز: ${evaluation.user_name}\n⏰ زمان: ${this.getCurrentTime()}`
             };
 
         } catch (error) {
@@ -618,6 +617,22 @@ class ArzyabiModule {
             this.saveEvaluationData();
 
             console.log(`✅ [ARZYABI] ارزیابی تکمیل شد: ${evaluationId} - سطح: ${overallLevel}`);
+            
+            // ارسال پیام تکمیل ارزیابی به گروه اصلی
+            if (this.sendMessage) {
+                try {
+                    const completionMessage = `🎉 **ارزیابی تکمیل شد!**\n\n` +
+                        `👤 قرآن‌آموز: ${evaluation.user_name}\n` +
+                        `📊 میانگین نمرات: ${averageScore.toFixed(1)}/5\n` +
+                        `🏆 سطح کلی: ${overallLevel}\n` +
+                        `⏰ زمان تکمیل: ${this.getCurrentTime()}`;
+                    
+                    this.sendMessage(evaluation.chat_id, completionMessage);
+                    console.log('📤 پیام تکمیل ارزیابی به گروه اصلی ارسال شد');
+                } catch (error) {
+                    console.error('❌ [ARZYABI] خطا در ارسال پیام تکمیل:', error.message);
+                }
+            }
 
         } catch (error) {
             console.error('❌ [ARZYABI] خطا در تکمیل ارزیابی:', error.message);
@@ -691,7 +706,7 @@ class ArzyabiModule {
     }
 
     // ===== ارسال گزارش تمرین به گروه گزارش =====
-    sendPracticeReportToAdmin(userId, userData, date, time) {
+    sendPracticeReportToAdmin(userId, userData, evaluationId, date, time) {
         // دریافت ساعت‌های فعال تمرین
         const { getPracticeHours } = require('./3config');
         const practiceHours = getPracticeHours();
@@ -699,12 +714,18 @@ class ArzyabiModule {
             practiceHours.map(h => `${h}:00`).join(', ') : 
             'تنظیم نشده';
         
-        const reportText = `📝 **گزارش تمرین جدید**\n\n` +
-            `کاربر: ${userData.full_name || userData.first_name || `کاربر ${userId}`}\n` +
-            `تاریخ: ${date}\n` +
-            `زمان: ${time}\n` +
+        let reportText = `📝 **گزارش تمرین جدید**\n\n` +
+            `👤 کاربر: ${userData.full_name || userData.first_name || `کاربر ${userId}`}\n`;
+        
+        if (evaluationId) {
+            reportText += `🆔 کد ارزیابی: ${evaluationId}\n`;
+        }
+        
+        reportText += `📅 تاریخ: ${date}\n` +
+            `⏰ زمان: ${time}\n` +
             `⏰ ساعت‌های تمرین: ${hoursText}\n` +
-            `وضعیت: در انتظار ارزیابی`;
+            `📊 وضعیت: در انتظار ارزیابی\n\n` +
+            `🔔 لطفاً مربیان محترم این تمرین را ارزیابی کنند.`;
 
         // ارسال به گروه گزارش
         if (this.sendMessage) {
@@ -729,22 +750,31 @@ class ArzyabiModule {
             if (!evaluation) return;
 
             let reportText = `📊 **گزارش ارزیابی جدید**\n\n` +
-                `قرآن‌آموز: ${evaluation.user_name}\n` +
-                `ID ارزیابی: ${evaluationId}\n\n` +
-                `**لیست ارزیابی‌های فعلی:**\n`;
+                `👤 قرآن‌آموز: ${evaluation.user_name}\n` +
+                `📅 تاریخ: ${this.getCurrentDate()}\n\n` +
+                `**📋 لیست ارزیابی‌های فعلی:**\n`;
 
             if (Object.keys(evaluation.evaluations).length === 0) {
-                reportText += "هنوز ارزیابی‌ای ثبت نشده است.";
+                reportText += "❌ هنوز ارزیابی‌ای ثبت نشده است.";
             } else {
                 let index = 1;
                 for (const [evaluatorId, evalData] of Object.entries(evaluation.evaluations)) {
                     const scoreText = ["نیاز به تلاش بیشتر", "متوسط", "خوب", "عالی", "ممتاز"][evalData.score - 1];
-                    reportText += `${index}. ${evalData.evaluator_name}: ${scoreText}\n`;
+                    const emoji = ["🔴", "🟡", "🟢", "🔵", "⭐"][evalData.score - 1];
+                    reportText += `${index}. ${emoji} ${evalData.evaluator_name}: ${scoreText} (${evalData.score}/5)\n`;
                     index++;
+                }
+                
+                // نمایش تعداد ارزیابی‌های باقی‌مانده
+                const remainingEvaluations = 2 - Object.keys(evaluation.evaluations).length;
+                if (remainingEvaluations > 0) {
+                    reportText += `\n⏳ ${remainingEvaluations} ارزیابی دیگر برای تکمیل نیاز است.`;
+                } else {
+                    reportText += `\n✅ ارزیابی‌ها تکمیل شده است!`;
                 }
             }
 
-            reportText += `\nتاریخ: ${this.getCurrentDate()}`;
+            reportText += `\n📅 تاریخ: ${this.getCurrentDate()}`;
 
             // ارسال به گروه گزارش
             if (this.sendMessage) {
@@ -910,6 +940,37 @@ class ArzyabiModule {
         };
     }
 
+    // ===== نمایش وضعیت ارزیابی‌های در انتظار =====
+    getPendingEvaluationsStatus() {
+        const pendingEvaluations = this.evaluationData.pending_evaluations;
+        const pendingCount = Object.keys(pendingEvaluations).length;
+        
+        if (pendingCount === 0) {
+            return {
+                has_pending: false,
+                message: "✅ هیچ ارزیابی در انتظار وجود ندارد."
+            };
+        }
+
+        let statusMessage = `📋 **وضعیت ارزیابی‌های در انتظار**\n\n`;
+        statusMessage += `📊 تعداد کل: ${pendingCount} ارزیابی\n\n`;
+
+        Object.entries(pendingEvaluations).forEach(([evaluationId, evaluation], index) => {
+            const evaluationCount = Object.keys(evaluation.evaluations).length;
+            const remainingCount = 2 - evaluationCount;
+            const progressBar = "🟢".repeat(evaluationCount) + "⚪".repeat(remainingCount);
+            
+            statusMessage += `${index + 1}. 👤 ${evaluation.user_name}\n`;
+            statusMessage += `   📊 ${evaluationCount}/2 ارزیابی ${progressBar}\n`;
+            statusMessage += `   ⏳ ${remainingCount} ارزیابی باقی‌مانده\n\n`;
+        });
+
+        return {
+            has_pending: true,
+            message: statusMessage
+        };
+    }
+
     // ===== تشخیص نوع پیام تمرین =====
     getPracticeMessageType(message) {
         if (message.voice && message.caption) {
@@ -980,6 +1041,51 @@ class ArzyabiModule {
         } catch (error) {
             console.error('❌ [ARZYABI] Error in getPracticeTimeStatus:', error.message);
             return { is_active: false, error: error.message };
+        }
+    }
+
+    // ===== نمایش آمار کامل =====
+    getCompleteStatistics() {
+        try {
+            const stats = this.getStatistics();
+            const timeStatus = this.getPracticeTimeStatus();
+            const pendingStatus = this.getPendingEvaluationsStatus();
+            
+            let report = `📊 **آمار کامل سیستم ارزیابی**\n\n`;
+            
+            // وضعیت زمان تمرین
+            report += `⏰ **وضعیت زمان تمرین:**\n`;
+            report += `   📅 روز: ${timeStatus.current_day}\n`;
+            report += `   🕐 ساعت: ${timeStatus.current_hour}:00\n`;
+            report += `   🔴 فعال: ${timeStatus.is_active ? '✅ بله' : '❌ خیر'}\n`;
+            report += `   📋 روزهای فعال: ${timeStatus.schedule.days.map(d => ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'][d]).join(', ')}\n`;
+            report += `   ⏰ ساعت‌های فعال: ${timeStatus.schedule.hours.map(h => `${h}:00`).join(', ')}\n\n`;
+            
+            // آمار تمرین‌ها
+            report += `📝 **آمار تمرین‌ها:**\n`;
+            report += `   📅 امروز: ${stats.today_practices} تمرین\n`;
+            report += `   ⏳ در انتظار ارزیابی: ${stats.total_pending_evaluations} تمرین\n`;
+            report += `   ✅ تکمیل شده: ${stats.total_completed_evaluations} تمرین\n`;
+            report += `   📊 نظرسنجی: ${stats.total_satisfaction_surveys} نظرسنجی\n\n`;
+            
+            // وضعیت ارزیابی‌های در انتظار
+            if (pendingStatus.has_pending) {
+                report += pendingStatus.message;
+            } else {
+                report += pendingStatus.message + '\n';
+            }
+            
+            return {
+                success: true,
+                message: report
+            };
+            
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در تولید آمار کامل:', error.message);
+            return {
+                success: false,
+                message: '❌ خطا در تولید آمار'
+            };
         }
     }
 
