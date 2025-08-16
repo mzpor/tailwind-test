@@ -285,7 +285,7 @@ const messageTimestamps = {
 // تنظیمات نقش‌ها - به‌روزرسانی شده در 1404/05/13 ساعت 16:47 - نسخه 1.4.1
 const roleConfig = {
   [ROLES.SCHOOL_ADMIN]: {
-    name: 'مدیر مدرسه',
+            name: 'مدیر راهبران',
     emoji: '🛡️',
     panelText: 'مدیر',
     get keyboard() { return generateDynamicKeyboard(ROLES.SCHOOL_ADMIN); },
@@ -294,25 +294,25 @@ const roleConfig = {
   },
 
   [ROLES.COACH]: {
-    name: 'مربی',
+    name: 'راهبر',
     emoji: '🏋️',
-    panelText: 'مربی',
+    panelText: 'راهبر',
     get keyboard() { return generateDynamicKeyboard(ROLES.COACH); },
-    commands: ['/شروع', '/خروج', '/ربات', '/مربی']
+    commands: ['/شروع', '/خروج', '/ربات', '/راهبر']
   },
   [ROLES.ASSISTANT]: {
-    name: 'کمک مربی',
+    name: 'دبیر',
     emoji: '👨‍🏫',
-    panelText: 'کمک مربی',
+    panelText: 'دبیر',
     get keyboard() { return generateDynamicKeyboard(ROLES.ASSISTANT); },
-    commands: ['/شروع', '/خروج', '/ربات', '/کمک مربی']
+    commands: ['/شروع', '/خروج', '/ربات', '/دبیر']
   },
   [ROLES.STUDENT]: {
-    name: 'قرآن آموز',
+    name: 'فعال',
     emoji: '📖',
-    panelText: 'قرآن آموز',
+    panelText: 'فعال',
     get keyboard() { return generateDynamicKeyboard(ROLES.STUDENT); },
-    commands: ['/شروع', '/خروج', '/ربات', '/قرآن آموز'],
+    commands: ['/شروع', '/خروج', '/ربات', '/فعال'],
     // تابع جدید برای تولید keyboard با userId
     getKeyboard: function(userId) { return generateDynamicKeyboard(ROLES.STUDENT, userId); }
   }
@@ -347,7 +347,7 @@ function generateDynamicKeyboard(role, userId = null) {
       secondRow.push('تنظیمات');
     }
     
-    // اضافه کردن دکمه ثبت اطلاعات بر اساس کانفیگ (برای مشاهده گزارشات مربیان)
+            // اضافه کردن دکمه ثبت اطلاعات بر اساس کانفیگ (برای مشاهده گزارشات راهبران)
     if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
       secondRow.push('ثبت اطلاعات');
     }
@@ -357,22 +357,22 @@ function generateDynamicKeyboard(role, userId = null) {
       secondRow.push('نقش‌ها');
     }
   } else if (role === ROLES.COACH) {
-    secondRow.push('مربی');
+    secondRow.push('راهبر');
     
     // اضافه کردن دکمه ثبت اطلاعات بر اساس کانفیگ
     if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
       secondRow.push('ثبت اطلاعات');
     }
   } else if (role === ROLES.ASSISTANT) {
-    secondRow.push('کمک مربی');
+    secondRow.push('دبیر');
     
     // اضافه کردن دکمه ثبت اطلاعات بر اساس کانفیگ
     if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
       secondRow.push('ثبت اطلاعات');
     }
   } else if (role === ROLES.STUDENT) {
-    // دکمه "قرآن آموز" برای همه کاربران با نقش STUDENT
-    secondRow.push('قرآن آموز');
+    // دکمه "فعال" برای همه کاربران با نقش STUDENT
+    secondRow.push('فعال');
   }
   
   if (secondRow.length > 0) {
@@ -515,21 +515,21 @@ async function getGroupsList(userId = null) {
           let shouldShowGroup = false;
           
           if (userId && isCoach(userId)) {
-            // برای مربی
+            // برای راهبر
             if (GROUP_VISIBILITY_CONFIG.COACH_SEE_ALL_GROUPS === 1) {
               // اگر 1 باشد، همه گروه‌ها را نشان بده
               shouldShowGroup = true;
             } else {
-              // اگر 0 باشد، فقط گروه‌هایی که مربی در آن‌ها ادمین است را نشان بده
+              // اگر 0 باشد، فقط گروه‌هایی که راهبر در آن‌ها ادمین است را نشان بده
               shouldShowGroup = getCurrentGroupAdminIds().includes(userId);
             }
           } else if (userId && isAssistant(userId)) {
-            // برای کمک مربی
+            // برای دبیر
             if (GROUP_VISIBILITY_CONFIG.ASSISTANT_SEE_ALL_GROUPS === 1) {
               // اگر 1 باشد، همه گروه‌ها را نشان بده
               shouldShowGroup = true;
             } else {
-              // اگر 0 باشد، فقط گروه‌هایی که کمک مربی در آن‌ها ادمین است را نشان بده
+              // اگر 0 باشد، فقط گروه‌هایی که دبیر در آن‌ها ادمین است را نشان بده
               shouldShowGroup = getCurrentGroupAdminIds().includes(userId);
             }
           } else {
@@ -551,14 +551,14 @@ async function getGroupsList(userId = null) {
           let shouldShowGroup = false;
           
           if (userId && isCoach(userId)) {
-            // برای مربی
+            // برای راهبر
             if (GROUP_VISIBILITY_CONFIG.COACH_SEE_ALL_GROUPS === 1) {
               shouldShowGroup = true;
             } else {
               shouldShowGroup = getCurrentGroupAdminIds().includes(userId);
             }
           } else if (userId && isAssistant(userId)) {
-            // برای کمک مربی
+            // برای دبیر
             if (GROUP_VISIBILITY_CONFIG.ASSISTANT_SEE_ALL_GROUPS === 1) {
               shouldShowGroup = true;
             } else {
@@ -675,12 +675,12 @@ async function handleRoleMessage(msg, role) {
           reply = '❌ دکمه ثبت اطلاعات در حال حاضر غیرفعال است.';
           keyboard = config.keyboard;
         } else {
-          // دکمه ثبت اطلاعات - برای مربی، کمک مربی و مدیر مدرسه
-          const userRole = getUserRole(msg.from.id);
-          console.log(`🔍 [POLLING] نقش کاربر: ${userRole}, ROLES.COACH: ${ROLES.COACH}, ROLES.ASSISTANT: ${ROLES.ASSISTANT}, ROLES.SCHOOL_ADMIN: ${ROLES.SCHOOL_ADMIN}`);
-          console.log(`🔍 [POLLING] آیا مربی است؟ ${userRole === ROLES.COACH}`);
-          console.log(`🔍 [POLLING] آیا کمک مربی است؟ ${userRole === ROLES.ASSISTANT}`);
-          console.log(`🔍 [POLLING] آیا مدیر مدرسه است؟ ${userRole === ROLES.SCHOOL_ADMIN}`);
+                  // دکمه ثبت اطلاعات - برای راهبر، دبیر و مدیر راهبران
+        const userRole = getUserRole(msg.from.id);
+        console.log(`🔍 [POLLING] نقش کاربر: ${userRole}, ROLES.COACH: ${ROLES.COACH}, ROLES.ASSISTANT: ${ROLES.ASSISTANT}, ROLES.SCHOOL_ADMIN: ${ROLES.SCHOOL_ADMIN}`);
+        console.log(`🔍 [POLLING] آیا راهبر است؟ ${userRole === ROLES.COACH}`);
+        console.log(`🔍 [POLLING] آیا دبیر است؟ ${userRole === ROLES.ASSISTANT}`);
+        console.log(`🔍 [POLLING] آیا مدیر راهبران است؟ ${userRole === ROLES.SCHOOL_ADMIN}`);
           
           if (userRole === ROLES.COACH || userRole === ROLES.ASSISTANT || userRole === ROLES.SCHOOL_ADMIN) {
             console.log(`📝 [POLLING] ثبت اطلاعات درخواست شد توسط ${userRole}`);
@@ -700,7 +700,7 @@ async function handleRoleMessage(msg, role) {
             }
           } else {
             console.log(`❌ [POLLING] کاربر نقش مناسب ندارد: ${userRole}`);
-            reply = '❌ فقط مربی، کمک مربی و مدیر مدرسه می‌توانند از ثبت اطلاعات استفاده کنند.';
+            reply = '❌ فقط راهبر، دبیر و مدیر راهبران می‌توانند از ثبت اطلاعات استفاده کنند.';
             keyboard = config.keyboard;
           }
         }
@@ -713,10 +713,10 @@ async function handleRoleMessage(msg, role) {
         } else {
           // دکمه تنظیمات - برای همه کاربران
           console.log(`⚙️ [POLLING] تنظیمات درخواست شد`);
-          // بررسی دسترسی کاربر برای تنظیمات - فقط مدیر مدرسه
+          // بررسی دسترسی کاربر برای تنظیمات - فقط مدیر راهبران
           if (!isAdmin(msg.from.id)) {
             console.log('❌ [POLLING] User is not admin for settings command');
-            reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
+            reply = '⚠️ فقط مدیر راهبران می‌تواند از تنظیمات استفاده کند.';
             keyboard = config.keyboard;
           } else {
             // نمایش پنل تنظیمات
@@ -743,12 +743,12 @@ async function handleRoleMessage(msg, role) {
       
       // بررسی نقش کاربر برای نمایش پنل مناسب
       if (isCoach(msg.from.id)) {
-        // پنل مربی - استفاده از handleCoachButton از 15reg.js
+        // پنل راهبر - استفاده از handleCoachButton از 15reg.js
         console.log(`🏋️ [POLLING] Coach panel requested, delegating to 15reg.js`);
         await registrationModule.handleCoachButton(msg);
         return; // ادامه حلقه بدون ارسال پیام معمولی
           } else if (isAssistant(msg.from.id)) {
-        // پنل کمک مربی - بررسی کانفیگ مدیریت گروه‌ها
+        // پنل دبیر - بررسی کانفیگ مدیریت گروه‌ها
         const inlineKeyboard = [
           [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
@@ -773,7 +773,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
         return; // ادامه حلقه بدون ارسال پیام معمولی
     } else if (getUserRole(msg.from.id) === ROLES.STUDENT) {
-      // پنل قرآن آموز - نمایش ساده بدون Inline Keyboard
+      // پنل فعال - نمایش ساده بدون Inline Keyboard
       const { getRoleDisplayName } = require('./3config');
       reply = `📖 **پنل ${getRoleDisplayName('STUDENT')}**
 
@@ -785,7 +785,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
 ⏰ ${getTimeStamp()}`;
       keyboard = config.keyboard;
     } else {
-      // پنل مدیر - بررسی کانفیگ مدیریت گروه‌ها
+      // پنل مدیر راهبران - بررسی کانفیگ مدیریت گروه‌ها
       const inlineKeyboard = [
         [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
       ];
@@ -862,10 +862,10 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
   } else if (msg.text === 'تنظیمات' || msg.text === '/تنظیمات') {
     console.log('🔍 [POLLING] Settings command detected:', msg.text);
     console.log(`🔍 [POLLING] User ID: ${msg.from.id}, Chat ID: ${msg.chat.id}`);
-    // دستور تنظیمات - فقط برای مدیر مدرسه
+    // دستور تنظیمات - فقط برای مدیر راهبران
     if (!isAdmin(msg.from.id)) {
       console.log('❌ [POLLING] User is not admin for settings command');
-      reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
+      reply = '⚠️ فقط مدیر راهبران می‌تواند از تنظیمات استفاده کند.';
       keyboard = config.keyboard;
     } else {
       // نمایش پنل تنظیمات
@@ -885,9 +885,9 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
       }
     }
   } else if (msg.text === 'نقش‌ها' || msg.text === '/نقش‌ها') {
-    // مدیریت نقش‌ها - فقط برای مدیر مدرسه
+    // مدیریت نقش‌ها - فقط برای مدیر راهبران
     if (!isAdmin(msg.from.id)) {
-      reply = '⚠️ فقط مدیر مدرسه می‌تواند نقش‌ها را مدیریت کند.';
+      reply = '⚠️ فقط مدیر راهبران می‌تواند نقش‌ها را مدیریت کند.';
       keyboard = config.keyboard;
     } else {
       // نمایش پنل مدیریت نقش‌ها
@@ -904,12 +904,12 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
       keyboard = config.keyboard;
     }
   } else if (msg.text === '/گروه') {
-    // دستور /گروه - فقط در گروه گزارش و فقط برای مدیر مدرسه
+    // دستور /گروه - فقط در گروه گزارش و فقط برای مدیر راهبران
     if (msg.chat.id !== REPORT_GROUP_ID) {
       reply = '⚠️ این دستور فقط در گروه گزارش قابل استفاده است.';
       keyboard = config.keyboard;
     } else if (!isAdmin(msg.from.id)) {
-      reply = '⚠️ فقط مدیر مدرسه می‌تواند از این دستور استفاده کند.';
+      reply = '⚠️ فقط مدیر راهبران می‌تواند از این دستور استفاده کند.';
       keyboard = config.keyboard;
     } else {
       // نمایش لیست گروه‌ها برای مدیر مدرسه با Inline Keyboard
@@ -962,7 +962,7 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
     keyboard = config.keyboard;
   } else if (msg.text === 'قرآن آموز' || msg.text === '/قرآن آموز') {
     // دستور قرآن آموز - نمایش پنل قرآن آموز
-    reply = `📖 **پنل قرآن آموز**
+    reply = `📖 **پنل فعال**
 
 📋 **گزینه‌های موجود:**
 • 🤖 معرفی ربات
@@ -1037,9 +1037,9 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
       return;
     }
     
-    // 🔥 برای قرآن‌آموز، پیام مناسب‌تری نمایش بده
+    // 🔥 برای فعال، پیام مناسب‌تری نمایش بده
     if (role === ROLES.STUDENT) {
-      reply = `📖 **قرآن‌آموز عزیز**
+      reply = `📖 **فعال عزیز**
 
 💡 **لطفاً از دکمه‌های منو استفاده کنید:**
 • 🤖 معرفی ربات
@@ -1545,7 +1545,7 @@ function startPolling() {
                      callback_query.data.startsWith('assistant_')) {
             console.log('🔄 [POLLING] Registration callback detected');
             console.log(`🔄 [POLLING] Registration callback data: ${callback_query.data}`);
-            // پردازش callback های ثبت‌نام و مدیریت کمک مربی
+            // پردازش callback های ثبت‌نام و مدیریت دبیر
             const success = await registrationModule.handleCallback(callback_query);
             
             if (!success) {
@@ -1639,7 +1639,7 @@ function startPolling() {
             continue;
           }
           
-          // دستورات ادمین و مربی‌ها - به‌روزرسانی شده در 1404/05/13 ساعت 10:45 - نسخه 1.4.0
+          // دستورات ادمین و راهبران - به‌روزرسانی شده در 1404/05/13 ساعت 10:45 - نسخه 1.4.0
           const userRole = getUserRole(msg.from.id);
           const canUseAdminCommands = isAdmin(msg.from.id) || isGroupAdmin(msg.from.id) || isCoach(msg.from.id) || isAssistant(msg.from.id);
           
@@ -1764,7 +1764,7 @@ function startPolling() {
             }
           }
           
-          // اولویت‌بندی: مدیر -> مربی -> کمک مربی -> قرآن‌آموز
+          // اولویت‌بندی: مدیر -> راهبر -> دبیر -> فعال
           if (userRole === ROLES.SCHOOL_ADMIN || userRole === ROLES.COACH || userRole === ROLES.ASSISTANT) {
             console.log(`🔄 [POLLING] Admin/Coach/Assistant detected, using role-based handling`);
             
@@ -1979,7 +1979,7 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
       console.log(`🔙 [POLLING] Back to main for user ${userId} with role: ${role}`);
       
       if (isCoach(userId)) {
-        // پنل مربی - بررسی کانفیگ مدیریت گروه‌ها
+        // پنل راهبر - بررسی کانفیگ مدیریت گروه‌ها
         const inlineKeyboard = [
           [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
@@ -1993,7 +1993,7 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
           ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
           : '';
         
-        const reply = `👨‍🏫 پنل مربی
+        const reply = `👨‍🏫 پنل راهبر
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
@@ -2002,7 +2002,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         
         await sendMessageWithInlineKeyboard(chatId, reply, inlineKeyboard);
       } else if (isAssistant(userId)) {
-        // پنل کمک مربی - بررسی کانفیگ مدیریت گروه‌ها
+        // پنل دبیر - بررسی کانفیگ مدیریت گروه‌ها
         const inlineKeyboard = [
           [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
@@ -2016,7 +2016,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
           ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
           : '';
         
-        const reply = `👨‍🏫 پنل کمک مربی
+        const reply = `👨‍🏫 پنل دبیر
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
@@ -2025,7 +2025,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         
         await sendMessageWithInlineKeyboard(chatId, reply, inlineKeyboard);
       } else {
-        // پنل مدیر - بررسی کانفیگ مدیریت گروه‌ها
+        // پنل مدیر راهبران - بررسی کانفیگ مدیریت گروه‌ها
         const inlineKeyboard = [
           [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
@@ -2049,7 +2049,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
           ? '• 👨‍🏫 استادها\n' 
           : '';
         
-        const reply = `🔧 پنل مدیر مدرسه
+        const reply = `🔧 پنل مدیر راهبران
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات

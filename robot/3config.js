@@ -109,18 +109,18 @@ const MAIN_BUTTONS_CONFIG = {
        // دکمه تنظیمات (0 = مخفی، 1 = نمایان)
     // کنترل نمایش دکمه ثبت اطلاعات برای هر نقش
   REGISTER_INFO_BY_ROLE: {
-    SCHOOL_ADMIN: 1,    // مدیر مدرسه: 1 = نمایش، 0 = مخفی
-    COACH: 1,           // مربی: 1 = نمایش، 0 = مخفی
-    ASSISTANT: 1,       // کمک مربی: 1 = نمایش، 0 = مخفی
-    STUDENT: 1          // قرآن‌آموز: 1 = نمایش، 0 = مخفی
+    SCHOOL_ADMIN: 1,    // مدیر راهبران: 1 = نمایش، 0 = مخفی
+    COACH: 1,           // راهبر: 1 = نمایش، 0 = مخفی
+    ASSISTANT: 1,       // دبیر: 1 = نمایش، 0 = مخفی
+    STUDENT: 1          // فعال: 1 = نمایش، 0 = مخفی
   },
   SETTINGS: 0,  
   // کنترل نمایش دکمه تنظیمات برای هر نقش
   SETTINGS_BY_ROLE: {
-    SCHOOL_ADMIN: 1,    // مدیر مدرسه: 1 = نمایش، 0 = مخفی
-    COACH: 0,           // مربی: 1 = نمایش، 0 = مخفی
-    ASSISTANT: 0,       // کمک مربی: 1 = نمایش، 0 = مخفی
-    STUDENT: 0          // قرآن‌آموز: 1 = نمایش، 0 = مخفی
+    SCHOOL_ADMIN: 1,    // مدیر راهبران: 1 = نمایش، 0 = مخفی
+    COACH: 0,           // راهبر: 1 = نمایش، 0 = مخفی
+    ASSISTANT: 0,       // دبیر: 1 = نمایش، 0 = مخفی
+    STUDENT: 0          // فعال: 1 = نمایش، 0 = مخفی
   }
 };
 
@@ -181,7 +181,7 @@ const GROUP_VISIBILITY_CONFIG = {
 const GROUP_MANAGEMENT_CONFIG = {
   enabled: 1,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
   visibility: {
-    admin: 1,        // مدیر مدرسه
+    admin: 1,        // مدیر راهبران
     instructor: 1,   // مربی
     assistant: 1,    // کمک مربی
     regular: 0       // کاربران عادی - همه دسترسی دارند
@@ -198,7 +198,7 @@ const GROUP_MANAGEMENT_CONFIG = {
 const OSATD_MANAGEMENT_CONFIG = {
   enabled: 1,  // 0 = غیرفعال (دکمه استادها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
   visibility: {
-    admin: 1,        // مدیر مدرسه
+    admin: 1,        // مدیر راهبران
     instructor: 1,   // مربی
     assistant: 1,    // کمک مربی
     regular: 0       // کاربران عادی
@@ -1180,14 +1180,14 @@ function isRobotOnline() {
   }
 }
 
-// نقش‌های کاربران
-const ROLES = {
-  SCHOOL_ADMIN: 'SCHOOL_ADMIN',    // مدیر مدرسه
-  GROUP_ADMIN: 'GROUP_ADMIN',      // ادمین گروه
-  COACH: 'COACH',                  // مربی
-  ASSISTANT: 'ASSISTANT',          // کمک مربی
-  STUDENT: 'STUDENT'               // قرآن آموز
-};
+        // نقش‌های کاربران
+        const ROLES = {
+          SCHOOL_ADMIN: 'SCHOOL_ADMIN',    // مدیر راهبران
+          GROUP_ADMIN: 'GROUP_ADMIN',      // ادمین گروه
+          COACH: 'COACH',                  // راهبر
+          ASSISTANT: 'ASSISTANT',          // دبیر
+          STUDENT: 'STUDENT'               // فعال
+        };
 
 // نگاشت نقش‌های کاربران (تولید خودکار از USERS)
 const USER_ROLES = Object.entries(USERS).reduce((acc, [id, user]) => {

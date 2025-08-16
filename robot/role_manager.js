@@ -332,7 +332,7 @@ class RoleManager {
       'SCHOOL_ADMIN': 'مدیر مدرسه',
       'COACH': 'مربی',
       'ASSISTANT': 'کمک مربی',
-      'STUDENT': 'قرآن آموز'
+      'STUDENT': 'فعال'
     };
     return names[role] || role;
   }

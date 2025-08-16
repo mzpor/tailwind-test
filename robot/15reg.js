@@ -168,11 +168,11 @@ class RegistrationModule {
                         // 🔥 اضافه کردن خودکار به کانفیگ
                         try {
                             if (userRole === 'coach') {
-                                addUserToRole('COACH', userId, 'مربی', phoneToCheck);
-                                console.log(`✅ [15REG] کاربر ${userId} به عنوان مربی در کانفیگ اضافه شد`);
+                                addUserToRole('COACH', userId, 'راهبر', phoneToCheck);
+                                console.log(`✅ [15REG] کاربر ${userId} به عنوان راهبر در کانفیگ اضافه شد`);
                             } else if (userRole === 'assistant') {
-                                addUserToRole('ASSISTANT', userId, 'کمک مربی', phoneToCheck);
-                                console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
+                                addUserToRole('ASSISTANT', userId, 'دبیر', phoneToCheck);
+                                console.log(`✅ [15REG] کاربر ${userId} به عنوان دبیر در کانفیگ اضافه شد`);
                             }
                         } catch (error) {
                             console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
@@ -196,7 +196,7 @@ class RegistrationModule {
         }
     }
     
-    // 🔥 متد جدید: بررسی و تکمیل ثبت‌نام مربی
+    // 🔥 متد جدید: بررسی و تکمیل ثبت‌نام راهبر
     async checkAndCompleteCoachRegistration(ctx) {
         const userId = ctx.from.id;
         const userData = this.userStates[userId]?.data;
@@ -219,9 +219,9 @@ class RegistrationModule {
         console.log(`🔍 [15REG] نقش کاربر: ${userRole}`);
         
         if (userRole === 'coach' || userRole === 'assistant') {
-            // 🔥 مربی یا کمک مربی - استفاده از نام ورکشاپ
+            // 🔥 راهبر یا دبیر - استفاده از نام ورکشاپ
             const workshopName = await this.getWorkshopName(userData.phone);
-            const firstName = workshopName || 'مربی';
+            const firstName = workshopName || 'راهبر';
             
             console.log(`✅ [15REG] تکمیل خودکار ثبت‌نام برای ${userRole} با نام: ${firstName}`);
             
@@ -229,10 +229,10 @@ class RegistrationModule {
             try {
                 if (userRole === 'coach') {
                     addUserToRole('COACH', userId, firstName, userData.phone);
-                    console.log(`✅ [15REG] کاربر ${userId} به عنوان مربی در کانفیگ اضافه شد`);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان راهبر در کانفیگ اضافه شد`);
                 } else if (userRole === 'assistant') {
                     addUserToRole('ASSISTANT', userId, firstName, userData.phone);
-                    console.log(`✅ [15REG] کاربر ${userId} به عنوان کمک مربی در کانفیگ اضافه شد`);
+                    console.log(`✅ [15REG] کاربر ${userId} به عنوان دبیر در کانفیگ اضافه شد`);
                 }
             } catch (error) {
                 console.error(`❌ [15REG] خطا در اضافه کردن به کانفیگ:`, error.message);
@@ -240,11 +240,11 @@ class RegistrationModule {
             
             // تکمیل اطلاعات
             this.userStates[userId].data.firstName = firstName;
-            this.userStates[userId].data.fullName = workshopName || 'مربی';
+            this.userStates[userId].data.fullName = workshopName || 'راهبر';
             this.userStates[userId].step = 'completed';
             this.saveData();
             
-            const roleText = userRole === 'coach' ? 'مربی' : 'کمک مربی';
+            const roleText = userRole === 'coach' ? 'راهبر' : 'دبیر';
             
             const welcomeText = `👨‍🏫 خوش‌آمدی ${roleText} ${firstName}
 پنل ${roleText} فعال شد`;
@@ -252,9 +252,9 @@ class RegistrationModule {
             // ساخت کیبرد متناسب با نقش
             let keyboardRows;
             if (userRole === 'coach') {
-                keyboardRows = [['شروع', 'مربی', 'ربات', 'خروج']];
+                keyboardRows = [['شروع', 'راهبر', 'ربات', 'خروج']];
             } else {
-                keyboardRows = [['شروع', 'کمک مربی', 'ربات', 'خروج']];
+                keyboardRows = [['شروع', 'دبیر', 'ربات', 'خروج']];
             }
             
             // اضافه کردن دکمه ریست اگر مجاز باشد
@@ -265,7 +265,7 @@ class RegistrationModule {
                 console.log(`⚠️ [15REG] دکمه ریست نمایش داده نمی‌شود (allowUserReset: 0)`);
             }
             
-            // 🔥 اضافه کردن دکمه "تمایل به ثبت‌نام" برای کمک مربی
+            // 🔥 اضافه کردن دکمه "تمایل به ثبت‌نام" برای دبیر
             if (userRole === 'assistant') {
                 keyboardRows.push(['📝 تمایل به ثبت‌نام']);
                 console.log(`✅ [15REG] دکمه "تمایل به ثبت‌نام" برای کمک مربی اضافه شد`);
@@ -628,9 +628,9 @@ class RegistrationModule {
             this.userStates[userId].step = 'completed';  // 🔥 مستقیماً تکمیل
             this.saveData();
             
-            console.log(`✅ [15REG] اطلاعات مربی ذخیره شد و ثبت‌نام تکمیل شد`);
+                          console.log(`✅ [15REG] اطلاعات راهبر ذخیره شد و ثبت‌نام تکمیل شد`);
             
-            // نمایش پنل مربی
+            // نمایش پنل راهبر
             await this.handleCoachWelcome(ctx, userRole, firstName);
             
         } else {
@@ -856,7 +856,7 @@ class RegistrationModule {
         ctx.reply(welcomeText, { reply_markup: keyboard });
     }
 
-    // ثبت‌نام قرآن‌آموز
+    // ثبت‌نام فعال
     async handleQuranStudentRegistration(ctx) {
         const userId = ctx.from.id;
         
@@ -896,17 +896,17 @@ class RegistrationModule {
         }
         
         // تعیین متن نقش
-        let roleText = 'قرآن‌آموز';
+        let roleText = 'فعال';
         if (userRole === 'coach') {
-            roleText = 'مربی';
+            roleText = 'راهبر';
         } else if (userRole === 'assistant') {
-            roleText = 'کمک مربی';
+            roleText = 'دبیر';
         }
         
         const welcomeText = `📖 ${roleText} ${firstName} خوش‌آمدی`;
         
         // ساخت کیبرد متناسب با نقش
-        const keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
+        const keyboardRows = [['شروع', 'فعال', 'ربات', 'خروج']];
         
         // اضافه کردن دکمه ریست اگر مجاز باشد
         if (USER_ACCESS_CONFIG.allowUserReset === 1) {
@@ -1322,7 +1322,7 @@ class RegistrationModule {
         // اضافه کردن ماژول مدیریت کمک مربی
         const AssistantManagerModule = require('./assistant_manager');
         this.assistantManager = new AssistantManagerModule();
-        console.log(`✅ [15REG] پنل مربی برای کاربر ${userId} نمایش داده شد`);
+        console.log(`✅ [15REG] پنل راهبر برای کاربر ${userId} نمایش داده شد`);
     }
     
     // پردازش callback های کیبرد اینلاین
@@ -1342,16 +1342,16 @@ class RegistrationModule {
         if (data === 'quran_student_registration') {
             console.log(`📝 [15REG] ثبت‌نام قرآن‌آموز درخواست شد`);
             return await this.handleQuranStudentRegistration(chatId, userId, callbackQueryId);
-        } else if (data === 'quran_student_back_to_menu') {
-            console.log(`🏠 [15REG] بازگشت قرآن‌آموز به منو درخواست شد`);
+        } else if (data === 'active_back_to_menu') {
+                          console.log(`🏠 [15REG] بازگشت فعال به منو درخواست شد`);
             return await this.handleQuranStudentBackToMenu(chatId, userId, callbackQueryId);
-        } else if (data.startsWith('quran_student_select_workshop_')) {
-            console.log(`📚 [15REG] انتخاب کارگاه قرآن‌آموز: ${data}`);
+        } else if (data.startsWith('active_select_workshop_')) {
+                          console.log(`📚 [15REG] انتخاب کارگاه فعال: ${data}`);
             return await this.handleQuranStudentWorkshopSelection(chatId, userId, callbackQueryId, data);
-        } else if (data.startsWith('quran_student_payment_')) {
-            console.log(`💳 [15REG] پرداخت کارگاه قرآن‌آموز: ${data}`);
-            const workshopId = data.replace('quran_student_payment_', '');
-            return await this.paymentModule.handleQuranStudentPayment(chatId, userId, workshopId);
+        } else if (data.startsWith('active_payment_')) {
+                          console.log(`💳 [15REG] پرداخت کارگاه فعال: ${data}`);
+              const workshopId = data.replace('active_payment_', '');
+            return await this.paymentModule.handleActivePayment(chatId, userId, workshopId);
         } else if (data.startsWith('payment_confirm_')) {
             console.log(`💳 [15REG] تأیید پرداخت کارگاه: ${data}`);
             const workshopId = data.replace('payment_confirm_', '');
@@ -1359,13 +1359,13 @@ class RegistrationModule {
         } else if (data.startsWith('pay_workshop_')) {
             console.log(`💳 [15REG] پرداخت مستقیم کارگاه: ${data}`);
             const workshopId = data.replace('pay_workshop_', '');
-            return await this.paymentModule.handleQuranStudentPayment(chatId, userId, workshopId);
+            return await this.paymentModule.handleActivePayment(chatId, userId, workshopId);
         } else if (data === 'workshop_registration_disabled') {
             console.log(`⏳ [15REG] ثبت‌نام کارگاه غیرفعال درخواست شد`);
             await answerCallbackQuery(callbackQueryId, '⏳ ثبت‌نام در کارگاه‌ها به زودی فعال خواهد شد');
             return true;
         } else if (data === 'manage_assistant') {
-            console.log(`👨‍🏫 [15REG] مدیریت کمک مربی درخواست شد`);
+            console.log(`👨‍🏫 [15REG] مدیریت دبیر درخواست شد`);
             return await this.handleManageAssistant(chatId, userId, callbackQueryId);
         } else if (data === 'assistant_manage_groups') {
             // بررسی کانفیگ مدیریت گروه‌ها
@@ -1382,7 +1382,7 @@ class RegistrationModule {
                 return true;
             }
             
-            console.log(`🎯 [15REG] مدیریت گروه‌های کمک مربی درخواست شد`);
+            console.log(`🎯 [15REG] مدیریت گروه‌های دبیر درخواست شد`);
             return await this.handleAssistantManageGroups(chatId, userId, callbackQueryId);
         } else if (data === 'coach_groups') {
             // بررسی کانفیگ مدیریت گروه‌ها
@@ -1399,17 +1399,17 @@ class RegistrationModule {
                 return true;
             }
             
-            console.log(`🎯 [15REG] مدیریت گروه‌های مربی درخواست شد (همان مسیر کمک مربی)`);
+            console.log(`🎯 [15REG] مدیریت گروه‌های راهبر درخواست شد (همان مسیر دبیر)`);
             return false; // اجازه می‌دهد تا 5polling.js پردازش کند
                 } else if (data === 'assistant_back') {
-            console.log(`🔙 [15REG] بازگشت کمک مربی درخواست شد`);
+            console.log(`🔙 [15REG] بازگشت دبیر درخواست شد`);
             return await this.handleAssistantBack(chatId, userId, callbackQueryId);
         } else if (data === 'back') {
             console.log(`🔙 [15REG] بازگشت درخواست شد`);
             return await this.handleBackToMain(chatId, userId, callbackQueryId);
         } else if (data.startsWith('assistant_')) {
-            // ارسال callback به ماژول مدیریت کمک مربی
-            console.log(`👨‍🏫 [15REG] Callback مدیریت کمک مربی: ${data}`);
+            // ارسال callback به ماژول مدیریت دبیر
+            console.log(`👨‍🏫 [15REG] Callback مدیریت دبیر: ${data}`);
             const result = await this.assistantManager.handleCallback(callback);
             
             // اگر نتیجه وجود دارد، پیام جدید ارسال کن
@@ -1443,7 +1443,7 @@ class RegistrationModule {
             
             console.log(`🔍 [15REG] نقش کاربر ${userId}: ${userRole}`);
             
-            // اگر مربی یا کمک مربی است، اطمینان از اضافه شدن به ساختار مرکزی
+            // اگر راهبر یا دبیر است، اطمینان از اضافه شدن به ساختار مرکزی
             if (userRole === 'coach' || userRole === 'assistant') {
                 try {
                     if (userRole === 'coach') {
@@ -1597,11 +1597,11 @@ class RegistrationModule {
             return;
         }
         
-        const welcomeText = `👨‍🏫 **پنل کمک مربی محمد**
+        const welcomeText = `👨‍🏫 **پنل دبیر محمد**
 
 📋 **گزینه‌های موجود:**
 • 🎯 مدیریت گروه‌ها (2 گروه)
-• مدیریت دانش‌آموزان گروه‌های من (فعلاً غیرفعال)
+• مدیریت فعالان گروه‌های من (فعلاً غیرفعال)
 • 🚫 گزارش‌گیری گروه‌های من (فعلاً غیرفعال)
 • ثبت‌نام (فعلاً غیرفعال)
 
@@ -1609,7 +1609,7 @@ class RegistrationModule {
         
         // کیبرد معمولی (موجود)
         const keyboard = {
-            keyboard: [['شروع', 'کمک مربی', 'قرآن‌آموز', 'ربات', 'خروج']],
+            keyboard: [['شروع', 'دبیر', 'فعال', 'ربات', 'خروج']],
             resize_keyboard: true
         };
         
@@ -1638,19 +1638,19 @@ class RegistrationModule {
             assistantKeyboard
         );
         
-        console.log(`✅ [15REG] پنل کمک مربی برای کاربر ${userId} نمایش داده شد`);
+        console.log(`✅ [15REG] پنل دبیر برای کاربر ${userId} نمایش داده شد`);
     }
     
-    // متد جدید: پردازش ثبت‌نام قرآن‌آموز
+    // متد جدید: پردازش ثبت‌نام فعال
     async handleQuranStudentRegistration(chatId, userId, callbackQueryId) {
-        console.log(`📝 [15REG] شروع ثبت‌نام قرآن‌آموز برای کاربر ${userId}`);
+        console.log(`📝 [15REG] شروع ثبت‌نام فعال برای کاربر ${userId}`);
         
         try {
             // استفاده از ماژول کارگاه‌ها برای نمایش انتخاب کارگاه
             const workshopModule = require('./12kargah');
             
             // ارسال پیام انتخاب کارگاه
-            const text = `📝 **ثبت نام قرآن آموز**
+            const text = `📝 **ثبت نام فعال**
 
 🎯 **مراحل ثبت نام:**
 1️⃣ **انتخاب کلاس:** یکی از کلاس‌های موجود را انتخاب کنید
@@ -1669,7 +1669,7 @@ class RegistrationModule {
 لطفاً بعداً دوباره تلاش کنید یا با مدیر تماس بگیرید.`;
                 
                 const keyboard = [
-                    [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+                    [{ text: '🏠 بازگشت به منو', callback_data: 'active_back_to_menu' }]
                 ];
                 
                 const { sendMessageWithInlineKeyboard } = require('./4bale');
@@ -1684,11 +1684,11 @@ class RegistrationModule {
                 const cost = workshop.cost || 'نامشخص';
                 keyboard.push([{
                     text: `📚 ${instructorName} - ${cost}`,
-                    callback_data: `quran_student_select_workshop_${coachId}`
+                    callback_data: `active_select_workshop_${coachId}`
                 }]);
             }
             
-            keyboard.push([{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]);
+            keyboard.push([{ text: '🏠 بازگشت به منو', callback_data: 'active_back_to_menu' }]);
             
             const { sendMessageWithInlineKeyboard } = require('./4bale');
             await sendMessageWithInlineKeyboard(chatId, text, keyboard);
@@ -1700,7 +1700,7 @@ class RegistrationModule {
             console.error(`❌ [15REG] خطا در نمایش انتخاب کارگاه:`, error);
             const { sendMessageWithInlineKeyboard } = require('./4bale');
             await sendMessageWithInlineKeyboard(chatId, '❌ خطا در نمایش کارگاه‌ها. لطفاً دوباره تلاش کنید.', [
-                [{ text: '🔙 بازگشت', callback_data: 'quran_student_back_to_menu' }]
+                [{ text: '🔙 بازگشت', callback_data: 'active_back_to_menu' }]
             ]);
             return false;
         }
@@ -1726,7 +1726,7 @@ class RegistrationModule {
         console.log(`🔍 [15REG] نقش کاربر از حافظه: ${userRole}`);
         console.log(`🔍 [15REG] شماره تلفن: ${userData.phone}`);
         
-        const robotText = `🤖 **معرفی ربات قرآنی هوشمند**
+        const robotText = `🤖 **معرفی ربات جهادی هوشمند**
 
 📚 **قابلیت‌های اصلی:**
 • 👥 حضور و غیاب
@@ -1734,7 +1734,7 @@ class RegistrationModule {
 • 🏫 مدیریت گروه‌ها
 • 📝 ثبت‌نام ماهانه
 
-🎯 **این ربات برای کمک به آموزش قرآن کریم طراحی شده است**
+🎯 **این ربات برای کمک به فعالیت‌های جهادی طراحی شده است**
 
 ⏰ ${new Date().toLocaleDateString('fa-IR')}`;
         
@@ -1742,11 +1742,11 @@ class RegistrationModule {
         let keyboardRows;
         
         if (userRole === 'coach') {
-            keyboardRows = [['شروع', 'مربی', 'ربات', 'خروج']];
+            keyboardRows = [['شروع', 'راهبر', 'ربات', 'خروج']];
         } else if (userRole === 'assistant') {
-            keyboardRows = [['شروع', 'کمک مربی', 'ربات', 'خروج']];
+            keyboardRows = [['شروع', 'دبیر', 'ربات', 'خروج']];
         } else {
-            keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
+            keyboardRows = [['شروع', 'فعال', 'ربات', 'خروج']];
         }
         
         // اضافه کردن دکمه ریست اگر مجاز باشد
@@ -2057,9 +2057,9 @@ class RegistrationModule {
 👆 **برای ادامه ثبت‌نام و پرداخت:**`;
             
             const keyboard = [
-                [{ text: `💳 پرداخت ${cost}`, callback_data: `quran_student_payment_${workshopId}` }],
-                [{ text: '🔙 بازگشت به انتخاب کارگاه', callback_data: 'quran_student_registration' }],
-                [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+                [{ text: `💳 پرداخت ${cost}`, callback_data: `active_payment_${workshopId}` }],
+                [{ text: '🔙 بازگشت به انتخاب کارگاه', callback_data: 'active_registration' }],
+                [{ text: '🏠 بازگشت به منو', callback_data: 'active_back_to_menu' }]
             ];
             
             const { sendMessageWithInlineKeyboard } = require('./4bale');
@@ -2072,7 +2072,7 @@ class RegistrationModule {
             console.error(`❌ [15REG] خطا در انتخاب کارگاه:`, error);
             const { sendMessageWithInlineKeyboard } = require('./4bale');
             await sendMessageWithInlineKeyboard(chatId, '❌ خطا در انتخاب کارگاه. لطفاً دوباره تلاش کنید.', [
-                [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }]
+                [{ text: '🔙 بازگشت', callback_data: 'active_registration' }]
             ]);
                          return false;
          }
@@ -2111,9 +2111,9 @@ class RegistrationModule {
  
  🎯 **برای بازگشت به منوی اصلی:**`;
              
-             const keyboard = [
-                 [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
-             ];
+                             const keyboard = [
+                    [{ text: '🏠 بازگشت به منو', callback_data: 'active_back_to_menu' }]
+                ];
              
              const { sendMessageWithInlineKeyboard } = require('./4bale');
              await sendMessageWithInlineKeyboard(chatId, text, keyboard);
@@ -2125,7 +2125,7 @@ class RegistrationModule {
              console.error(`❌ [15REG] خطا در تأیید پرداخت:`, error);
              const { sendMessageWithInlineKeyboard } = require('./4bale');
              await sendMessageWithInlineKeyboard(chatId, '❌ خطا در تأیید پرداخت. لطفاً دوباره تلاش کنید.', [
-                 [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }]
+                 [{ text: '🔙 بازگشت', callback_data: 'active_registration' }]
              ]);
              return false;
          }

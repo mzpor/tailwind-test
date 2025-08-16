@@ -162,14 +162,14 @@ function getRoleKeyboard(chatId) {
       return [['شروع', 'خروج'], ['پنل مدیریتی']];
     case 'COACH':
       console.log(`✅ [MID] Returning coach keyboard for ${chatId}`);
-      return [['شروع', 'خروج'], ['پنل مربی']];
+      return [['شروع', 'خروج'], ['پنل راهبر']];
     case 'ASSISTANT':
       console.log(`✅ [MID] Returning assistant keyboard for ${chatId}`);
-      return [['شروع', 'خروج'], ['پنل کمک مربی']];
+      return [['شروع', 'خروج'], ['پنل دبیر']];
     case 'STUDENT':
     default:
       console.log(`✅ [MID] Returning student keyboard for ${chatId}`);
-      return [['شروع', 'خروج'], ['پنل قرآن آموز']];
+      return [['شروع', 'خروج'], ['پنل فعال']];
   }
 }
 
