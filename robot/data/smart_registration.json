@@ -1,6 +1,5 @@
 {
   "userStates": {
-    
     "574330749": {
       "step": "phone",
       "data": {},
@@ -13,7 +12,12 @@
         "fullName": "سل ایرانی",
         "firstName": "سل",
         "lastName": "ایرانی",
-        "userRole": "quran_student"
+        "userRole": "quran_student",
+        "workshopId": "w-1404-01",
+        "month": "1404/05",
+        "paymentStatus": "paid",
+        "coachId": "2",
+        "registrationDate": "2025-08-16"
       },
       "timestamp": 1755250091223
     },
@@ -24,7 +28,12 @@
         "userRole": "quran_student",
         "fullName": "علی محرابی",
         "firstName": "علی",
-        "lastName": "محرابی"
+        "lastName": "محرابی",
+        "workshopId": "w-1404-03",
+        "month": "1404/05",
+        "paymentStatus": "paid",
+        "coachId": "3",
+        "registrationDate": "2025-08-16"
       },
       "timestamp": 1755359957501
     },
@@ -33,13 +42,18 @@
       "data": {
         "phone": "989222507759",
         "userRole": "quran_student",
-        "fullName": "رایتل محمد محمد",
+        "fullName": "رایتل زارع",
         "firstName": "رایتل",
-        "lastName": "محمد محمد"
+        "lastName": "زارع",
+        "workshopId": "w-1404-04",
+        "month": "1404/05",
+        "paymentStatus": "paid",
+        "coachId": "4",
+        "registrationDate": "2025-08-16"
       },
-      "timestamp": 1755358141060
+      "timestamp": 1755364947725
     },
     "1755170093362": {}
   },
-  "lastUpdated": "2025-08-16T16:48:29.631Z"
+  "lastUpdated": "2025-08-16T17:22:57.464Z"
 }
