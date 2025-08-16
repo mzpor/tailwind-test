@@ -61,6 +61,9 @@ const arzyabiModule = new ArzyabiModule();
 // ایجاد یک instance واحد از SabtManager
 const sabtManager = new SabtManager();
 
+// ایجاد یک instance واحد از DiscountModule
+const discountModule = require('./19discount');
+
 // تابع گزارش هوشمند ورود ربات به گروه
 async function reportBotJoinToGroup(chat) {
   try {
@@ -290,7 +293,7 @@ const roleConfig = {
     emoji: '🛡️',
     panelText: 'مدیر',
     get keyboard() { return generateDynamicKeyboard(ROLES.SCHOOL_ADMIN); },
-    commands: ['/شروع', '/خروج', '/ربات', '/مدیر', '/تنظیمات', '/کارگاه']
+    commands: ['/شروع', '/خروج', '/ربات', '/مدیر', '/تنظیمات', '/کارگاه', '/تخفیف']
     // دستور /نقش‌ها غیرفعال شده
   },
 
@@ -352,6 +355,9 @@ function generateDynamicKeyboard(role, userId = null) {
     if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
       secondRow.push('ثبت اطلاعات');
     }
+    
+    // اضافه کردن دکمه تخفیف
+    secondRow.push('🎫 تخفیف');
     
     // اضافه کردن دکمه نقش‌ها بر اساس کانفیگ
     if (isButtonVisible('ROLES_BUTTON')) {
@@ -994,6 +1000,210 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
         keyboard = config.keyboard;
       }
     }
+  } else if (msg.text === '🎫 تخفیف' || msg.text === '/تخفیف') {
+    // دستور تخفیف - فقط برای مدیر مدرسه
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند از سیستم تخفیف استفاده کند.';
+      keyboard = config.keyboard;
+    } else {
+      // نمایش پنل تخفیف
+      const reply = `🎫 **پنل مدیریت تخفیف**
+
+📊 **آمار فعلی:**
+${(() => {
+  const stats = discountModule.getDiscountStats();
+  if (stats.success) {
+    return `• کل کدها: ${stats.stats.total}
+• فعال: ${stats.stats.active}
+• استفاده شده: ${stats.stats.used}
+• منقضی شده: ${stats.stats.expired}`;
+  }
+  return '• خطا در دریافت آمار';
+})()}
+
+🔧 **عملیات:**
+• /تولید_کد [نوع] [مقدار] - تولید کد تخفیف جدید
+• /لیست_کدها - نمایش کدهای فعال
+• /غیرفعال_کد [کد] - غیرفعال کردن کد
+
+💡 **نکات:**
+• نوع: fixed (مبلغ ثابت) یا percentage (درصد)
+• مقدار: مبلغ تومان یا درصد
+• مدت اعتبار: 10 روز
+• یکبار مصرف
+
+⏰ ${getTimeStamp()}`;
+
+      const inlineKeyboard = [
+        [{ text: '🎫 تولید کد تخفیف', callback_data: 'generate_discount' }],
+        [{ text: '📋 لیست کدها', callback_data: 'list_discounts' }],
+        [{ text: '📊 آمار تخفیف', callback_data: 'discount_stats' }],
+        [{ text: '🔙 بازگشت', callback_data: 'back_to_main' }]
+      ];
+      
+      await sendMessageWithInlineKeyboard(msg.chat.id, reply, inlineKeyboard);
+      return; // ادامه حلقه بدون ارسال پیام معمولی
+    }
+  } else if (msg.text.startsWith('/تولید_کد')) {
+    // دستور تولید کد تخفیف
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند کد تخفیف تولید کند.';
+      keyboard = config.keyboard;
+    } else {
+      const parts = msg.text.split(' ');
+      if (parts.length !== 3) {
+        reply = `❌ **فرمت نادرست**
+
+📝 **فرمت صحیح:**
+/تولید_کد [نوع] [مقدار]
+
+**مثال:**
+• /تولید_کد fixed 100000
+• /تولید_کد percentage 25
+
+💡 **نکات:**
+• نوع: fixed یا percentage
+• مقدار: عدد بدون کاما
+• درصد: 1 تا 100
+
+⏰ ${getTimeStamp()}`;
+        keyboard = config.keyboard;
+      } else {
+        const discountType = parts[1];
+        const discountValue = parseInt(parts[2]);
+        
+        if (discountType !== 'fixed' && discountType !== 'percentage') {
+          reply = `❌ **نوع تخفیف نامعتبر**
+
+📝 **انواع مجاز:**
+• fixed - مبلغ ثابت
+• percentage - درصد
+
+⏰ ${getTimeStamp()}`;
+          keyboard = config.keyboard;
+        } else if (isNaN(discountValue) || discountValue <= 0) {
+          reply = `❌ **مقدار تخفیف نامعتبر**
+
+📝 **مقدار باید عدد مثبت باشد**
+
+⏰ ${getTimeStamp()}`;
+          keyboard = config.keyboard;
+        } else if (discountType === 'percentage' && discountValue > 100) {
+          reply = `❌ **درصد تخفیف نامعتبر**
+
+📝 **درصد نمی‌تواند بیشتر از 100 باشد**
+
+⏰ ${getTimeStamp()}`;
+          keyboard = config.keyboard;
+        } else {
+          // تولید کد تخفیف
+          const result = discountModule.generateDiscountCode(msg.from.id, discountType, discountValue);
+          
+          if (result.success) {
+            const discountCode = result.discountCode;
+            const expiresAt = new Date(discountCode.expiresAt);
+            const expiresDate = expiresAt.toLocaleDateString('fa-IR');
+            
+            reply = `🎉 **کد تخفیف با موفقیت تولید شد!**
+
+🎫 **کد:** \`${discountCode.code}\`
+📊 **نوع:** ${discountType === 'fixed' ? 'مبلغ ثابت' : 'درصد'}
+💰 **مقدار:** ${discountType === 'fixed' ? `${discountCode.value.toLocaleString()} تومان` : `${discountCode.value}%`}
+📅 **انقضا:** ${expiresDate}
+🔄 **استفاده:** ${discountCode.maxUsage} بار
+
+💡 **نکات:**
+• این کد فقط یکبار قابل استفاده است
+• مدت اعتبار: 10 روز
+• فقط برای یک کاربر
+
+⏰ ${getTimeStamp()}`;
+          } else {
+            reply = `❌ **خطا در تولید کد تخفیف**
+
+${result.error}
+
+⏰ ${getTimeStamp()}`;
+          }
+          keyboard = config.keyboard;
+        }
+      }
+    }
+  } else if (msg.text === '/لیست_کدها') {
+    // دستور نمایش لیست کدهای تخفیف
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند لیست کدها را ببیند.';
+      keyboard = config.keyboard;
+    } else {
+      const activeCodes = discountModule.getActiveDiscountCodes();
+      
+      if (activeCodes.success && activeCodes.codes.length > 0) {
+        reply = `📋 **کدهای تخفیف فعال (${activeCodes.count} کد)**
+
+`;
+        
+        activeCodes.codes.forEach((code, index) => {
+          const expiresAt = new Date(code.expiresAt);
+          const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+          
+          reply += `${index + 1}. **کد:** \`${code.code}\`
+• نوع: ${code.type === 'fixed' ? 'مبلغ ثابت' : 'درصد'}
+• مقدار: ${code.type === 'fixed' ? `${code.value.toLocaleString()} تومان` : `${code.value}%`}
+• انقضا: ${daysLeft} روز دیگر
+• استفاده: ${code.usedBy.length}/${code.maxUsage}
+
+`;
+        });
+        
+        reply += `⏰ ${getTimeStamp()}`;
+      } else {
+        reply = `📋 **کدهای تخفیف فعال**
+
+❌ هیچ کد تخفیف فعالی یافت نشد.
+
+⏰ ${getTimeStamp()}`;
+      }
+      keyboard = config.keyboard;
+    }
+  } else if (msg.text.startsWith('/غیرفعال_کد')) {
+    // دستور غیرفعال کردن کد تخفیف
+    if (!isAdmin(msg.from.id)) {
+      reply = '⚠️ فقط مدیر مدرسه می‌تواند کد تخفیف غیرفعال کند.';
+      keyboard = config.keyboard;
+    } else {
+      const parts = msg.text.split(' ');
+      if (parts.length !== 2) {
+        reply = `❌ **فرمت نادرست**
+
+📝 **فرمت صحیح:**
+/غیرفعال_کد [کد]
+
+**مثال:**
+• /غیرفعال_کد ABC12345
+
+⏰ ${getTimeStamp()}`;
+        keyboard = config.keyboard;
+      } else {
+        const code = parts[1];
+        const result = discountModule.deactivateDiscountCode(code, msg.from.id);
+        
+        if (result.success) {
+          reply = `✅ **کد تخفیف غیرفعال شد**
+
+🎫 **کد:** \`${code}\`
+🚫 **وضعیت:** غیرفعال
+
+⏰ ${getTimeStamp()}`;
+        } else {
+          reply = `❌ **خطا در غیرفعال کردن کد**
+
+${result.message}
+
+⏰ ${getTimeStamp()}`;
+        }
+        keyboard = config.keyboard;
+      }
+    }
   } else {
     // بررسی وضعیت کاربر در ماژول‌های مختلف - اولویت با وضعیت‌ها
     const settingsModule = new SettingsModule();
@@ -1247,6 +1457,135 @@ function startPolling() {
               const reply = '❌ خطا در بارگذاری پنل. لطفاً دوباره تلاش کنید.';
               await safeSendMessage(callback_query.from.id, reply);
             }
+          } else if (callback_query.data === 'generate_discount') {
+            // تولید کد تخفیف جدید
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
+              return;
+            }
+            
+            const reply = `🎫 **تولید کد تخفیف جدید**
+
+📝 **لطفاً اطلاعات تخفیف را وارد کنید:**
+
+**نوع تخفیف:**
+• fixed - مبلغ ثابت (مثل 100000 تومان)
+• percentage - درصد (مثل 25 درصد)
+
+**مثال:**
+• /تولید_کد fixed 100000
+• /تولید_کد percentage 25
+
+💡 **نکات:**
+• مبلغ: عدد بدون کاما
+• درصد: عدد 1 تا 100
+• مدت اعتبار: 10 روز
+• یکبار مصرف
+
+⏰ ${getTimeStamp()}`;
+            
+            await safeSendMessage(callback_query.from.id, reply);
+            
+          } else if (callback_query.data === 'list_discounts') {
+            // نمایش لیست کدهای تخفیف فعال
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
+              return;
+            }
+            
+            const activeCodes = discountModule.getActiveDiscountCodes();
+            
+            if (activeCodes.success && activeCodes.codes.length > 0) {
+              let reply = `📋 **کدهای تخفیف فعال**
+
+`;
+              
+              activeCodes.codes.forEach((code, index) => {
+                const expiresAt = new Date(code.expiresAt);
+                const daysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
+                
+                reply += `${index + 1}. **کد:** \`${code.code}\`
+• نوع: ${code.type === 'fixed' ? 'مبلغ ثابت' : 'درصد'}
+• مقدار: ${code.type === 'fixed' ? `${code.value.toLocaleString()} تومان` : `${code.value}%`}
+• انقضا: ${daysLeft} روز دیگر
+• استفاده: ${code.usedBy.length}/${code.maxUsage}
+
+`;
+              });
+              
+              reply += `⏰ ${getTimeStamp()}`;
+            } else {
+              reply = `📋 **کدهای تخفیف فعال**
+
+❌ هیچ کد تخفیف فعالی یافت نشد.
+
+⏰ ${getTimeStamp()}`;
+            }
+            
+            await safeSendMessage(callback_query.from.id, reply);
+            
+          } else if (callback_query.data === 'discount_stats') {
+            // نمایش آمار تخفیف
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
+              return;
+            }
+            
+            const stats = discountModule.getDiscountStats();
+            
+            if (stats.success) {
+              const reply = `📊 **آمار کدهای تخفیف**
+
+🔢 **تعداد:**
+• کل کدها: ${stats.stats.total}
+• فعال: ${stats.stats.active}
+• استفاده شده: ${stats.stats.used}
+• منقضی شده: ${stats.stats.expired}
+
+📈 **نسبت‌ها:**
+• نرخ استفاده: ${stats.stats.total > 0 ? Math.round((stats.stats.used / stats.stats.total) * 100) : 0}%
+• نرخ فعال: ${stats.stats.total > 0 ? Math.round((stats.stats.active / stats.stats.total) * 100) : 0}%
+
+⏰ ${getTimeStamp()}`;
+              
+              await safeSendMessage(callback_query.from.id, reply);
+            } else {
+              await safeSendMessage(callback_query.from.id, '❌ خطا در دریافت آمار تخفیف');
+            }
+          } else if (callback_query.data.startsWith('quran_student_discount_')) {
+            // پرداخت با تخفیف - انتخاب کارگاه
+            const workshopId = callback_query.data.replace('quran_student_discount_', '');
+            const success = await registrationModule.handleDiscountPayment(callback_query.from.id, callback_query.from.id.toString(), workshopId);
+            
+            if (!success) {
+              const reply = '❌ خطا در شروع پرداخت با تخفیف. لطفاً دوباره تلاش کنید.';
+              await safeSendMessage(callback_query.from.id, reply);
+            }
+          } else if (callback_query.data.startsWith('quran_student_discount_payment_')) {
+            // تأیید پرداخت با تخفیف
+            const parts = callback_query.data.replace('quran_student_discount_payment_', '').split('_');
+            const workshopId = parts[0];
+            const discountCode = parts[1];
+            
+            // اینجا می‌توانید منطق پرداخت واقعی را اضافه کنید
+            const reply = `🎉 **پرداخت با تخفیف تأیید شد!**
+
+📚 **کارگاه:** ${workshopId}
+🎫 **کد تخفیف:** ${discountCode}
+✅ **ثبت‌نام شما با موفقیت انجام شد**
+
+💡 **نکات:**
+• تخفیف شما اعمال شده است
+• منتظر تماس از سوی استاد باشید
+• شروع کلاس طبق برنامه اعلام شده
+
+⏰ ${getTimeStamp()}`;
+            
+            const keyboard = [
+              [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+            ];
+            
+            await sendMessageWithInlineKeyboard(callback_query.from.id, reply, keyboard);
           } else if (callback_query.data === 'school_intro') {
             
             console.log('🔄 [POLLING] School intro callback detected');

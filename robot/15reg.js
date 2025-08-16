@@ -129,6 +129,10 @@ class RegistrationModule {
             // 🔥 مرحله profile - نمایش پروفایل و ادامه
             console.log(`🔍 [15REG] کاربر در مرحله profile، نمایش پروفایل`);
             this.showProfileAndContinue(ctx);
+        } else if (userState.step === 'discount_code') {
+            // مرحله ورود کد تخفیف
+            console.log(`🎫 [15REG] کاربر در مرحله ورود کد تخفیف`);
+            await this.handleDiscountCodeInput(ctx, msg.text);
         } else if (userState.step === 'full_name') {
             // 🔥 بررسی معتبر بودن شماره تلفن
             const userData = userState.data;
@@ -2088,6 +2092,7 @@ class RegistrationModule {
             
             const keyboard = [
                 [{ text: `💳 پرداخت ${cost}`, callback_data: `quran_student_payment_${workshopId}` }],
+                [{ text: `🎫 پرداخت با تخفیف`, callback_data: `quran_student_discount_${workshopId}` }],
                 [{ text: '🔙 بازگشت به انتخاب کارگاه', callback_data: 'quran_student_registration' }],
                 [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
             ];
@@ -2155,9 +2160,183 @@ class RegistrationModule {
              console.error(`❌ [15REG] خطا در تأیید پرداخت:`, error);
              const { sendMessageWithInlineKeyboard } = require('./4bale');
              await sendMessageWithInlineKeyboard(chatId, '❌ خطا در تأیید پرداخت. لطفاً دوباره تلاش کنید.', [
+                 [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }] 
+             ]);
+             return false;
+         }
+     }
+     
+     // متد جدید: پرداخت با تخفیف
+     async handleDiscountPayment(chatId, userId, workshopId) {
+         console.log(`🎫 [15REG] پرداخت با تخفیف برای کاربر ${userId} و کارگاه ${workshopId}`);
+         
+         try {
+             // خواندن اطلاعات کارگاه
+             const { readJson } = require('./server/utils/jsonStore');
+             const workshops = await readJson('data/workshops.json', {});
+             
+             if (!workshops || !workshops.coach || !workshops.coach[workshopId]) {
+                 throw new Error('کارگاه یافت نشد');
+             }
+             
+             const workshop = workshops.coach[workshopId];
+             const costText = workshop.cost || 'نامشخص';
+             
+             // استخراج مبلغ از متن هزینه
+             const costAmount = this.extractAmountFromCost(costText);
+             
+             const text = `🎫 **پرداخت با تخفیف**
+
+📚 **کارگاه:** ${workshop.name}
+💰 **قیمت اصلی:** ${costText}
+🎯 **مبلغ قابل پرداخت:** ${costAmount.toLocaleString()} تومان
+
+📝 **برای استفاده از تخفیف:**
+• کد تخفیف خود را وارد کنید
+• یا از مدیر درخواست کد تخفیف کنید
+
+💡 **نکات:**
+• کدهای تخفیف 10 روز اعتبار دارند
+• هر کد فقط یکبار قابل استفاده است
+• تخفیف می‌تواند مبلغ ثابت یا درصدی باشد
+
+👆 **لطفاً کد تخفیف را وارد کنید:**`;
+             
+             const keyboard = [
+                 [{ text: '🔙 بازگشت به انتخاب کارگاه', callback_data: 'quran_student_registration' }],
+                 [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+             ];
+             
+             const { sendMessageWithInlineKeyboard } = require('./4bale');
+             await sendMessageWithInlineKeyboard(chatId, text, keyboard);
+             
+             // تنظیم وضعیت کاربر برای ورود کد تخفیف
+             this.userStates[userId] = {
+                 step: 'discount_code',
+                 data: {
+                     workshopId: workshopId,
+                     originalPrice: costAmount
+                 },
+                 timestamp: Date.now()
+             };
+             this.saveData();
+             
+             console.log(`✅ [15REG] پرداخت با تخفیف برای کاربر ${userId} و کارگاه ${workshopId} نمایش داده شد`);
+             return true;
+             
+         } catch (error) {
+             console.error(`❌ [15REG] خطا در پرداخت با تخفیف:`, error);
+             const { sendMessageWithInlineKeyboard } = require('./4bale');
+             await sendMessageWithInlineKeyboard(chatId, '❌ خطا در پرداخت با تخفیف. لطفاً دوباره تلاش کنید.', [
                  [{ text: '🔙 بازگشت', callback_data: 'quran_student_registration' }]
              ]);
              return false;
+         }
+     }
+     
+     // متد استخراج مبلغ از متن هزینه
+     extractAmountFromCost(costText) {
+         try {
+             // حذف کاراکترهای غیر عددی
+             const numericValue = costText.replace(/[^\d]/g, '');
+             return parseInt(numericValue) || 0;
+         } catch (error) {
+             console.error('❌ [15REG] خطا در استخراج مبلغ:', error);
+             return 0;
+         }
+     }
+     
+     // متد جدید: پردازش ورود کد تخفیف
+     async handleDiscountCodeInput(ctx, discountCode) {
+         const userId = ctx.from.id;
+         const userState = this.userStates[userId];
+         
+         if (!userState || userState.step !== 'discount_code') {
+             ctx.reply('❌ خطا در پردازش کد تخفیف. لطفاً دوباره تلاش کنید.');
+             return;
+         }
+         
+         const { workshopId, originalPrice } = userState.data;
+         
+         try {
+             // اعتبارسنجی کد تخفیف
+             const discountModule = require('./19discount');
+             const validation = discountModule.validateDiscountCode(discountCode, userId, originalPrice);
+             
+             if (!validation.valid) {
+                 ctx.reply(`❌ **کد تخفیف نامعتبر**
+
+${validation.message}
+
+💡 **راهنمایی:**
+• کد را دقیقاً وارد کنید
+• از مدیر درخواست کد جدید کنید
+• یا از پرداخت عادی استفاده کنید
+
+🔙 **برای بازگشت:**`);
+                 
+                 const keyboard = [
+                     [{ text: '🔙 بازگشت به انتخاب کارگاه', callback_data: 'quran_student_registration' }],
+                     [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+                 ];
+                 
+                 const { sendMessageWithInlineKeyboard } = require('./4bale');
+                 await sendMessageWithInlineKeyboard(ctx.chat.id, '🔙 **بازگشت:**', keyboard);
+                 return;
+             }
+             
+             // استفاده از کد تخفیف
+             const usageResult = discountModule.useDiscountCode(discountCode, userId);
+             
+             if (!usageResult.success) {
+                 ctx.reply(`❌ **خطا در استفاده از کد تخفیف**
+
+${usageResult.message}
+
+🔙 **برای بازگشت:**`);
+                 
+                 const keyboard = [
+                     [{ text: '🔙 بازگشت به انتخاب کارگاه', callback_data: 'quran_student_registration' }],
+                     [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+                 ];
+                 
+                 const { sendMessageWithInlineKeyboard } = require('./4bale');
+                 await sendMessageWithInlineKeyboard(ctx.chat.id, '🔙 **بازگشت:**', keyboard);
+                 return;
+             }
+             
+             // نمایش قیمت جدید و تأیید پرداخت
+             const text = `🎉 **کد تخفیف معتبر!**
+
+✅ **تخفیف اعمال شد:**
+• قیمت اصلی: ${originalPrice.toLocaleString()} تومان
+• مقدار تخفیف: ${validation.discountAmount.toLocaleString()} تومان
+• قیمت جدید: ${validation.newPrice.toLocaleString()} تومان
+
+🎯 **مرحله بعدی:** پرداخت مبلغ جدید
+
+👆 **برای ادامه ثبت‌نام و پرداخت:**`;
+             
+             const keyboard = [
+                 [{ text: `💳 پرداخت ${validation.newPrice.toLocaleString()} تومان`, callback_data: `quran_student_discount_payment_${workshopId}_${discountCode}` }],
+                 [{ text: '🔙 بازگشت به انتخاب کارگاه', callback_data: 'quran_student_registration' }],
+                 [{ text: '🏠 بازگشت به منو', callback_data: 'quran_student_back_to_menu' }]
+             ];
+             
+             const { sendMessageWithInlineKeyboard } = require('./4bale');
+             await sendMessageWithInlineKeyboard(ctx.chat.id, text, keyboard);
+             
+             // ذخیره اطلاعات تخفیف
+             this.userStates[userId].data.discountCode = discountCode;
+             this.userStates[userId].data.discountedPrice = validation.newPrice;
+             this.userStates[userId].data.discountAmount = validation.discountAmount;
+             this.saveData();
+             
+             console.log(`✅ [15REG] کد تخفیف ${discountCode} برای کاربر ${userId} اعمال شد`);
+             
+         } catch (error) {
+             console.error(`❌ [15REG] خطا در پردازش کد تخفیف:`, error);
+             ctx.reply('❌ خطا در پردازش کد تخفیف. لطفاً دوباره تلاش کنید.');
          }
      }
      
