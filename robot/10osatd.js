@@ -399,26 +399,7 @@ const handleCoachesCallback = async (callbackQuery) => {
       // نمایش کیبرد حضور و غیاب برای دانشجو
       const parts = data.split('_');
       const studentId = parts[1];
-      
-      // ساخت مجدد coachId از parts
-      let coachId = null;
-      if (parts.length >= 5) {
-        // student_1790308237_phone_1755212603854_ga1njd27g
-        // parts[0] = student
-        // parts[1] = 1790308237 (studentId)
-        // parts[2] = phone (نوع)
-        // parts[3] = 1755212603854 (شماره)
-        // parts[4] = ga1njd27g (شناسه)
-        coachId = `${parts[2]}_${parts[3]}_${parts[4]}`;
-      }
-      
-      if (!coachId) {
-        // اگر coachId ساخته نشد، از coaches.json استفاده می‌کنیم
-        const coaches = loadCoaches();
-        if (coaches.length > 0) {
-          coachId = coaches[0].id;
-        }
-      }
+      const coachId = parts[2]; // فرمت جدید: student_studentId_coachId
       
       const keyboard = generateAttendanceKeyboard(studentId, coachId);
       const text = '📝 *تغییر وضعیت حضور و غیاب*\n\nوضعیت جدید را انتخاب کنید:';
@@ -435,13 +416,16 @@ const handleCoachesCallback = async (callbackQuery) => {
       
       if (result.success) {
         // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
-        // coachId را از callback data قبلی دریافت می‌کنیم
-        // فعلاً از coaches.json استفاده می‌کنیم
-        const coaches = loadCoaches();
+        // باید coachId را از callback data قبلی دریافت کنیم
+        // فعلاً از smart_registration.json استفاده می‌کنیم
+        const registrations = loadRegistrations();
         let coachId = null;
         
-        if (coaches.length > 0) {
-          coachId = coaches[0].id; // فعلاً اولین مربی را در نظر می‌گیریم
+        // پیدا کردن coachId از اطلاعات دانشجو
+        if (registrations.userStates[studentId] && 
+            registrations.userStates[studentId].data && 
+            registrations.userStates[studentId].data.coachId) {
+          coachId = registrations.userStates[studentId].data.coachId;
         }
         
         if (coachId) {
@@ -449,14 +433,27 @@ const handleCoachesCallback = async (callbackQuery) => {
           const { getRoleDisplayName } = require('./3config');
           const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\n${getRoleDisplayName('STUDENT')}: ${studentId}\nوضعیت جدید: ${status}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
           
-          return { text, keyboard, parse_mode: 'Markdown' };
+          return { 
+            text, 
+            keyboard, 
+            parse_mode: 'Markdown',
+            edit_message: true  // ویرایش پیام موجود
+          };
         } else {
           const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}`;
-          return { text, parse_mode: 'Markdown' };
+          return { 
+            text, 
+            parse_mode: 'Markdown',
+            edit_message: true 
+          };
         }
       } else {
         const text = `❌ *خطا در به‌روزرسانی*\n\n${result.message}`;
-        return { text, parse_mode: 'Markdown' };
+        return { 
+          text, 
+          parse_mode: 'Markdown',
+          edit_message: true 
+        };
       }
       
          } else if (data.startsWith('attendance_all_')) {
@@ -477,17 +474,27 @@ const handleCoachesCallback = async (callbackQuery) => {
          
          const result = updateAllStudentsAttendance(coachId, status);
          
-         if (result.success) {
-           // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
-           const keyboard = generateStudentsKeyboard(coachId);
-           const { getRoleDisplayName } = require('./3config');
-           const text = `✅ *وضعیت حضور و غیاب همه ${getRoleDisplayName('STUDENT')}ان به‌روزرسانی شد*\n\nوضعیت جدید: ${status}\n${result.message}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
-           
-           return { text, keyboard, parse_mode: 'Markdown' };
-         } else {
-           const text = `❌ *خطا در به‌روزرسانی*\n\n${result.message}`;
-           return { text, parse_mode: 'Markdown' };
-         }
+                   if (result.success) {
+            // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
+            const keyboard = generateStudentsKeyboard(coachId);
+            const { getRoleDisplayName } = require('./3config');
+            const text = `✅ *وضعیت حضور و غیاب همه ${getRoleDisplayName('STUDENT')}ان به‌روزرسانی شد*\n\nوضعیت جدید: ${status}\n${result.message}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
+            
+            // استفاده از editMessageText برای ویرایش پیام قبلی
+            return { 
+              text, 
+              keyboard, 
+              parse_mode: 'Markdown',
+              edit_message: true  // علامت برای ویرایش پیام
+            };
+          } else {
+            const text = `❌ *خطا در به‌روزرسانی*\n\n${result.message}`;
+            return { 
+              text, 
+              parse_mode: 'Markdown',
+              edit_message: true 
+            };
+          }
        } else {
          console.error(`❌ [OSATD] Invalid attendance_all_ callback data: ${data}, parts:`, parts);
          const text = '❌ *خطا در پردازش درخواست*\n\nفرمت callback data نامعتبر است';
@@ -510,8 +517,8 @@ const handleCoachesCallback = async (callbackQuery) => {
         report.students.map((student, index) => {
           const statusEmoji = {
             'حاضر': '✅',
-            'حضور با تاخیر': '⏰',
             'غایب': '❌',
+            'حضور با تاخیر': '⏰',
             'غیبت(موجه)': '📄',
             'در انتظار': '⏳'
           }[student.attendance] || '❓';
@@ -527,7 +534,12 @@ const handleCoachesCallback = async (callbackQuery) => {
         `🗓️ *آخرین بروزرسانی:* ${new Date().toLocaleDateString('fa-IR')} ساعت ${new Date().toLocaleTimeString('fa-IR')}`;
       
       const keyboard = generateReportKeyboard(coachId);
-      return { text, keyboard, parse_mode: 'Markdown' };
+      return { 
+        text, 
+        keyboard, 
+        parse_mode: 'Markdown',
+        edit_message: true  // ویرایش پیام موجود
+      };
       
     } else if (data === 'back_to_coaches') {
       // بازگشت به لیست مربی‌ها

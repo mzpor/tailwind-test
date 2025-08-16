@@ -1554,7 +1554,26 @@ function startPolling() {
             const result = await osatdModule.handleCoachesCallback(callback_query);
             
             if (result) {
-              if (result.keyboard) {
+              // پاسخ به callback query برای حذف spinner
+              await answerCallbackQuery(callback_query.id);
+              
+              if (result.edit_message) {
+                // اگر edit_message = true، پیام قبلی را ویرایش کن
+                if (result.keyboard) {
+                  await editMessageWithInlineKeyboard(
+                    callback_query.message.chat.id,
+                    callback_query.message.message_id,
+                    result.text,
+                    result.keyboard
+                  );
+                } else {
+                  await editMessageWithInlineKeyboard(
+                    callback_query.message.chat.id,
+                    callback_query.message.message_id,
+                    result.text
+                  );
+                }
+              } else if (result.keyboard) {
                 // اگر کیبرد دارد، پیام جدید ارسال کن
                 await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
               } else {
