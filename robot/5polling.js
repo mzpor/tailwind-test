@@ -1683,22 +1683,29 @@ function startPolling() {
           }
           
           // 🎯 پردازش پیام‌های تمرین (صوتی با کپشن تمرین)
-          if (arzyabiModule.isPracticeMessage(msg)) {
+          if (arzyabiModule.isPracticeSubmission(msg)) {
             console.log(`🎯 [POLLING] Practice message detected in group ${msg.chat.title}`);
             
-            // ایجاد userData از اطلاعات پیام
+            // دریافت نقش کاربر
+            const userRole = getUserRole(msg.from.id);
             const userData = {
+              user_type: userRole,
               full_name: msg.from.first_name + (msg.from.last_name ? ' ' + msg.from.last_name : ''),
               first_name: msg.from.first_name,
               last_name: msg.from.last_name || '',
               username: msg.from.username || ''
             };
             
-            const result = await arzyabiModule.handlePracticeSubmission(msg, userData);
+            const result = await arzyabiModule.processPracticeMessage(msg, userData);
             if (result && result.success) {
               console.log('✅ [POLLING] Practice message handled successfully');
               // ارسال پیام پاسخ به کاربر
               await sendMessage(msg.chat.id, result.message);
+              
+              // اگر کیبورد ارزیابی وجود دارد، آن را ارسال کن
+              if (result.keyboard) {
+                await sendMessageWithInlineKeyboard(msg.chat.id, result.keyboard.text, result.keyboard.keyboard);
+              }
             } else {
               console.error('❌ [POLLING] Failed to handle practice message');
               if (result && result.message) {

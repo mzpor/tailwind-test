@@ -349,6 +349,14 @@ class ArzyabiModule {
                 };
             }
 
+            // بررسی اینکه آیا زمان تمرین است
+            if (!this.isPracticeTime()) {
+                return {
+                    success: false,
+                    message: "⚠️ زمان ارسال تمرین نیست. لطفاً در ساعات مشخص شده تمرین ارسال کنید."
+                };
+            }
+
             // پردازش تمرین جدید
             const result = this.handleNewPractice(message, userData);
             
