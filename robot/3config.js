@@ -22,7 +22,7 @@ const fs = require('fs');
 // تنظیمات API تلگرام
 //const BOT_TOKEN = '1714651531:y2xOK6EBg5nzVV6fEWGqtOdc3nVqVgOuf4PZVQ7S';
 //BOT_TOKEN = '1714651531:y2xOK6EBg5nzVV6fEWGqtOdc3nVqVgOuf4PZVQ7S'//#یار مدیر  modyar
-BOT_TOKEN = "1778171143:vD6rjJXAYidLL7hQyQkBeu5TJ9KpRd4zAKegqUt3" // #محرابی  mtelbot
+//BOT_TOKEN = "1778171143:vD6rjJXAYidLL7hQyQkBeu5TJ9KpRd4zAKegqUt3" // #محرابی  mtelbot
 
 BOT_TOKEN="262597677:qzQNXdMMGfmORJsSAJmzEWRsZ68zqOjoVcFibLWC"//jaha
 const BASE_URL = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
