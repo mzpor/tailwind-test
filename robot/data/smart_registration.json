@@ -1,25 +1,10 @@
 {
   "userStates": {
-    "123": {
-      "step": "completed",
-      "data": {
-        "phone": "09339253803",
-        "fullName": "ایرانسل",
-        "firstName": "ایرانسل",
-        "lastName": "",
-        "userRole": "assistant"
-      }
-    },
+    
     "574330749": {
-      "step": "completed",
-      "data": {
-        "phone": "989942878984",
-        "fullName": "مربی",
-        "firstName": "مربی",
-        "lastName": "",
-        "userRole": "coach"
-      },
-      "timestamp": 1755358540230
+      "step": "phone",
+      "data": {},
+      "timestamp": 1755362909630
     },
     "1790308237": {
       "step": "completed",
@@ -31,6 +16,17 @@
         "userRole": "quran_student"
       },
       "timestamp": 1755250091223
+    },
+    "1914261376": {
+      "step": "completed",
+      "data": {
+        "phone": "989305412814",
+        "userRole": "quran_student",
+        "fullName": "علی محرابی",
+        "firstName": "علی",
+        "lastName": "محرابی"
+      },
+      "timestamp": 1755359957501
     },
     "2045777722": {
       "step": "completed",
@@ -45,5 +41,5 @@
     },
     "1755170093362": {}
   },
-  "lastUpdated": "2025-08-16T15:35:44.197Z"
+  "lastUpdated": "2025-08-16T16:48:29.631Z"
 }

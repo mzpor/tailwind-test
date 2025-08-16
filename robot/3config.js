@@ -430,51 +430,8 @@ try {
 }
 
 // ===== فایل ذخیره‌سازی مربی‌ها =====
-const COACHES_FILE = path.join(__dirname, 'data', 'coaches.json');
-
-// تابع بارگذاری مربی‌ها از فایل
-const loadCoachesFromFile = () => {
-  try {
-    if (fs.existsSync(COACHES_FILE)) {
-      const data = fs.readFileSync(COACHES_FILE, 'utf8');
-      const coaches = JSON.parse(data);
-      console.log(`✅ [CONFIG] Loaded ${coaches.length} coaches from file`);
-      return coaches;
-    }
-  } catch (error) {
-    console.error('❌ [CONFIG] Error loading coaches from file:', error);
-  }
-  return [];
-};
-
-// تابع ذخیره مربی‌ها در فایل
-const saveCoachesToFile = (coaches) => {
-  try {
-    // اطمینان از وجود پوشه data
-    const dataDir = path.dirname(COACHES_FILE);
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    
-    fs.writeFileSync(COACHES_FILE, JSON.stringify(coaches, null, 2), 'utf8');
-    console.log(`✅ [CONFIG] Saved ${coaches.length} coaches to file`);
-    return true;
-  } catch (error) {
-    console.error('❌ [CONFIG] Error saving coaches to file:', error);
-    return false;
-  }
-};
-
-// بارگذاری مربی‌ها از فایل در ابتدا
-const phoneBasedCoaches = loadCoachesFromFile();
-
-// اضافه کردن مربی‌های مبتنی بر شماره تلفن به USERS_BY_ROLE.COACH
-phoneBasedCoaches.forEach(coach => {
-  if (coach && coach.phone && coach.name) {
-    USERS_BY_ROLE.COACH.push(coach);
-    console.log(`🔄 [CONFIG] Loaded coach ${coach.name} with phone ${coach.phone}`);
-  }
-});
+// 🔥 مربی‌ها و کمک مربی‌ها از workshops.json بارگذاری می‌شوند
+// این بخش در 15reg.js مدیریت می‌شود
 
 // ===== تولید خودکار آرایه‌ها از نقش‌ها =====
 const ADMIN_IDS = USERS_BY_ROLE.SCHOOL_ADMIN.map(user => 
@@ -1559,11 +1516,9 @@ const addCoachByPhone = (phoneNumber, instructorName) => {
       phone: normalizedPhone 
     };
     
-    // ذخیره مربی‌ها در فایل
-    const phoneBasedCoaches = USERS_BY_ROLE.COACH.filter(user => 
-      typeof user === 'object' && user.phone && user.type === 'phone_based'
-    );
-    saveCoachesToFile(phoneBasedCoaches);
+    // 🔥 مربی‌ها در workshops.json مدیریت می‌شوند
+    // ذخیره در USERS_BY_ROLE.COACH (موقت)
+    console.log(`✅ [CONFIG] Coach added to USERS_BY_ROLE.COACH (temporary)`);
     
     console.log(`✅ [CONFIG] Coach ${instructorName} with phone ${normalizedPhone} added to COACH role and saved to file`);
     return { success: true, message: 'مربی با موفقیت اضافه شد', coachId };
@@ -1603,11 +1558,9 @@ const removeCoachByPhone = (phoneNumber) => {
       delete USERS[removedCoach.id];
     }
     
-    // به‌روزرسانی فایل مربی‌ها
-    const phoneBasedCoaches = USERS_BY_ROLE.COACH.filter(user => 
-      typeof user === 'object' && user.phone && user.type === 'phone_based'
-    );
-    saveCoachesToFile(phoneBasedCoaches);
+    // 🔥 مربی‌ها در workshops.json مدیریت می‌شوند
+    // حذف از USERS_BY_ROLE.COACH (قبلاً انجام شده)
+    console.log(`✅ [CONFIG] Coach removed from USERS_BY_ROLE.COACH`);
     
     console.log(`✅ [CONFIG] Coach with phone ${normalizedPhone} removed from COACH role and file updated`);
     return { success: true, message: 'مربی با موفقیت حذف شد' };
@@ -1624,16 +1577,26 @@ const isPhoneCoach = (phoneNumber) => {
     // نرمال‌سازی شماره تلفن
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     
-    // جستجو در لیست مربی‌ها
-    const isCoach = USERS_BY_ROLE.COACH.some(user => {
-      if (typeof user === 'object' && user.phone) {
-        return normalizePhoneNumber(user.phone) === normalizedPhone;
+    // 🔥 جستجو در workshops.json برای مربی‌ها
+    const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+    if (fs.existsSync(workshopsFile)) {
+      const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
+      
+      if (workshopsData.coach) {
+        for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
+          if (coach.phone && coach.phone !== "0" && coach.phone.trim() !== "") {
+            const normalizedCoachPhone = normalizePhoneNumber(coach.phone);
+            if (normalizedPhone === normalizedCoachPhone) {
+              console.log(`✅ [CONFIG] Phone ${normalizedPhone} isCoach: true (${coach.name})`);
+              return true;
+            }
+          }
+        }
       }
-      return false;
-    });
+    }
     
-    console.log(`🔍 [CONFIG] Phone ${normalizedPhone} isCoach: ${isCoach}`);
-    return isCoach;
+    console.log(`🔍 [CONFIG] Phone ${normalizedPhone} isCoach: false`);
+    return false;
     
   } catch (error) {
     console.error('❌ [CONFIG] Error checking if phone is coach:', error);
@@ -1647,21 +1610,32 @@ const getCoachByPhone = (phoneNumber) => {
     // نرمال‌سازی شماره تلفن
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     
-    // جستجو در لیست مربی‌ها
-    const coach = USERS_BY_ROLE.COACH.find(user => {
-      if (typeof user === 'object' && user.phone) {
-        return normalizePhoneNumber(user.phone) === normalizedPhone;
+    // 🔥 جستجو در workshops.json برای مربی‌ها
+    const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+    if (fs.existsSync(workshopsFile)) {
+      const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
+      
+      if (workshopsData.coach) {
+        for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
+          if (coach.phone && coach.phone !== "0" && coach.phone.trim() !== "") {
+            const normalizedCoachPhone = normalizePhoneNumber(coach.phone);
+            if (normalizedPhone === normalizedCoachPhone) {
+              const coachInfo = {
+                id: coachId,
+                name: coach.name,
+                phone: coach.phone,
+                type: 'workshop_based'
+              };
+              console.log(`✅ [CONFIG] Found coach for phone ${normalizedPhone}:`, coachInfo);
+              return coachInfo;
+            }
+          }
+        }
       }
-      return false;
-    });
-    
-    if (coach) {
-      console.log(`✅ [CONFIG] Found coach for phone ${normalizedPhone}:`, coach);
-      return coach;
-    } else {
-      console.log(`⚠️ [CONFIG] No coach found for phone ${normalizedPhone}`);
-      return null;
     }
+    
+    console.log(`⚠️ [CONFIG] No coach found for phone ${normalizedPhone}`);
+    return null;
     
   } catch (error) {
     console.error('❌ [CONFIG] Error getting coach by phone:', error);
@@ -1672,12 +1646,31 @@ const getCoachByPhone = (phoneNumber) => {
 // دریافت لیست تمام مربی‌ها با شماره تلفن
 const getAllCoachesWithPhones = () => {
   try {
-    const coachesWithPhones = USERS_BY_ROLE.COACH.filter(user => 
-      typeof user === 'object' && user.phone
-    );
+    // 🔥 جستجو در workshops.json برای مربی‌ها
+    const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+    if (fs.existsSync(workshopsFile)) {
+      const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
+      const coachesWithPhones = [];
+      
+      if (workshopsData.coach) {
+        for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
+          if (coach.phone && coach.phone !== "0" && coach.phone.trim() !== "") {
+            coachesWithPhones.push({
+              id: coachId,
+              name: coach.name,
+              phone: coach.phone,
+              type: 'workshop_based'
+            });
+          }
+        }
+      }
+      
+      console.log(`✅ [CONFIG] Retrieved ${coachesWithPhones.length} coaches with phones from workshops.json`);
+      return coachesWithPhones;
+    }
     
-    console.log(`✅ [CONFIG] Retrieved ${coachesWithPhones.length} coaches with phones`);
-    return coachesWithPhones;
+    console.log(`⚠️ [CONFIG] workshops.json not found, returning empty coaches list`);
+    return [];
     
   } catch (error) {
     console.error('❌ [CONFIG] Error getting coaches with phones:', error);

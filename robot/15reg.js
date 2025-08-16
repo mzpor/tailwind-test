@@ -674,19 +674,7 @@ class RegistrationModule {
         console.log(`🔍 [15REG] بررسی نقش برای شماره: ${phoneNumber}`);
         
         try {
-            // 🔥 استفاده از سیستم مرکزی تشخیص نقش از 3config.js
-            const { isPhoneCoach, getCoachByPhone } = require('./3config');
-            
-            // بررسی مربی بودن
-            if (isPhoneCoach(phoneNumber)) {
-                const coach = getCoachByPhone(phoneNumber);
-                if (coach) {
-                    console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (${coach.name})`);
-                    return 'coach';
-                }
-            }
-            
-            // 🔥 بررسی کمک مربی بودن - از workshops.json
+            // 🔥 استفاده از workshops.json برای همه نقش‌ها
             const normalizePhone = (phone) => {
                 const digits = phone.replace(/\D/g, '');
                 // اگر 11 رقم یا بیشتر، 10 رقم آخر
@@ -696,12 +684,25 @@ class RegistrationModule {
             const normalizedPhone = normalizePhone(phoneNumber);
             console.log(`🔧 [15REG] شماره نرمال‌سازی شده: ${normalizedPhone}`);
             
-            // بارگذاری workshops.json برای کمک مربی‌ها
+            // بارگذاری workshops.json
             const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
             if (fs.existsSync(workshopsFile)) {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
                 
-                // بررسی کمک مربی‌ها
+                // 🔥 بررسی مربی‌ها
+                if (workshopsData.coach) {
+                    for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
+                        if (coach.phone && coach.phone !== "0" && coach.phone.trim() !== "") {
+                            const normalizedCoachPhone = normalizePhone(coach.phone);
+                            if (normalizedPhone.includes(normalizedCoachPhone)) {
+                                console.log(`✅ [15REG] نقش تشخیص داده شد: مربی (کارگاه ${coachId})`);
+                                return 'coach';  // مربی
+                            }
+                        }
+                    }
+                }
+                
+                // 🔥 بررسی کمک مربی‌ها
                 if (workshopsData.assistant) {
                     for (const [assistantId, assistant] of Object.entries(workshopsData.assistant)) {
                         if (assistant.phone && assistant.phone.trim() !== "") {
@@ -733,7 +734,7 @@ class RegistrationModule {
             if (fs.existsSync(workshopsFile)) {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
                 
-                // بررسی مربی‌ها
+                // 🔥 بررسی مربی‌ها
                 if (workshopsData.coach) {
                     for (const [coachId, coach] of Object.entries(workshopsData.coach)) {
                         if (coach.phone && coach.phone !== "0" && coach.phone.trim() !== "") {
@@ -753,7 +754,7 @@ class RegistrationModule {
                     }
                 }
                 
-                // بررسی کمک مربی‌ها
+                // 🔥 بررسی کمک مربی‌ها
                 if (workshopsData.assistant) {
                     for (const [assistantId, assistant] of Object.entries(workshopsData.assistant)) {
                         if (assistant.phone && assistant.phone.trim() !== "") {
