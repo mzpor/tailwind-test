@@ -1378,6 +1378,39 @@ function startPolling() {
             // پردازش callback های تمرین، ارزیابی و نظرسنجی (به جز تنظیمات روزها)
             console.log(`🎯 [POLLING] Practice/Evaluation/Satisfaction callback detected: ${callback_query.data}`);
             
+            // بررسی نقش کاربر برای callback های ارزیابی
+            if (callback_query.data.startsWith('evaluate_')) {
+              const userRole = getUserRole(callback_query.from.id);
+              console.log(`🔍 [POLLING] Evaluation callback by user ${callback_query.from.id} with role: ${userRole}`);
+              
+              // فقط مربیان و کمک مربیان می‌توانند ارزیابی کنند
+              if (!['COACH', 'ASSISTANT', 'teacher', 'assistant_teacher'].includes(userRole)) {
+                console.log(`❌ [POLLING] User ${callback_query.from.id} (${userRole}) attempted to evaluate but is not authorized`);
+                await answerCallbackQuery(callback_query.id, '⚠️ فقط مربیان و کمک مربیان می‌توانند ارزیابی کنند', true);
+                
+                // ارسال گزارش به گروه ادمین
+                try {
+                  const { REPORT_GROUP_ID } = require('./6mid');
+                  const reportText = `🚨 **هشدار امنیتی!**\n\n` +
+                    `👤 کاربر: ${callback_query.from.first_name} ${callback_query.from.last_name || ''}\n` +
+                    `🆔 شناسه: ${callback_query.from.id}\n` +
+                    `📊 نقش: ${userRole}\n` +
+                    `⚠️ اقدام: تلاش برای ارزیابی تمرین\n` +
+                    `📅 تاریخ: ${new Date().toLocaleString('fa-IR')}\n\n` +
+                    `🔒 این کاربر مجاز به ارزیابی نیست!`;
+                  
+                  await sendMessage(REPORT_GROUP_ID, reportText);
+                  console.log('📤 گزارش امنیتی به گروه ادمین ارسال شد');
+                } catch (error) {
+                  console.error('❌ [POLLING] Error sending security report:', error.message);
+                }
+                
+                continue;
+              }
+              
+              console.log(`✅ [POLLING] User ${callback_query.from.id} (${userRole}) is authorized to evaluate`);
+            }
+            
             // متصل کردن متدهای ارسال پیام به ماژول ارزیابی
             arzyabiModule.setSendMessage(sendMessage);
             arzyabiModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
@@ -1393,8 +1426,17 @@ function startPolling() {
                 callback_query.from.id, 
                 callback_query.from.first_name + (callback_query.from.last_name ? ' ' + callback_query.from.last_name : '')
               );
+            } else if (callback_query.data.startsWith('evaluate_')) {
+              // ارزیابی - با بررسی نقش
+              const userRole = getUserRole(callback_query.from.id);
+              success = await arzyabiModule.processEvaluationCallback(
+                callback_query.data, 
+                callback_query.from.id, 
+                callback_query.from.first_name + (callback_query.from.last_name ? ' ' + callback_query.from.last_name : ''),
+                userRole
+              );
             } else {
-              // تمرین و ارزیابی
+              // تمرین
               success = await arzyabiModule.handleEvaluationCallback(
                 callback_query.data, 
                 callback_query.from.id, 

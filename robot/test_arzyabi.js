@@ -72,7 +72,7 @@ console.log(`✅ نتیجه پردازش تمرین:`, practiceResult2);
 if (practiceResult && practiceResult.keyboard) {
     console.log('\n🧪 تست 5: کیبورد ارزیابی');
     console.log(`✅ متن کیبورد:`, practiceResult.keyboard.text);
-    console.log(`⌨️ دکمه‌ها:`, practiceResult.keyboard.keyboard.inline_keyboard.length, 'ردیف');
+    console.log(`⌨️ دکمه‌ها:`, practiceResult.keyboard.keyboard.length, 'ردیف');
 }
 
 // تست 6: پردازش ارزیابی با نقش COACH
