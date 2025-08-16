@@ -28,7 +28,8 @@ const {
   hasGroupManagementAccess,
   isOsatdManagementEnabled,
   hasOsatdManagementAccess,
-  MAIN_BUTTONS_CONFIG
+  MAIN_BUTTONS_CONFIG,
+  getRoleDisplayName
 } = require('./3config');
 const { 
   getCurrentCoachId, 
@@ -294,18 +295,18 @@ const roleConfig = {
   },
 
   [ROLES.COACH]: {
-    name: 'مربی',
+    name: getRoleDisplayName('COACH'),
     emoji: '🏋️',
-    panelText: 'مربی',
+    panelText: getRoleDisplayName('COACH'),
     get keyboard() { return generateDynamicKeyboard(ROLES.COACH); },
-    commands: ['/شروع', '/خروج', '/ربات', '/مربی']
+    commands: ['/شروع', '/خروج', '/ربات', `/${getRoleDisplayName('COACH')}`]
   },
   [ROLES.ASSISTANT]: {
-    name: 'کمک مربی',
+    name: getRoleDisplayName('ASSISTANT'),
     emoji: '👨‍🏫',
-    panelText: 'کمک مربی',
+    panelText: getRoleDisplayName('ASSISTANT'),
     get keyboard() { return generateDynamicKeyboard(ROLES.ASSISTANT); },
-    commands: ['/شروع', '/خروج', '/ربات', '/کمک مربی']
+    commands: ['/شروع', '/خروج', '/ربات', `/${getRoleDisplayName('ASSISTANT')}`]
   },
   [ROLES.STUDENT]: {
     name: 'قرآن آموز',
