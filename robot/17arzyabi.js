@@ -444,8 +444,7 @@ class ArzyabiModule {
             if (message.text && message.reply_to_message?.voice) {
                 const text = message.text.toLowerCase().trim();
                 if (text.includes('تکلیف') || text.includes('تمرین')) {
-                    console.log('✅ 
-                        [ARZYABI] تمرین تشخیص داده شد: متن تکلیف + ریپلای به صوت');
+                    console.log('✅ [ARZYABI] تمرین تشخیص داده شد: متن تکلیف + ریپلای به صوت');
                     return true;
                 }
             }

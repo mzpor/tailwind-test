@@ -1,5 +1,12 @@
 {
   "userStates": {
+    "123": {
+      "step": "waiting_for_name",
+      "data": {
+        "phone": "09123456789",
+        "userRole": "quran_student"
+      }
+    },
     "574330749": {
       "step": "completed",
       "data": {
@@ -23,17 +30,14 @@
       "timestamp": 1755250091223
     },
     "2045777722": {
-      "step": "completed",
+      "step": "waiting_for_name",
       "data": {
         "phone": "989222507759",
-        "fullName": "رایتل ممل",
-        "firstName": "رایتل",
-        "lastName": "ممل",
         "userRole": "quran_student"
       },
-      "timestamp": 1755211250507
+      "timestamp": 1755357947456
     },
     "1755170093362": {}
   },
-  "lastUpdated": "2025-08-15T09:28:34.665Z"
+  "lastUpdated": "2025-08-16T15:25:50.552Z"
 }

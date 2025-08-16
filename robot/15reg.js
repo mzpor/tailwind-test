@@ -121,6 +121,10 @@ class RegistrationModule {
         if (userState.step === 'phone') {
             ctx.reply('📱 لطفاً شماره تلفن خود را ارسال کنید:');
             this.showContactButton(ctx);
+        } else if (userState.step === 'waiting_for_name') {
+            // 🔥 مرحله انتظار برای نام - درخواست نام و فامیل
+            console.log(`🔍 [15REG] کاربر در مرحله انتظار برای نام، درخواست نام و فامیل`);
+            await this.handleQuranStudentRegistration(ctx);
         } else if (userState.step === 'profile') {
             // 🔥 مرحله profile - نمایش پروفایل و ادامه
             console.log(`🔍 [15REG] کاربر در مرحله profile، نمایش پروفایل`);
@@ -356,15 +360,31 @@ class RegistrationModule {
 
     // پردازش پیام
     async handleMessage(ctx) {
-        // بررسی وجود ctx.from
-        if (!ctx.from || !ctx.from.id) {
-            console.log('❌ [15REG] ctx.from یا ctx.from.id وجود ندارد');
+        // 🔥 سازگاری با ساختارهای مختلف: ctx از 5polling.js یا ctx معمولی
+        let messageObj = ctx;
+        let userId, messageText, contact, chatId;
+        
+        // بررسی ساختار msg از 5polling.js
+        if (ctx && ctx.from && ctx.from.id && ctx.chat && ctx.chat.id) {
+            // ساختار ctx معمولی
+            messageObj = ctx;
+            userId = ctx.from.id;
+            messageText = ctx.text;
+            contact = ctx.contact || null;
+            chatId = parseInt(ctx.chat.id);
+            console.log(`🔍 [15REG] ساختار ctx معمولی تشخیص داده شد`);
+        } else if (ctx && ctx.from && ctx.from.id && ctx.chat && ctx.chat.id) {
+            // ساختار msg از 5polling.js
+            messageObj = ctx;
+            userId = ctx.from.id;
+            messageText = ctx.text;
+            contact = ctx.contact || null;
+            chatId = parseInt(ctx.chat.id);
+            console.log(`🔍 [15REG] ساختار msg از 5polling.js تشخیص داده شد`);
+        } else {
+            console.log('❌ [15REG] ساختار پیام نامعتبر:', JSON.stringify(ctx, null, 2));
             return false;
         }
-        
-        const userId = ctx.from.id;
-        const messageText = ctx.text;  // مستقیماً از ctx.text بگیر
-        const contact = ctx.contact || null;  // مستقیماً از ctx.contact بگیر
         
         console.log(`🔍 [15REG] پردازش پیام از کاربر ${userId}: ${messageText || (contact ? 'contact' : 'unknown')}`);
         
@@ -375,20 +395,20 @@ class RegistrationModule {
         const artificialCtx = {
             from: { 
                 id: parseInt(userId),
-                first_name: ctx.first_name || 'کاربر'
+                first_name: messageObj.first_name || 'کاربر'
             },
-            chat: { id: parseInt(ctx.chat.id) },
+            chat: { id: chatId },
             reply: async (text, options = {}) => {
                 try {
-                    console.log(`📤 [15REG] ارسال پیام به ${ctx.chat.id}: ${text}`);
+                    console.log(`📤 [15REG] ارسال پیام به ${chatId}: ${text}`);
                     
                     if (options && options.reply_markup) {
                         // ارسال با keyboard
-                        await sendMessage(parseInt(ctx.chat.id), text, options.reply_markup);
+                        await sendMessage(chatId, text, options.reply_markup);
                         console.log(`✅ [15REG] پیام با keyboard ارسال شد`);
                     } else {
                         // ارسال بدون keyboard
-                        await sendMessage(parseInt(ctx.chat.id), text);
+                        await sendMessage(chatId, text);
                         console.log(`✅ [15REG] پیام بدون keyboard ارسال شد`);
                     }
                 } catch (error) {
@@ -405,7 +425,7 @@ class RegistrationModule {
         }
         
         // اگر نام و فامیل وارد شد
-        if (messageText && this.userStates[userId]?.step === 'full_name') {
+        if (messageText && this.userStates[userId]?.step === 'waiting_for_name') {
             console.log(`👤 [15REG] نام و فامیل دریافت شد`);
             await this.handleFullNameInput(artificialCtx, messageText);
             return true;
@@ -634,28 +654,15 @@ class RegistrationModule {
             await this.handleCoachWelcome(ctx, userRole, firstName);
             
         } else {
-            // قرآن‌آموز - ادامه ثبت‌نام
-            const fullName = contact.first_name || ctx.from.first_name || 'کاربر';
+            // قرآن‌آموز - فقط شماره تلفن ذخیره شود
+            console.log(`📱 [15REG] قرآن‌آموز تشخیص داده شد، درخواست نام و فامیل`);
             
-            // تقسیم نام به بخش‌های مختلف
-            const nameParts = fullName.split(/[\s\u200C\u200D]+/).filter(part => part.length > 0);
-            const firstName = nameParts.length > 0 ? nameParts[0] : fullName;
-            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-            
-            console.log(`👤 [15REG] نام کامل: "${fullName}"`);
-            console.log(`👤 [15REG] نام‌های تقسیم شده:`, nameParts);
-            console.log(`👤 [15REG] اسم کوچک: "${firstName}"`);
-            console.log(`👤 [15REG] نام خانوادگی: "${lastName}"`);
-            
-            // ذخیره کامل اطلاعات کاربر
+            // فقط شماره تلفن ذخیره شود (بدون نام)
             this.userStates[userId].data = {
                 phone: phoneNumber,  // شماره تلفن واقعی
-                fullName: fullName,
-                firstName: firstName,
-                lastName: lastName,
-                userRole: userRole  // 🔥 نقش ذخیره شد
+                userRole: userRole   // نقش ذخیره شد
             };
-            this.userStates[userId].step = 'full_name';  // 🔥 ادامه ثبت‌نام
+            this.userStates[userId].step = 'waiting_for_name';  // مرحله جدید: انتظار برای نام
             this.saveData();
             
             await this.handleQuranStudentRegistration(ctx);
@@ -861,10 +868,26 @@ class RegistrationModule {
         const userId = ctx.from.id;
         
         // تغییر مرحله به دریافت نام
-        this.userStates[userId].step = 'full_name';
+        this.userStates[userId].step = 'waiting_for_name';
         this.saveData();
         
-        ctx.reply('👤 لطفاً نام و فامیل خود را وارد کنید:');
+        // نمایش کیبرد معمولی (بدون دکمه ارسال شماره تلفن)
+        const keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
+        
+        // اضافه کردن دکمه ریست اگر مجاز باشد
+        if (USER_ACCESS_CONFIG.allowUserReset === 1) {
+            keyboardRows.push(['ریست']);
+            console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
+        }
+        
+        const keyboard = {
+            keyboard: keyboardRows,
+            resize_keyboard: true
+        };
+        
+        // ارسال پیام با کیبرد معمولی
+        ctx.reply('👤 لطفاً نام و فامیل خود را وارد کنید:', { reply_markup: keyboard });
+        console.log(`✅ [15REG] درخواست نام و فامیل با کیبرد معمولی ارسال شد`);
     }
 
     // پردازش ورود نام و فامیل
@@ -887,6 +910,8 @@ class RegistrationModule {
         this.userStates[userId].data.lastName = lastName;
         this.userStates[userId].step = 'completed';
         this.saveData();
+        
+        console.log(`✅ [15REG] نام و فامیل ذخیره شد: ${fullName}`);
         
         // 🔥 استفاده از نقش ذخیره شده به جای شناسایی مجدد
         const userRole = this.userStates[userId].data.userRole;
@@ -977,6 +1002,13 @@ class RegistrationModule {
             // 🔥 کاربر در مرحله تلفن - نمایش دکمه contact
             console.log(`📱 [15REG] کاربر در مرحله تلفن، نمایش دکمه contact`);
             await this.showContactButton(ctx);
+            return true;
+        }
+        
+        if (userState.step === 'waiting_for_name') {
+            // 🔥 کاربر در مرحله انتظار برای نام - درخواست نام و فامیل
+            console.log(`👤 [15REG] کاربر در مرحله انتظار برای نام، درخواست نام و فامیل`);
+            await this.handleQuranStudentRegistration(ctx);
             return true;
         }
         
@@ -1341,7 +1373,7 @@ class RegistrationModule {
         // پردازش callback های مدیریت کمک مربی
         if (data === 'quran_student_registration') {
             console.log(`📝 [15REG] ثبت‌نام قرآن‌آموز درخواست شد`);
-            return await this.handleQuranStudentRegistration(chatId, userId, callbackQueryId);
+            return await this.handleQuranStudentRegistrationCallback(chatId, userId, callbackQueryId);
         } else if (data === 'quran_student_back_to_menu') {
             console.log(`🏠 [15REG] بازگشت قرآن‌آموز به منو درخواست شد`);
             return await this.handleQuranStudentBackToMenu(chatId, userId, callbackQueryId);
@@ -1642,7 +1674,7 @@ class RegistrationModule {
     }
     
     // متد جدید: پردازش ثبت‌نام قرآن‌آموز
-    async handleQuranStudentRegistration(chatId, userId, callbackQueryId) {
+    async handleQuranStudentRegistrationCallback(chatId, userId, callbackQueryId) {
         console.log(`📝 [15REG] شروع ثبت‌نام قرآن‌آموز برای کاربر ${userId}`);
         
         try {

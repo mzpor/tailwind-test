@@ -1797,7 +1797,14 @@ function startPolling() {
           // 🔥 اولویت 2: بررسی پیام‌های عادی برای قرآن‌آموز
           if (userRole === ROLES.STUDENT && msg.text) {
             console.log(`📝 [POLLING] Text message detected for student, using registration module`);
-            const success = await registrationModule.handleMessage(msg);
+            // ساخت ctx مصنوعی برای compatibility با registrationModule
+            const artificialCtx = {
+              from: { id: msg.from.id, first_name: msg.from.first_name || 'کاربر' },
+              chat: { id: msg.chat.id },
+              text: msg.text,
+              contact: msg.contact || null
+            };
+            const success = await registrationModule.handleMessage(artificialCtx);
             if (success) {
               console.log('✅ [POLLING] Message processed successfully by registration module');
               continue;
@@ -1832,7 +1839,14 @@ function startPolling() {
           } else {
             // برای قرآن‌آموز و ناشناس‌ها، از ماژول ثبت‌نام هوشمند استفاده کن
             console.log(`🔄 [POLLING] Student/Unknown user detected, using smart registration module`);
-            const success = await registrationModule.handleMessage(msg);
+            // ساخت ctx مصنوعی برای compatibility با registrationModule
+            const artificialCtx = {
+              from: { id: msg.from.id, first_name: msg.from.first_name || 'کاربر' },
+              chat: { id: msg.chat.id },
+              text: msg.text,
+              contact: msg.contact || null
+            };
+            const success = await registrationModule.handleMessage(artificialCtx);
             
             if (!success) {
               console.log('🔄 [POLLING] Registration module did not handle message, falling back to role-based handling');
