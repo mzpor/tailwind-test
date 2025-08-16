@@ -1,0 +1,38 @@
+{
+  "schoolName": "مدرسه تلاوت",
+  "registrationOpen": true,
+  "maxStudents": null,
+  "adminMessage": "سلام مدیر عزیز! 👋",
+  "practice_days": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "practice_hours": [
+    17
+  ],
+  "evaluation_days": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "attendance_days": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "enable_satisfaction_survey": true,
+  "enable_bot_reports": true
+}

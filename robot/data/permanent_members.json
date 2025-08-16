@@ -1,0 +1,37 @@
+{
+  "999999999": {
+    "fullName": "مربی تست جدید",
+    "firstName": "مربی",
+    "nationalId": "999999999",
+    "phone": "09123456789",
+    "registrationComplete": true,
+    "source": "test",
+    "registrationDate": 1754796802171,
+    "lastUpdated": 1754796802171,
+    "status": "active"
+  },
+  "1234567890": {
+    "fullName": "علی رضایی",
+    "firstName": "علی",
+    "nationalId": "1234567890",
+    "phone": "09123456789",
+    "workshopId": "w-1404-01",
+    "registrationComplete": true,
+    "source": "both",
+    "registrationDate": 1754796802167,
+    "lastUpdated": 1754796853807,
+    "status": "active"
+  },
+  "0987654321": {
+    "fullName": "سارا احمدی",
+    "firstName": "سارا",
+    "nationalId": "0987654321",
+    "phone": "09987654321",
+    "workshopId": "w-1404-02",
+    "registrationComplete": true,
+    "source": "website",
+    "registrationDate": 1754796802168,
+    "lastUpdated": 1754796853807,
+    "status": "active"
+  }
+}

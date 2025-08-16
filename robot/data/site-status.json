@@ -1,0 +1,16 @@
+{
+  "registration": {
+    "enabled": true,
+    "lastUpdate": 1755309782032,
+    "updatedFrom": "ربات",
+    "maxCapacity": 100,
+    "currentRegistrations": 0
+  },
+  "survey": {
+    "enabled": true,
+    "lastUpdate": 1755309789340,
+    "updatedFrom": "ربات",
+    "currentQuestion": "نظر شما درباره کیفیت کارگاه‌ها چیست؟",
+    "totalResponses": 0
+  }
+}

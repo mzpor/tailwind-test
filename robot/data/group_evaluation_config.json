@@ -1,0 +1,79 @@
+{
+  "systemEnabled": true,
+  "lastUpdate": "2025-08-14T21:58:10.065Z",
+  "updatedBy": "test_user",
+  "evaluation": {
+    "enabled": true,
+    "autoEvaluation": true,
+    "evaluationDays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "evaluationTime": "21:00",
+    "evaluationDuration": 60,
+    "questionsPerEvaluation": 5,
+    "passingScore": 70,
+    "retryLimit": 3
+  },
+  "groupManagement": {
+    "enabled": true,
+    "autoClose": true,
+    "autoOpen": true,
+    "closeTime": "23:00",
+    "openTime": "06:00",
+    "weekendMode": true,
+    "weekendCloseTime": "22:00",
+    "weekendOpenTime": "08:00"
+  },
+  "notifications": {
+    "enabled": true,
+    "evaluationReminder": true,
+    "groupStatusChange": true,
+    "adminNotifications": true,
+    "reminderTime": "19:30"
+  },
+  "permissions": {
+    "adminOnly": true,
+    "evaluationAccess": [
+      "SCHOOL_ADMIN",
+      "COACH",
+      "ASSISTANT"
+    ],
+    "groupControlAccess": [
+      "SCHOOL_ADMIN",
+      "COACH"
+    ],
+    "configAccess": [
+      "SCHOOL_ADMIN"
+    ]
+  },
+  "scheduling": {
+    "timezone": "Asia/Tehran",
+    "daylightSaving": true,
+    "customSchedules": [
+      {
+        "name": "اعلان تست",
+        "action": "send_notification",
+        "time": "22:00",
+        "days": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "message": "این یک اعلان تست است!",
+        "id": "1755208690065",
+        "createdAt": "2025-08-14T21:58:10.065Z",
+        "updatedBy": "test_user"
+      }
+    ]
+  }
+}

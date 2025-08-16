@@ -1,0 +1,25 @@
+{
+  "coach": {
+    "2": {
+      "name": "راهبر علی",
+      "phone": "0",
+      "cost": "1000 تومان",
+      "link": "https://t.me/workshop_rashvand",
+      "description": "کارگاه تخصصی حفظ قرآن کریم",
+      "capacity": 15,
+      "duration": "3 ماه",
+      "level": "مبتدی تا متوسط"
+    },
+    "7": {
+      "name": "همرادو همراه ۲",
+      "phone": "09942878984",
+      "cost": "1000 تومان",
+      "link": "لینک",
+      "description": "توضیحات موجود نیست",
+      "capacity": 20,
+      "duration": "3 ماه",
+      "level": "همه سطوح"
+    }
+  },
+  "assistant": {}
+}

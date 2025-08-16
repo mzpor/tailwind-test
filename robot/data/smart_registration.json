@@ -1,0 +1,39 @@
+{
+  "userStates": {
+    "574330749": {
+      "step": "completed",
+      "data": {
+        "phone": "989942878984",
+        "fullName": "همرادو همراه ۲",
+        "firstName": "همرادو همراه ۲",
+        "lastName": "",
+        "userRole": "coach"
+      },
+      "timestamp": 1755214330517
+    },
+    "1790308237": {
+      "step": "completed",
+      "data": {
+        "phone": "989339253803",
+        "fullName": "سل ایرانی",
+        "firstName": "سل",
+        "lastName": "ایرانی",
+        "userRole": "quran_student"
+      },
+      "timestamp": 1755250091223
+    },
+    "2045777722": {
+      "step": "completed",
+      "data": {
+        "phone": "989222507759",
+        "fullName": "رایتل ممل",
+        "firstName": "رایتل",
+        "lastName": "ممل",
+        "userRole": "quran_student"
+      },
+      "timestamp": 1755211250507
+    },
+    "1755170093362": {}
+  },
+  "lastUpdated": "2025-08-15T09:28:34.665Z"
+}

@@ -1,0 +1,26 @@
+{
+  "574330749": {
+    "fullName": "",
+    "firstName": "",
+    "nationalId": "",
+    "phone": "",
+    "workshopId": null,
+    "status": "new",
+    "source": "bot",
+    "registrationComplete": false,
+    "ts": 1755003463596,
+    "lastUpdated": 1755003463596
+  },
+  "2045777722": {
+    "fullName": "",
+    "firstName": "",
+    "nationalId": "",
+    "phone": "",
+    "workshopId": null,
+    "status": "new",
+    "source": "bot",
+    "registrationComplete": false,
+    "ts": 1755003334234,
+    "lastUpdated": 1755003334234
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "11": {
+    "instructor_name": "ایرانسل",
+    "instructor_phone": "09339253803",
+    "cost": 1000,
+    "link": "لیسنک",
+    "description": "تست",
+    "capacity": 20,
+    "duration": "3 ماه",
+    "level": "همه سطوح"
+  },
+  "01": {
+    "instructor_name": "استاد محمد رشوند",
+    "instructor_phone": "0",
+    "cost": "750,000 تومان",
+    "link": "https://t.me/workshop_rashvand",
+    "description": "کارگاه تخصصی حفظ قرآن کریم",
+    "capacity": 15,
+    "duration": "3 ماه",
+    "level": "مبتدی تا متوسط"
+  },
+  "02": {
+    "instructor_name": "استاد علی حتم خانی",
+    "instructor_phone": "0",
+    "cost": "850,000 تومان",
+    "link": "https://t.me/workshop_hatamkhani",
+    "description": "کارگاه تجوید و صوت و لحن",
+    "capacity": 12,
+    "duration": "4 ماه",
+    "level": "متوسط تا پیشرفته"
+  },
+  "03": {
+    "instructor_name": "استاد احمد حاجی زاده",
+    "instructor_phone": "0",
+    "cost": "650,000 تومان",
+    "link": "https://t.me/workshop_hajizadeh",
+    "description": "کارگاه تفسیر قرآن کریم",
+    "capacity": 20,
+    "duration": "6 ماه",
+    "level": "همه سطوح"
+  },
+  "04": {
+    "instructor_name": "استاد محسن قربانیان",
+    "cost": "900,000 تومان",
+    "link": "https://t.me/workshop_ghorbanian",
+    "description": "کارگاه تخصصی قرائت قرآن",
+    "capacity": 10,
+    "duration": "5 ماه",
+    "level": "پیشرفته"
+  },
+  "05": {
+    "instructor_name": "استاد رضا کاظمی",
+    "cost": "800,000 تومان",
+    "link": "https://t.me/workshop_kazemi",
+    "description": "کارگاه مفاهیم و معارف قرآنی",
+    "capacity": 18,
+    "duration": "4 ماه",
+    "level": "متوسط"
+  },
+  "06": {
+    "instructor_name": "استاد محمد درویشی",
+    "cost": "700,000 تومان",
+    "link": "https://t.me/workshop_darvishi",
+    "description": "کارگاه حفظ موضوعی قرآن",
+    "capacity": 16,
+    "duration": "3 ماه",
+    "level": "مبتدی"
+  },
+  "07": {
+    "instructor_name": "مهدی رشتبری",
+    "cost": "950,000 تومان",
+    "link": "https://t.me/workshop_rashtbari",
+    "description": "کارگاه تخصصی ترتیل قرآن",
+    "capacity": 8,
+    "duration": "6 ماه",
+    "level": "پیشرفته",
+    "instructor_phone": "09027040993"
+  }
+}

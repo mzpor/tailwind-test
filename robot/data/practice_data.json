@@ -1,0 +1,32 @@
+{
+  "daily_practices": {
+    "2025-08-15": {
+      "date": "2025-08-15",
+      "practices": {
+        "1790308237": {
+          "user_id": 1790308237,
+          "user_name": "محمدایرانسل",
+          "chat_id": 4594690153,
+          "message_id": 15795,
+          "submission_time": "2025-08-15T14:11:38.729Z",
+          "status": "pending_evaluation"
+        }
+      }
+    }
+  },
+  "practice_schedule": {
+    "enabled": 1,
+    "hours": [
+      14,
+      15,
+      16
+    ],
+    "days": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ]
+  }
+}

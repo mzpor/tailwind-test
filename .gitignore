@@ -28,8 +28,8 @@ gateway-config.json
 src/lib/gateway-config.json
 
 # Data files (runtime generated)
-robot/data/
-data/
+# robot/data/  # Commented out - this data is needed for the application
+# data/  # Commented out - this data is needed for the application
 /src/lib
 /src
 src/lib/gateway-config.json
