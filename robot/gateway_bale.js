@@ -424,60 +424,11 @@ app.get('/api/reports/combined', async (req, res) => {
     let lastChangedFrom = '';
     let lastChangedStatus = true;
     
-    // بررسی زمان تغییر گزارش‌ها
-    if (config.lastUpdate) {
-      latestTimestamp = new Date(config.lastUpdate);
-      lastChangedItem = 'گزارش‌ها';
-      lastChangedFrom = config.updatedFrom || 'سیستم';
-      lastChangedStatus = config.enabled;
-    }
-    
-    // بررسی زمان تغییر نظرسنجی و ثبت‌نام
-    try {
-      const siteStatus = await readJson('data/site-status.json', {});
-      
-      // بررسی نظرسنجی
-      if (siteStatus.survey?.lastUpdate) {
-        const surveyTime = new Date(siteStatus.survey.lastUpdate);
-        if (!latestTimestamp || surveyTime > latestTimestamp) {
-          latestTimestamp = surveyTime;
-          lastChangedItem = 'نظرسنجی';
-          lastChangedFrom = siteStatus.survey.updatedFrom || 'سیستم';
-          lastChangedStatus = surveyEnabled;
-        }
-      }
-      
-      // بررسی ثبت‌نام
-      if (siteStatus.registration?.lastUpdate) {
-        const registrationTime = new Date(siteStatus.registration.lastUpdate);
-        if (!latestTimestamp || registrationTime > latestTimestamp) {
-          latestTimestamp = registrationTime;
-          lastChangedItem = 'ثبت‌نام';
-          lastChangedFrom = siteStatus.registration.updatedFrom || 'سیستم';
-          lastChangedStatus = registrationEnabled;
-        }
-      }
-    } catch (error) {
-      console.log('⚠️ [API] Could not read site status for latest change time');
-    }
-    
-    // بررسی زمان تغییر وضعیت سیستم‌ها (ربات، اتصال، سایت)
-    if (status.lastChange?.timestamp) {
-      const systemChangeTime = new Date(status.lastChange.timestamp);
-      if (!latestTimestamp || systemChangeTime > latestTimestamp) {
-        latestTimestamp = systemChangeTime;
-        
-        // تعیین نام و وضعیت سیستم
-        const systemNames = {
-          robot: 'ربات',
-          gateway: 'اتصال', 
-          website: 'سایت'
-        };
-        
-        lastChangedItem = systemNames[status.lastChange.system] || status.lastChange.system;
-        lastChangedFrom = 'سیستم';
-        lastChangedStatus = status.lastChange.status;
-      }
+    // فقط وضعیت ربات را بررسی کن
+    if (status.robot !== undefined) {
+      lastChangedItem = 'ربات';
+      lastChangedFrom = 'سیستم';
+      lastChangedStatus = status.robot;
     }
     
     // تشخیص آیکون و متن نهایی
@@ -998,30 +949,8 @@ async function sendCombinedDashboard() {
     // دریافت تنظیمات گزارش‌ها
     const config = loadReportsConfig();
     
-    // دریافت وضعیت ثبت‌نام و نظرسنجی
-    let registrationEnabled = true;
-    let surveyEnabled = true;
-    let registrationUpdatedFrom = 'سیستم';
-    let surveyUpdatedFrom = 'سیستم';
-    
-    try {
-      const siteStatus = await readJson('data/site-status.json', {});
-      if (siteStatus.registration) {
-        registrationEnabled = siteStatus.registration.enabled;
-        registrationUpdatedFrom = siteStatus.registration.updatedFrom || 'سیستم';
-      }
-      if (siteStatus.survey) {
-        surveyEnabled = siteStatus.survey.enabled;
-        surveyUpdatedFrom = siteStatus.survey.updatedFrom || 'سیستم';
-      }
-    } catch (error) {
-      console.log('⚠️ [COMBINED-DASHBOARD] Could not read site status, using defaults');
-    }
-    
     // آیکون‌های تنظیمات
     const reportsIcon = config.enabled ? '🟢' : '🔴';
-    const registrationIcon = registrationEnabled ? '🟢' : '🔴';
-    const surveyIcon = surveyEnabled ? '🟢' : '🔴';
     
     // محاسبه آخرین تغییر از بین همه تنظیمات و وضعیت سیستم‌ها
     let lastChangeInfo = 'نامشخص';
@@ -1030,60 +959,11 @@ async function sendCombinedDashboard() {
     let lastChangedFrom = '';
     let lastChangedStatus = true;
     
-    // بررسی زمان تغییر گزارش‌ها
-    if (config.lastUpdate) {
-      latestTimestamp = new Date(config.lastUpdate);
-      lastChangedItem = 'گزارش‌ها';
-      lastChangedFrom = config.updatedFrom || 'سیستم';
-      lastChangedStatus = config.enabled;
-    }
-    
-    // بررسی زمان تغییر نظرسنجی و ثبت‌نام
-    try {
-      const siteStatus = await readJson('data/site-status.json', {});
-      
-      // بررسی نظرسنجی
-      if (siteStatus.survey?.lastUpdate) {
-        const surveyTime = new Date(siteStatus.survey.lastUpdate);
-        if (!latestTimestamp || surveyTime > latestTimestamp) {
-          latestTimestamp = surveyTime;
-          lastChangedItem = 'نظرسنجی';
-          lastChangedFrom = siteStatus.survey.updatedFrom || 'سیستم';
-          lastChangedStatus = surveyEnabled;
-        }
-      }
-      
-      // بررسی ثبت‌نام
-      if (siteStatus.registration?.lastUpdate) {
-        const registrationTime = new Date(siteStatus.registration.lastUpdate);
-        if (!latestTimestamp || registrationTime > latestTimestamp) {
-          latestTimestamp = registrationTime;
-          lastChangedItem = 'ثبت‌نام';
-          lastChangedFrom = siteStatus.registration.updatedFrom || 'سیستم';
-          lastChangedStatus = registrationEnabled;
-        }
-      }
-    } catch (error) {
-      console.log('⚠️ [COMBINED-DASHBOARD] Could not read site status for latest change time');
-    }
-    
-    // بررسی زمان تغییر وضعیت سیستم‌ها (ربات، اتصال، سایت)
-    if (status.lastChange?.timestamp) {
-      const systemChangeTime = new Date(status.lastChange.timestamp);
-      if (!latestTimestamp || systemChangeTime > latestTimestamp) {
-        latestTimestamp = systemChangeTime;
-        
-        // تعیین نام و وضعیت سیستم
-        const systemNames = {
-          robot: 'ربات',
-          gateway: 'اتصال', 
-          website: 'سایت'
-        };
-        
-        lastChangedItem = systemNames[status.lastChange.system] || status.lastChange.system;
-        lastChangedFrom = 'سیستم';
-        lastChangedStatus = status.lastChange.status;
-      }
+    // فقط وضعیت ربات را بررسی کن
+    if (status.robot !== undefined) {
+      lastChangedItem = 'ربات';
+      lastChangedFrom = 'سیستم';
+      lastChangedStatus = status.robot;
     }
     
     // تشخیص آیکون و متن نهایی
@@ -1099,7 +979,7 @@ async function sendCombinedDashboard() {
     const now = moment();
     const currentTime = now.format('HH:mm:ss - jD jMMMM jYYYY').replace(/^ا/, '');
     
-    const combinedMessage = `🎛️ *داشبورد جامع سیستم*
+    const combinedMessage = `🎛️ *داشبورد جامع جهاد*
 
 📊 آخرین : ${lastChangeInfo}
 
@@ -1111,9 +991,7 @@ ${websiteIcon} سایت
 ${groupsList}
 
 ⚙️ **تنظیمات:**
-${surveyIcon} نظرسنجی (${surveyUpdatedFrom})
 ${reportsIcon} گزارش‌ها (${config.updatedFrom || 'سیستم'})
-${registrationIcon} ثبت‌نام (${registrationUpdatedFrom})
 
 ⏰ زمان فعلی: ${currentTime}`;
 

@@ -22,7 +22,7 @@ const {
 } = require('./3config');
 const { ROLES } = require('./3config');
 
-const REPORT_GROUP_ID = 5668045453;
+const REPORT_GROUP_ID = 5537396165; // گروه گزارش جهاد
 
 // ===== توابع بهینه‌سازی شده با ساختار مرکزی =====
 

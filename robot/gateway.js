@@ -6,7 +6,7 @@ const path = require('path');
 // تنظیمات
 const BOT_TOKEN = "1778171143:vD6rjJXAYidLL7hQyQkBeu5TJ9KpRd4zAKegqUt3";
 const ADMIN_ID = 1638058362; // مدیر مدرسه
-const REPORT_GROUP_ID = 5668045453; // گروه گزارش
+const REPORT_GROUP_ID = 5537396165; // گروه گزارش جهاد
 
 // راه‌اندازی Express
 const app = express();
