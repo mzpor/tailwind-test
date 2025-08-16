@@ -432,7 +432,7 @@ class ArzyabiModule {
     // ===== تشخیص تمرین جدید =====
     isPracticeSubmission(message) {
         try {
-            // بررسی صوت + ریپلای "تکلیف"
+            // حالت 1: صوت + ریپلای "تکلیف"
             if (message.voice && message.reply_to_message?.text) {
                 const replyText = message.reply_to_message.text.toLowerCase().trim();
                 if (replyText.includes('تکلیف') || replyText.includes('تمرین')) {
@@ -440,6 +440,16 @@ class ArzyabiModule {
                     return true;
                 }
             }
+            
+            // حالت 2: متن "تکلیف" + ریپلای به صوت
+            if (message.text && message.reply_to_message?.voice) {
+                const text = message.text.toLowerCase().trim();
+                if (text.includes('تکلیف') || text.includes('تمرین')) {
+                    console.log('✅ [ARZYABI] تمرین تشخیص داده شد: متن تکلیف + ریپلای به صوت');
+                    return true;
+                }
+            }
+            
             return false;
         } catch (error) {
             console.error('❌ [ARZYABI] خطا در تشخیص تمرین:', error.message);
