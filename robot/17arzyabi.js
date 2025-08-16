@@ -335,21 +335,61 @@ class ArzyabiModule {
 
     // ===== پردازش پیام تمرین =====
     processPracticeMessage(message, userData) {
-        // بررسی اینکه آیا پیام تمرین است
-        if (!this.isPracticeMessage(message)) {
-            return null;
-        }
+        try {
+            // بررسی اینکه آیا پیام تمرین است
+            if (!this.isPracticeSubmission(message)) {
+                return null;
+            }
 
-        // بررسی زمان تمرین
-        if (!this.isPracticeTime()) {
-            return {
-                success: false,
-                message: "⚠️ زمان ارسال تمرین نیست.\n\n⏰ **ساعات تمرین:**\nشنبه تا چهارشنبه: ساعت 2 تا 5 عصر\n\nلطفاً در زمان مشخص شده تمرین ارسال کنید."
-            };
-        }
+            // بررسی نقش کاربر (STUDENT یا quran_student)
+            if (userData.user_type !== 'quran_student' && userData.user_type !== 'STUDENT') {
+                return {
+                    success: false,
+                    message: "⚠️ فقط قرآن‌آموزان می‌توانند تمرین ارسال کنند."
+                };
+            }
 
-        // پردازش تمرین
-        return this.handlePracticeSubmission(message, userData);
+            // پردازش تمرین جدید
+            const result = this.handleNewPractice(message, userData);
+            
+            if (result.success) {
+                // ایجاد کیبورد ارزیابی
+                const keyboardData = this.createEvaluationKeyboard(result.evaluation_id, userData.full_name || userData.first_name);
+                
+                return {
+                    success: true,
+                    message: result.message,
+                    evaluation_id: result.evaluation_id,
+                    keyboard: keyboardData
+                };
+            }
+            
+            return result;
+            
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در پردازش پیام تمرین:', error.message);
+            return { success: false, message: '❌ خطا در پردازش تمرین' };
+        }
+    }
+
+    // ===== تابع اصلی پردازش callback ارزیابی =====
+    processEvaluationCallback(callbackData, evaluatorId, evaluatorName, userRole) {
+        try {
+            // بررسی نقش کاربر (مربی یا کمک مربی - هماهنگ با سیستم مرکزی)
+            if (!['teacher', 'assistant_teacher', 'COACH', 'ASSISTANT'].includes(userRole)) {
+                return {
+                    success: false,
+                    message: "⚠️ فقط مربیان و کمک مربیان می‌توانند ارزیابی کنند."
+                };
+            }
+
+            // پردازش callback ارزیابی
+            return this.handleEvaluationCallback(callbackData, evaluatorId, evaluatorName);
+            
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در پردازش callback ارزیابی:', error.message);
+            return { success: false, message: '❌ خطا در پردازش ارزیابی' };
+        }
     }
 
     // ===== دستور /لیست =====
@@ -389,7 +429,66 @@ class ArzyabiModule {
         };
     }
 
-    // ===== ارزیابی تمرین =====
+    // ===== تشخیص تمرین جدید =====
+    isPracticeSubmission(message) {
+        try {
+            // بررسی صوت + ریپلای "تکلیف"
+            if (message.voice && message.reply_to_message?.text) {
+                const replyText = message.reply_to_message.text.toLowerCase().trim();
+                if (replyText.includes('تکلیف') || replyText.includes('تمرین')) {
+                    console.log('✅ [ARZYABI] تمرین تشخیص داده شد: صوت + ریپلای تکلیف');
+                    return true;
+                }
+            }
+            return false;
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در تشخیص تمرین:', error.message);
+            return false;
+        }
+    }
+
+    // ===== پردازش تمرین جدید =====
+    handleNewPractice(message, userData) {
+        try {
+            const userId = message.from.id;
+            const chatId = message.chat.id;
+            const messageId = message.message_id;
+            const currentTime = this.getCurrentTime();
+            
+            // ایجاد ID منحصر به فرد
+            const evaluationId = `eval_${userId}_${Date.now()}`;
+            
+            // ذخیره در pending_evaluations
+            this.evaluationData.pending_evaluations[evaluationId] = {
+                user_id: userId,
+                user_name: userData.full_name || userData.first_name || `کاربر ${userId}`,
+                chat_id: chatId,
+                message_id: messageId,
+                submission_time: currentTime,
+                evaluations: {},
+                status: 'waiting_for_evaluation'
+            };
+            
+            this.saveEvaluationData();
+            
+            // ارسال گزارش به گروه گزارش
+            this.sendPracticeReportToAdmin(userId, userData, evaluationId);
+            
+            console.log(`✅ [ARZYABI] تمرین جدید ثبت شد: ${evaluationId}`);
+            
+            return {
+                success: true,
+                evaluation_id: evaluationId,
+                message: `✅ تمرین شما با موفقیت ثبت شد!\n📝 منتظر ارزیابی مربیان هستیم.`
+            };
+            
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در پردازش تمرین:', error.message);
+            return { success: false, message: '❌ خطا در ثبت تمرین' };
+        }
+    }
+
+    // ===== ایجاد کیبورد ارزیابی =====
     createEvaluationKeyboard(evaluationId, studentName) {
         const keyboard = {
             inline_keyboard: [
@@ -413,77 +512,97 @@ class ArzyabiModule {
         };
     }
 
+    // ===== پردازش ارزیابی مربی =====
     handleEvaluationCallback(callbackData, evaluatorId, evaluatorName) {
-        const parts = callbackData.split('_');
-        if (parts.length < 3) {
-            return { success: false, message: "❌ فرمت callback نامعتبر است." };
-        }
+        try {
+            const parts = callbackData.split('_');
+            if (parts.length < 3) {
+                return { success: false, message: "❌ فرمت callback نامعتبر است." };
+            }
 
-        const evaluationId = parts[1];
-        const score = parseInt(parts[2]);
+            const evaluationId = parts[1];
+            const score = parseInt(parts[2]);
 
-        // ذخیره ارزیابی
-        if (!this.evaluationData.pending_evaluations[evaluationId]) {
-            this.evaluationData.pending_evaluations[evaluationId] = {
-                evaluations: {}
+            // بررسی وجود ارزیابی
+            if (!this.evaluationData.pending_evaluations[evaluationId]) {
+                return { success: false, message: "❌ ارزیابی مورد نظر یافت نشد." };
+            }
+
+            // ذخیره ارزیابی
+            this.evaluationData.pending_evaluations[evaluationId].evaluations[evaluatorId] = {
+                evaluator_id: evaluatorId,
+                evaluator_name: evaluatorName,
+                score: score,
+                evaluation_time: this.getCurrentTime()
             };
+
+            this.saveEvaluationData();
+
+            // بررسی تکمیل ارزیابی
+            this.checkEvaluationCompletion(evaluationId);
+
+            // ارسال گزارش به گروه گزارش
+            this.sendEvaluationReportToAdmin(evaluationId);
+
+            console.log(`✅ [ARZYABI] ارزیابی ثبت شد: ${evaluationId} توسط ${evaluatorName}`);
+
+            return {
+                success: true,
+                message: `✅ ارزیابی شما ثبت شد.`
+            };
+
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در پردازش ارزیابی:', error.message);
+            return { success: false, message: '❌ خطا در ثبت ارزیابی' };
         }
-
-        this.evaluationData.pending_evaluations[evaluationId].evaluations[evaluatorId] = {
-            evaluator_id: evaluatorId,
-            evaluator_name: evaluatorName,
-            score: score,
-            evaluation_time: this.getCurrentTime()
-        };
-
-        this.saveEvaluationData();
-
-        // بررسی تکمیل ارزیابی
-        this.checkEvaluationCompletion(evaluationId);
-
-        return {
-            success: true,
-            message: `✅ ارزیابی شما ثبت شد.`
-        };
     }
 
+    // ===== بررسی تکمیل ارزیابی =====
     checkEvaluationCompletion(evaluationId) {
-        const evaluation = this.evaluationData.pending_evaluations[evaluationId];
-        if (!evaluation) return;
+        try {
+            const evaluation = this.evaluationData.pending_evaluations[evaluationId];
+            if (!evaluation) return;
 
-        // اگر حداقل 2 ارزیابی وجود دارد، تکمیل کن
-        if (Object.keys(evaluation.evaluations).length >= 2) {
-            this.completeEvaluation(evaluationId);
+            // اگر حداقل 2 ارزیابی وجود دارد، تکمیل کن
+            if (Object.keys(evaluation.evaluations).length >= 2) {
+                this.completeEvaluation(evaluationId);
+            }
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در بررسی تکمیل ارزیابی:', error.message);
         }
     }
 
+    // ===== تکمیل ارزیابی =====
     completeEvaluation(evaluationId) {
-        const evaluation = this.evaluationData.pending_evaluations[evaluationId];
-        if (!evaluation) return;
+        try {
+            const evaluation = this.evaluationData.pending_evaluations[evaluationId];
+            if (!evaluation) return;
 
-        // محاسبه میانگین نمرات
-        const scores = Object.values(evaluation.evaluations).map(e => e.score);
-        const averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+            // محاسبه میانگین نمرات
+            const scores = Object.values(evaluation.evaluations).map(e => e.score);
+            const averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
 
-        // تعیین سطح کلی
-        const scoreLevels = ["نیاز به تلاش بیشتر", "متوسط", "خوب", "عالی", "ممتاز"];
-        const overallLevel = scoreLevels[Math.floor(averageScore) - 1] || "متوسط";
+            // تعیین سطح کلی
+            const scoreLevels = ["نیاز به تلاش بیشتر", "متوسط", "خوب", "عالی", "ممتاز"];
+            const overallLevel = scoreLevels[Math.floor(averageScore) - 1] || "متوسط";
 
-        // انتقال به ارزیابی‌های تکمیل شده
-        this.evaluationData.completed_evaluations[evaluationId] = {
-            ...evaluation,
-            average_score: averageScore,
-            overall_level: overallLevel,
-            completion_time: this.getCurrentTime()
-        };
+            // انتقال به ارزیابی‌های تکمیل شده
+            this.evaluationData.completed_evaluations[evaluationId] = {
+                ...evaluation,
+                average_score: averageScore,
+                overall_level: overallLevel,
+                completion_time: this.getCurrentTime(),
+                status: 'completed'
+            };
 
-        // حذف از ارزیابی‌های در انتظار
-        delete this.evaluationData.pending_evaluations[evaluationId];
-        this.saveEvaluationData();
+            // حذف از ارزیابی‌های در انتظار
+            delete this.evaluationData.pending_evaluations[evaluationId];
+            this.saveEvaluationData();
 
-        // ارسال نظرسنجی رضایت
-        if (this.satisfactionData.settings.show_after_evaluation) {
-            this.sendSatisfactionSurvey(evaluationId);
+            console.log(`✅ [ARZYABI] ارزیابی تکمیل شد: ${evaluationId} - سطح: ${overallLevel}`);
+
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در تکمیل ارزیابی:', error.message);
         }
     }
 
@@ -553,7 +672,7 @@ class ArzyabiModule {
         };
     }
 
-    // ===== گزارش‌گیری =====
+    // ===== ارسال گزارش تمرین به گروه گزارش =====
     sendPracticeReportToAdmin(userId, userData, date, time) {
         // دریافت ساعت‌های فعال تمرین
         const { getPracticeHours } = require('./3config');
@@ -585,41 +704,50 @@ class ArzyabiModule {
         return reportText;
     }
 
-    sendSatisfactionReportToAdmin(evaluationId, userName, score) {
-        const evaluation = this.evaluationData.completed_evaluations[evaluationId];
-        if (!evaluation) return;
+    // ===== ارسال گزارش ارزیابی به گروه گزارش =====
+    sendEvaluationReportToAdmin(evaluationId) {
+        try {
+            const evaluation = this.evaluationData.pending_evaluations[evaluationId];
+            if (!evaluation) return;
 
-        // دریافت ساعت‌های فعال تمرین
-        const { getPracticeHours } = require('./3config');
-        const practiceHours = getPracticeHours();
-        const hoursText = practiceHours.length > 0 ? 
-            practiceHours.map(h => `${h}:00`).join(', ') : 
-            'تنظیم نشده';
+            let reportText = `📊 **گزارش ارزیابی جدید**\n\n` +
+                `قرآن‌آموز: ${evaluation.user_name}\n` +
+                `ID ارزیابی: ${evaluationId}\n\n` +
+                `**لیست ارزیابی‌های فعلی:**\n`;
 
-        const reportText = `📊 **گزارش نظرسنجی رضایت**\n\n` +
-            `کاربر: ${userName}\n` +
-            `سطح کلی ارزیابی: ${evaluation.overall_level}\n` +
-            `رضایت از نمره: ${score}/5\n` +
-            `⏰ ساعت‌های تمرین: ${hoursText}\n` +
-            `تاریخ: ${this.getCurrentDate()}`;
-
-        // ارسال به گروه گزارش
-        if (this.sendMessage) {
-            try {
-                const { REPORT_GROUP_ID } = require('./6mid');
-                this.sendMessage(REPORT_GROUP_ID, reportText);
-                console.log('📤 گزارش نظرسنجی به گروه گزارش ارسال شد:', reportText);
-            } catch (error) {
-                console.error('❌ [ARZYABI] Error sending satisfaction report to admin group:', error.message);
+            if (Object.keys(evaluation.evaluations).length === 0) {
+                reportText += "هنوز ارزیابی‌ای ثبت نشده است.";
+            } else {
+                let index = 1;
+                for (const [evaluatorId, evalData] of Object.entries(evaluation.evaluations)) {
+                    const scoreText = ["نیاز به تلاش بیشتر", "متوسط", "خوب", "عالی", "ممتاز"][evalData.score - 1];
+                    reportText += `${index}. ${evalData.evaluator_name}: ${scoreText}\n`;
+                    index++;
+                }
             }
-        } else {
-            console.log('📤 گزارش نظرسنجی به گروه گزارش ارسال شد (sendMessage not set):', reportText);
+
+            reportText += `\nتاریخ: ${this.getCurrentDate()}`;
+
+            // ارسال به گروه گزارش
+            if (this.sendMessage) {
+                try {
+                    const { REPORT_GROUP_ID } = require('./6mid');
+                    this.sendMessage(REPORT_GROUP_ID, reportText);
+                    console.log('📤 گزارش ارزیابی به گروه گزارش ارسال شد:', reportText);
+                } catch (error) {
+                    console.error('❌ [ARZYABI] خطا در ارسال گزارش ارزیابی:', error.message);
+                }
+            } else {
+                console.log('📤 گزارش ارزیابی به گروه گزارش ارسال شد (sendMessage not set):', reportText);
+            }
+            
+            return reportText;
+        } catch (error) {
+            console.error('❌ [ARZYABI] خطا در ارسال گزارش ارزیابی:', error.message);
         }
-        
-        return reportText;
     }
 
-    // ===== گزارش‌های هفتگی و ماهانه =====
+    // ===== گزارش‌گیری =====
     generateWeeklyReport(weekStartDate) {
         const weekEndDate = this.addDays(weekStartDate, 6);
         
