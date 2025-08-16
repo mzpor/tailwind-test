@@ -347,6 +347,11 @@ function generateDynamicKeyboard(role, userId = null) {
       secondRow.push('تنظیمات');
     }
     
+    // اضافه کردن دکمه ثبت اطلاعات بر اساس کانفیگ (برای مشاهده گزارشات مربیان)
+    if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
+      secondRow.push('ثبت اطلاعات');
+    }
+    
     // اضافه کردن دکمه نقش‌ها بر اساس کانفیگ
     if (isButtonVisible('ROLES_BUTTON')) {
       secondRow.push('نقش‌ها');
@@ -663,20 +668,39 @@ async function handleRoleMessage(msg, role) {
         keyboard = config.keyboard;
       } else if (msg.text === 'ثبت اطلاعات') {
         // دکمه ثبت اطلاعات - بررسی کانفیگ
+        console.log(`🔍 [POLLING] ثبت اطلاعات درخواست شد. REGISTER_INFO: ${MAIN_BUTTONS_CONFIG.REGISTER_INFO}`);
+        
         if (MAIN_BUTTONS_CONFIG.REGISTER_INFO !== 1) {
           console.log(`❌ [POLLING] دکمه ثبت اطلاعات غیرفعال است (REGISTER_INFO: ${MAIN_BUTTONS_CONFIG.REGISTER_INFO})`);
           reply = '❌ دکمه ثبت اطلاعات در حال حاضر غیرفعال است.';
           keyboard = config.keyboard;
         } else {
-          // دکمه ثبت اطلاعات - برای مربی و کمک مربی
+          // دکمه ثبت اطلاعات - برای مربی، کمک مربی و مدیر مدرسه
           const userRole = getUserRole(msg.from.id);
-          if (userRole === ROLES.COACH || userRole === ROLES.ASSISTANT) {
+          console.log(`🔍 [POLLING] نقش کاربر: ${userRole}, ROLES.COACH: ${ROLES.COACH}, ROLES.ASSISTANT: ${ROLES.ASSISTANT}, ROLES.SCHOOL_ADMIN: ${ROLES.SCHOOL_ADMIN}`);
+          console.log(`🔍 [POLLING] آیا مربی است؟ ${userRole === ROLES.COACH}`);
+          console.log(`🔍 [POLLING] آیا کمک مربی است؟ ${userRole === ROLES.ASSISTANT}`);
+          console.log(`🔍 [POLLING] آیا مدیر مدرسه است؟ ${userRole === ROLES.SCHOOL_ADMIN}`);
+          
+          if (userRole === ROLES.COACH || userRole === ROLES.ASSISTANT || userRole === ROLES.SCHOOL_ADMIN) {
             console.log(`📝 [POLLING] ثبت اطلاعات درخواست شد توسط ${userRole}`);
+            console.log(`🔍 [POLLING] فراخوانی sabtManager.startReport...`);
             const result = sabtManager.startReport(msg.chat.id, msg.from.id, msg.from.first_name || 'کاربر');
-            await sendMessageWithInlineKeyboard(msg.chat.id, result.text, result.keyboard);
-            return; // ادامه حلقه بدون ارسال پیام معمولی
+            console.log(`🔍 [POLLING] نتیجه startReport:`, JSON.stringify(result, null, 2));
+            
+            if (result && result.text && result.keyboard) {
+              console.log(`✅ [POLLING] ارسال پیام با کیبرد اینلاین...`);
+              await sendMessageWithInlineKeyboard(msg.chat.id, result.text, result.keyboard);
+              console.log(`✅ [POLLING] پیام ارسال شد، بازگشت از حلقه`);
+              return; // ادامه حلقه بدون ارسال پیام معمولی
+            } else {
+              console.log(`❌ [POLLING] نتیجه startReport نامعتبر است`);
+              reply = '❌ خطا در شروع ثبت اطلاعات';
+              keyboard = config.keyboard;
+            }
           } else {
-            reply = '❌ فقط مربی و کمک مربی می‌توانند گزارش ثبت کنند.';
+            console.log(`❌ [POLLING] کاربر نقش مناسب ندارد: ${userRole}`);
+            reply = '❌ فقط مربی، کمک مربی و مدیر مدرسه می‌توانند از ثبت اطلاعات استفاده کنند.';
             keyboard = config.keyboard;
           }
         }
@@ -1442,6 +1466,33 @@ function startPolling() {
               console.log('✅ [POLLING] Sabt callback handled successfully');
             } else {
               console.error('❌ [POLLING] Error handling sabt callback');
+              console.error(`❌ [POLLING] Sabt callback failed for data: ${callback_query.data}`);
+            }
+          } else if (callback_query.data === 'cancel_report' || 
+                     callback_query.data === 'edit_report' ||
+                     callback_query.data.startsWith('answer_') ||
+                     callback_query.data.startsWith('satisfaction_') ||
+                     callback_query.data === 'confirm_report') {
+            console.log('📝 [POLLING] Sabt inline keyboard callback detected');
+            console.log(`📝 [POLLING] Sabt callback data: ${callback_query.data}`);
+            // پردازش callback های کیبرد اینلاین ثبت اطلاعات
+            const result = sabtManager.handleCallback(callback_query.message.chat.id, callback_query.data);
+            
+            if (result && result.text) {
+              if (result.keyboard) {
+                // اگر کیبرد دارد، پیام جدید ارسال کن
+                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+              } else {
+                // اگر فقط متن دارد، پیام را ویرایش کن
+                await editMessageWithInlineKeyboard(
+                  callback_query.message.chat.id,
+                  callback_query.message.message_id,
+                  result.text
+                );
+              }
+              console.log('✅ [POLLING] Sabt inline keyboard callback handled successfully');
+            } else {
+              console.error('❌ [POLLING] Error handling sabt inline keyboard callback');
               console.error(`❌ [POLLING] Sabt callback failed for data: ${callback_query.data}`);
             }
           } else if (callback_query.data.startsWith('coach_') || 

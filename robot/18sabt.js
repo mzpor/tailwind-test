@@ -48,7 +48,7 @@ class SabtManager {
       return {
         text: '📝 شما امروز گزارش داده‌اید. آیا می‌خواهید گزارش خود را ویرایش کنید؟',
         keyboard: [
-          [{ text: '✏️ ویرایش گزارش' }, { text: '❌ انصراف' }]
+          [{ text: '✏️ ویرایش گزارش', callback_data: 'edit_report' }, { text: '❌ انصراف', callback_data: 'cancel_report' }]
         ]
       };
     }
@@ -65,9 +65,9 @@ class SabtManager {
     return {
       text: '📝 *ثبت گزارش روزانه*\n\nسوال اول (تستی):\n\n🎯 امروز چند نفر در کلاس حضور داشتند؟\n\n1️⃣ کمتر از 5 نفر\n2️⃣ 5 تا 10 نفر\n3️⃣ 10 تا 15 نفر\n4️⃣ بیشتر از 15 نفر',
       keyboard: [
-        [{ text: '1️⃣' }, { text: '2️⃣' }],
-        [{ text: '3️⃣' }, { text: '4️⃣' }],
-        [{ text: '❌ انصراف' }]
+        [{ text: '1️⃣', callback_data: 'answer_1' }, { text: '2️⃣', callback_data: 'answer_2' }],
+        [{ text: '3️⃣', callback_data: 'answer_3' }, { text: '4️⃣', callback_data: 'answer_4' }],
+        [{ text: '❌ انصراف', callback_data: 'cancel_report' }]
       ]
     };
   }
@@ -98,6 +98,53 @@ class SabtManager {
     }
   }
 
+  // پردازش callback queries
+  handleCallback(chatId, callbackData) {
+    const state = this.userStates.get(chatId);
+    if (!state) {
+      return { text: '❌ خطا: وضعیت ثبت گزارش یافت نشد. لطفاً دوباره شروع کنید.' };
+    }
+
+    // پردازش دکمه‌های مختلف
+    switch (callbackData) {
+      case 'cancel_report':
+        this.userStates.delete(chatId);
+        return { text: '❌ ثبت گزارش لغو شد.' };
+      
+      case 'edit_report':
+        // بازگشت به مرحله اول
+        state.step = 'question1';
+        state.answers = {};
+        return this.startReport(chatId, state.userId, state.userName);
+      
+      case 'answer_1':
+        return this.handleQuestion1(chatId, '1');
+      case 'answer_2':
+        return this.handleQuestion1(chatId, '2');
+      case 'answer_3':
+        return this.handleQuestion1(chatId, '3');
+      case 'answer_4':
+        return this.handleQuestion1(chatId, '4');
+      
+      case 'satisfaction_1':
+        return this.handleQuestion2(chatId, '1');
+      case 'satisfaction_2':
+        return this.handleQuestion2(chatId, '2');
+      case 'satisfaction_3':
+        return this.handleQuestion2(chatId, '3');
+      case 'satisfaction_4':
+        return this.handleQuestion2(chatId, '4');
+      case 'satisfaction_5':
+        return this.handleQuestion2(chatId, '5');
+      
+      case 'confirm_report':
+        return this.handleConfirm(chatId, '✅ ثبت گزارش');
+      
+      default:
+        return { text: '❌ خطا: دکمه نامعتبر.' };
+    }
+  }
+
   // پردازش سوال اول
   handleQuestion1(chatId, text) {
     const state = this.userStates.get(chatId);
@@ -113,9 +160,9 @@ class SabtManager {
     return {
       text: '📝 *ثبت گزارش روزانه*\n\nسوال دوم (تستی):\n\n📚 سطح رضایت دانشجویان از کلاس امروز چقدر بود؟\n\n1️⃣ خیلی کم\n2️⃣ کم\n3️⃣ متوسط\n4️⃣ زیاد\n5️⃣ خیلی زیاد',
       keyboard: [
-        [{ text: '1️⃣' }, { text: '2️⃣' }, { text: '3️⃣' }],
-        [{ text: '4️⃣' }, { text: '5️⃣' }],
-        [{ text: '❌ انصراف' }]
+        [{ text: '1️⃣', callback_data: 'satisfaction_1' }, { text: '2️⃣', callback_data: 'satisfaction_2' }, { text: '3️⃣', callback_data: 'satisfaction_3' }],
+        [{ text: '4️⃣', callback_data: 'satisfaction_4' }, { text: '5️⃣', callback_data: 'satisfaction_5' }],
+        [{ text: '❌ انصراف', callback_data: 'cancel_report' }]
       ]
     };
   }
@@ -135,7 +182,7 @@ class SabtManager {
     return {
       text: '📝 *ثبت گزارش روزانه*\n\nسوال سوم (تشریحی):\n\n💭 مشکلات و چالش‌های امروز در کلاس چه بود؟\n\nلطفاً توضیح دهید:',
       keyboard: [
-        [{ text: '❌ انصراف' }]
+        [{ text: '❌ انصراف', callback_data: 'cancel_report' }]
       ]
     };
   }
@@ -162,7 +209,7 @@ class SabtManager {
     return {
       text: `📋 *خلاصه گزارش شما:*\n\n${summary}\n\n✅ آیا می‌خواهید این گزارش را ثبت کنید؟`,
       keyboard: [
-        [{ text: '✅ ثبت گزارش' }, { text: '❌ انصراف' }]
+        [{ text: '✅ ثبت گزارش', callback_data: 'confirm_report' }, { text: '❌ انصراف', callback_data: 'cancel_report' }]
       ]
     };
   }
