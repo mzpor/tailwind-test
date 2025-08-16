@@ -340,7 +340,12 @@ function generateDynamicKeyboard(role, userId = null) {
   
   // اضافه کردن سایر دکمه‌ها بر اساس نقش
   if (role === ROLES.SCHOOL_ADMIN) {
-    secondRow.push('مدیر', 'تنظیمات');
+    secondRow.push('مدیر');
+    
+    // اضافه کردن دکمه تنظیمات بر اساس کانفیگ
+    if (MAIN_BUTTONS_CONFIG.SETTINGS === 1) {
+      secondRow.push('تنظیمات');
+    }
     
     // اضافه کردن دکمه نقش‌ها بر اساس کانفیگ
     if (isButtonVisible('ROLES_BUTTON')) {
@@ -348,8 +353,18 @@ function generateDynamicKeyboard(role, userId = null) {
     }
   } else if (role === ROLES.COACH) {
     secondRow.push('مربی');
+    
+    // اضافه کردن دکمه ثبت اطلاعات بر اساس کانفیگ
+    if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
+      secondRow.push('ثبت اطلاعات');
+    }
   } else if (role === ROLES.ASSISTANT) {
     secondRow.push('کمک مربی');
+    
+    // اضافه کردن دکمه ثبت اطلاعات بر اساس کانفیگ
+    if (MAIN_BUTTONS_CONFIG.REGISTER_INFO === 1) {
+      secondRow.push('ثبت اطلاعات');
+    }
   } else if (role === ROLES.STUDENT) {
     // دکمه "قرآن آموز" برای همه کاربران با نقش STUDENT
     secondRow.push('قرآن آموز');
@@ -647,40 +662,54 @@ async function handleRoleMessage(msg, role) {
 ⏰ ${getTimeStamp()}`;
         keyboard = config.keyboard;
       } else if (msg.text === 'ثبت اطلاعات') {
-        // دکمه ثبت اطلاعات - برای مربی و کمک مربی
-        const userRole = getUserRole(msg.from.id);
-        if (userRole === ROLES.COACH || userRole === ROLES.ASSISTANT) {
-          console.log(`📝 [POLLING] ثبت اطلاعات درخواست شد توسط ${userRole}`);
-          const result = sabtManager.startReport(msg.chat.id, msg.from.id, msg.from.first_name || 'کاربر');
-          await sendMessageWithInlineKeyboard(msg.chat.id, result.text, result.keyboard);
-          return; // ادامه حلقه بدون ارسال پیام معمولی
-        } else {
-          reply = '❌ فقط مربی و کمک مربی می‌توانند گزارش ثبت کنند.';
-          keyboard = config.keyboard;
-        }
-      } else if (msg.text === 'تنظیمات') {
-        // دکمه تنظیمات - برای همه کاربران
-        console.log(`⚙️ [POLLING] تنظیمات درخواست شد`);
-        // بررسی دسترسی کاربر برای تنظیمات - فقط مدیر مدرسه
-        if (!isAdmin(msg.from.id)) {
-          console.log('❌ [POLLING] User is not admin for settings command');
-          reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
+        // دکمه ثبت اطلاعات - بررسی کانفیگ
+        if (MAIN_BUTTONS_CONFIG.REGISTER_INFO !== 1) {
+          console.log(`❌ [POLLING] دکمه ثبت اطلاعات غیرفعال است (REGISTER_INFO: ${MAIN_BUTTONS_CONFIG.REGISTER_INFO})`);
+          reply = '❌ دکمه ثبت اطلاعات در حال حاضر غیرفعال است.';
           keyboard = config.keyboard;
         } else {
-          // نمایش پنل تنظیمات
-          console.log('🔍 [POLLING] User is admin, calling handleSettingsCommand...');
-          const settingsModule = new SettingsModule();
-          console.log('🔍 [POLLING] SettingsModule created');
-          const success = await settingsModule.handleSettingsCommand(msg.chat.id, msg.from.id);
-          console.log('🔍 [POLLING] handleSettingsCommand result:', success);
-          
-          if (success) {
-            console.log('✅ [POLLING] Settings command handled successfully, returning');
+          // دکمه ثبت اطلاعات - برای مربی و کمک مربی
+          const userRole = getUserRole(msg.from.id);
+          if (userRole === ROLES.COACH || userRole === ROLES.ASSISTANT) {
+            console.log(`📝 [POLLING] ثبت اطلاعات درخواست شد توسط ${userRole}`);
+            const result = sabtManager.startReport(msg.chat.id, msg.from.id, msg.from.first_name || 'کاربر');
+            await sendMessageWithInlineKeyboard(msg.chat.id, result.text, result.keyboard);
             return; // ادامه حلقه بدون ارسال پیام معمولی
           } else {
-            console.log('❌ [POLLING] Settings command failed, sending error message');
-            reply = '❌ خطا در نمایش تنظیمات';
+            reply = '❌ فقط مربی و کمک مربی می‌توانند گزارش ثبت کنند.';
             keyboard = config.keyboard;
+          }
+        }
+      } else if (msg.text === 'تنظیمات') {
+        // دکمه تنظیمات - بررسی کانفیگ
+        if (MAIN_BUTTONS_CONFIG.SETTINGS !== 1) {
+          console.log(`❌ [POLLING] دکمه تنظیمات غیرفعال است (SETTINGS: ${MAIN_BUTTONS_CONFIG.SETTINGS})`);
+          reply = '❌ دکمه تنظیمات در حال حاضر غیرفعال است.';
+          keyboard = config.keyboard;
+        } else {
+          // دکمه تنظیمات - برای همه کاربران
+          console.log(`⚙️ [POLLING] تنظیمات درخواست شد`);
+          // بررسی دسترسی کاربر برای تنظیمات - فقط مدیر مدرسه
+          if (!isAdmin(msg.from.id)) {
+            console.log('❌ [POLLING] User is not admin for settings command');
+            reply = '⚠️ فقط مدیر مدرسه می‌تواند از تنظیمات استفاده کند.';
+            keyboard = config.keyboard;
+          } else {
+            // نمایش پنل تنظیمات
+            console.log('🔍 [POLLING] User is admin, calling handleSettingsCommand...');
+            const settingsModule = new SettingsModule();
+            console.log('🔍 [POLLING] SettingsModule created');
+            const success = await settingsModule.handleSettingsCommand(msg.chat.id, msg.from.id);
+            console.log('🔍 [POLLING] handleSettingsCommand result:', success);
+            
+            if (success) {
+              console.log('✅ [POLLING] Settings command handled successfully, returning');
+              return; // ادامه حلقه بدون ارسال پیام معمولی
+            } else {
+              console.log('❌ [POLLING] Settings command failed, sending error message');
+              reply = '❌ خطا در نمایش تنظیمات';
+              keyboard = config.keyboard;
+            }
           }
         }
       } else if (msg.text === config.panelText) {
