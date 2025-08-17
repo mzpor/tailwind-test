@@ -44,8 +44,14 @@ async function sendMessage(chat_id, text, keyboard = null) {
   
   const payload = { chat_id, text };
   if (keyboard) {
+    // اگر keyboard دارای inline_keyboard است
+    if (keyboard.inline_keyboard) {
+      payload.reply_markup = {
+        inline_keyboard: keyboard.inline_keyboard
+      };
+    }
     // اگر keyboard یک object کامل است (دارای keyboard property)
-    if (keyboard.keyboard) {
+    else if (keyboard.keyboard) {
       payload.reply_markup = keyboard;
     } else {
       // اگر keyboard فقط آرایه دکمه‌ها است
