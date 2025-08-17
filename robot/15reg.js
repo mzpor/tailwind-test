@@ -2447,7 +2447,7 @@ class RegistrationModule {
          console.log(`✅ [15REG] نام سناریو 2 ذخیره شد: ${fullName}`);
          
          // نمایش پیام تکمیل حساب کاربری
-         const completionText = `✅ حساب کاربری کامل شد`;
+         const completionText = `ثبت نام بزودی..`;
          
          // کیبرد شیشه‌ای برای ثبت‌نام در کارگاه
          const inlineKeyboard = {
