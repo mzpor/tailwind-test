@@ -5,9 +5,31 @@
       "data": {},
       "timestamp": 1755404894948
     },
-    "574330749": {
-      "step": "welcome",
+    "95519970": {
+      "step": "phone",
       "data": {},
+      "timestamp": 1755442783406
+    },
+    "275722632": {
+      "step": "completed",
+      "data": {
+        "phone": "989027040993",
+        "userRole": "quran_student",
+        "fullName": "مهدی رشتبری",
+        "firstName": "مهدی",
+        "lastName": "رشتبری"
+      },
+      "timestamp": 1755442939958
+    },
+    "574330749": {
+      "step": "completed",
+      "data": {
+        "phone": "989942878984",
+        "userRole": "quran_student",
+        "fullName": "قرآن‌آموز",
+        "firstName": "قرآن",
+        "lastName": "آموز"
+      },
       "timestamp": 1755404996762
     },
     "888888888": {
@@ -65,5 +87,5 @@
     },
     "1755170093362": {}
   },
-  "lastUpdated": "2025-08-17T04:29:56.762Z"
+  "lastUpdated": "2025-08-17T15:02:52.823Z"
 }
