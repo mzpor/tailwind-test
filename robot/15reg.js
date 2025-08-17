@@ -2383,7 +2383,6 @@ class RegistrationModule {
          // کیبرد معمولی ثابت
          const mainKeyboard = {
              keyboard: [
-                 [{ text: "📝 مدرسه تلاوت" }],
                  [{ text: "💎 حساب کاربری" }]
              ],
              resize_keyboard: true
@@ -2459,7 +2458,6 @@ class RegistrationModule {
          // کیبرد معمولی ثابت
          const mainKeyboard = {
              keyboard: [
-                 [{ text: "📝 مدرسه تلاوت" }],
                  [{ text: "💎 حساب کاربری" }]
              ],
              resize_keyboard: true
