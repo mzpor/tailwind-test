@@ -116,12 +116,14 @@ class RegistrationModule {
         // کیبرد شیشه‌ای برای سناریو 2
         const inlineKeyboard = {
             inline_keyboard: [
-                [
-                    { text: "انصراف", callback_data: "scenario2_cancel" },
-                    { text: "بازگشت", callback_data: "scenario2_back" }
-                ]
+                [{ text: "❌ انصراف", callback_data: "scenario2_cancel" }],
+                [{ text: "🔙 بازگشت به منوی اصلی", callback_data: "scenario2_back" }]
+          
             ]
         };
+
+      //  const inlineKeyboard = {            inline_keyboard: [              [{ text: "❌ انصراف", callback_data: "scenario2_cancel" }],
+       //       [{ text: "🔙 بازگشت به منوی اصلی", callback_data: "scenario2_back" }]            ]          };          
         
         // کیبرد معمولی ثابت (فقط حساب کاربری)
         const mainKeyboard = {
@@ -137,7 +139,7 @@ class RegistrationModule {
         });
         
         // ارسال کیبرد معمولی جداگانه
-        ctx.reply("کیبرد اصلی:", { 
+        ctx.reply("", { 
             reply_markup: mainKeyboard 
         });
         
@@ -150,7 +152,8 @@ class RegistrationModule {
     showContactButton(ctx) {
         const contactKeyboard = {
             keyboard: [[{ text: "📱 ارسال شماره تلفن", request_contact: true }]],
-            resize_keyboard: true
+            resize_keyboard: true,
+            one_time_keyboard: true // باعث میشه بعد از ارسال شماره، کیبورد ناپدید بشه
         };
         
         // ارسال با keyboard
@@ -990,23 +993,33 @@ class RegistrationModule {
         this.userStates[userId].step = 'waiting_for_name';
         this.saveData();
         
-        // نمایش کیبرد معمولی (بدون دکمه ارسال شماره تلفن)
-        const keyboardRows = [['شروع', 'قرآن‌آموز', 'ربات', 'خروج']];
+        // کیبرد شیشه‌ای برای انصراف و بازگشت
+        const inlineKeyboard = {
+            inline_keyboard: [
+                [{ text: "❌ انصراف", callback_data: "quran_cancel" }],
+                [{ text: "🔙 بازگشت به منوی اصلی", callback_data: "quran_back" }]
+            ]
+        };
         
-        // اضافه کردن دکمه ریست اگر مجاز باشد
-        if (USER_ACCESS_CONFIG.allowUserReset === 1) {
-            keyboardRows.push(['ریست']);
-            console.log(`✅ [15REG] دکمه ریست اضافه شد (allowUserReset: 1)`);
-        }
-        
-        const keyboard = {
-            keyboard: keyboardRows,
+        // کیبرد معمولی (فقط حساب کاربری)
+        const mainKeyboard = {
+            keyboard: [
+                [{ text: "💎 حساب کاربری" }]
+            ],
             resize_keyboard: true
         };
         
-        // ارسال پیام با کیبرد معمولی
-        ctx.reply('👤 لطفاً نام و فامیل خود را وارد کنید:', { reply_markup: keyboard });
-        console.log(`✅ [15REG] درخواست نام و فامیل با کیبرد معمولی ارسال شد`);
+        // ارسال پیام با کیبرد شیشه‌ای
+        ctx.reply('👤 لطفاً نام و فامیل خود را وارد کنید (فقط حروف فارسی):', { 
+            reply_markup: inlineKeyboard 
+        });
+        
+        // ارسال کیبرد معمولی جداگانه
+        ctx.reply("", { 
+            reply_markup: mainKeyboard 
+        });
+        
+        console.log(`✅ [15REG] درخواست نام و فامیل با کیبرد شیشه‌ای و معمولی ارسال شد`);
     }
 
     // پردازش ورود نام و فامیل
@@ -1509,6 +1522,12 @@ class RegistrationModule {
         } else if (data === 'quran_student_back_to_menu') {
             console.log(`🏠 [15REG] بازگشت قرآن‌آموز به منو درخواست شد`);
             return await this.handleQuranStudentBackToMenu(chatId, userId, callbackQueryId);
+        } else if (data === 'quran_cancel') {
+            console.log(`❌ [15REG] انصراف قرآن‌آموز درخواست شد`);
+            return await this.handleQuranCancel(chatId, userId, callbackQueryId);
+        } else if (data === 'quran_back') {
+            console.log(`🔙 [15REG] بازگشت قرآن‌آموز به منوی اصلی درخواست شد`);
+            return await this.handleQuranBack(chatId, userId, callbackQueryId);
         } else if (data.startsWith('quran_student_select_workshop_')) {
             console.log(`📚 [15REG] انتخاب کارگاه قرآن‌آموز: ${data}`);
             return await this.handleQuranStudentWorkshopSelection(chatId, userId, callbackQueryId, data);
@@ -2570,7 +2589,7 @@ class RegistrationModule {
          });
          
          // ارسال کیبرد معمولی جداگانه
-         ctx.reply("کیبرد اصلی:", { 
+         ctx.reply("", { 
              reply_markup: mainKeyboard 
          });
          
@@ -2581,6 +2600,56 @@ class RegistrationModule {
      isPersianText(text) {
          const persianRegex = /^[\u0600-\u06FF\s\u200C\u200D]+$/;
          return persianRegex.test(text);
+     }
+     
+     // ===== متدهای جدید قرآن‌آموز =====
+     
+     // پردازش انصراف قرآن‌آموز
+     async handleQuranCancel(chatId, userId, callbackQueryId) {
+         console.log(`❌ [15REG] انصراف قرآن‌آموز برای کاربر ${userId}`);
+         
+         // برگشت به مرحله welcome
+         this.userStates[userId].step = 'welcome';
+         this.saveData();
+         
+         // ساخت ctx مصنوعی
+         const ctx = {
+             from: { id: userId },
+             chat: { id: chatId }
+         };
+         
+         await this.showWelcome(ctx);
+         
+         // پاسخ به callback query
+         const { answerCallbackQuery } = require('./4bale');
+         await answerCallbackQuery(callbackQueryId, '❌ انصراف داده شد');
+         
+         console.log(`✅ [15REG] انصراف قرآن‌آموز برای کاربر ${userId} پردازش شد`);
+         return true;
+     }
+     
+     // پردازش بازگشت قرآن‌آموز به منوی اصلی
+     async handleQuranBack(chatId, userId, callbackQueryId) {
+         console.log(`🔙 [15REG] بازگشت قرآن‌آموز به منوی اصلی برای کاربر ${userId}`);
+         
+         // برگشت به مرحله welcome
+         this.userStates[userId].step = 'welcome';
+         this.saveData();
+         
+         // ساخت ctx مصنوعی
+         const ctx = {
+             from: { id: userId },
+             chat: { id: chatId }
+         };
+         
+         await this.showWelcome(ctx);
+         
+         // پاسخ به callback query
+         const { answerCallbackQuery } = require('./4bale');
+         await answerCallbackQuery(callbackQueryId, '🔙 بازگشت به منوی اصلی');
+         
+         console.log(`✅ [15REG] بازگشت قرآن‌آموز به منوی اصلی برای کاربر ${userId} پردازش شد`);
+         return true;
      }
      
      // ===== پایان متدهای سناریو 2 =====
