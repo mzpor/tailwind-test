@@ -123,10 +123,9 @@ class RegistrationModule {
             ]
         };
         
-        // کیبرد معمولی ثابت (مدرسه تلاوت + حساب کاربری)
+        // کیبرد معمولی ثابت (فقط حساب کاربری)
         const mainKeyboard = {
             keyboard: [
-                [{ text: "📝 مدرسه تلاوت" }],
                 [{ text: "💎 حساب کاربری" }]
             ],
             resize_keyboard: true
@@ -459,9 +458,17 @@ class RegistrationModule {
                     console.log(`📤 [15REG] ارسال پیام به ${chatId}: ${text}`);
                     
                     if (options && options.reply_markup) {
-                        // ارسال با keyboard
-                        await sendMessage(chatId, text, options.reply_markup);
-                        console.log(`✅ [15REG] پیام با keyboard ارسال شد`);
+                        // بررسی نوع keyboard
+                        if (options.reply_markup.inline_keyboard) {
+                            // کیبرد شیشه‌ای - استفاده از sendMessageWithInlineKeyboard
+                            const { sendMessageWithInlineKeyboard } = require('./4bale');
+                            await sendMessageWithInlineKeyboard(chatId, text, options.reply_markup.inline_keyboard);
+                            console.log(`✅ [15REG] پیام با inline keyboard ارسال شد`);
+                        } else {
+                            // کیبرد معمولی - استفاده از sendMessage
+                            await sendMessage(chatId, text, options.reply_markup);
+                            console.log(`✅ [15REG] پیام با keyboard ارسال شد`);
+                        }
                     } else {
                         // ارسال بدون keyboard
                         await sendMessage(chatId, text);
@@ -1079,9 +1086,17 @@ class RegistrationModule {
                     console.log(`📤 [15REG] ارسال پیام به ${chatId}: ${text}`);
                     
                     if (options && options.reply_markup) {
-                        // ارسال با keyboard
-                        await sendMessage(parseInt(chatId), text, options.reply_markup);
-                        console.log(`✅ [15REG] پیام با keyboard ارسال شد`);
+                        // بررسی نوع keyboard
+                        if (options.reply_markup.inline_keyboard) {
+                            // کیبرد شیشه‌ای - استفاده از sendMessageWithInlineKeyboard
+                            const { sendMessageWithInlineKeyboard } = require('./4bale');
+                            await sendMessageWithInlineKeyboard(parseInt(chatId), text, options.reply_markup.inline_keyboard);
+                            console.log(`✅ [15REG] پیام با inline keyboard ارسال شد`);
+                        } else {
+                            // کیبرد معمولی - استفاده از sendMessage
+                            await sendMessage(parseInt(chatId), text, options.reply_markup);
+                            console.log(`✅ [15REG] پیام با keyboard ارسال شد`);
+                        }
                     } else {
                         // ارسال بدون keyboard
                         await sendMessage(parseInt(chatId), text);
@@ -2035,22 +2050,89 @@ class RegistrationModule {
         
         console.log(`💎 [15REG] نمایش حساب کاربری برای کاربر ${userId}`);
         
-        const accountText = `💎 **حساب کاربری شما**
+        // بررسی وضعیت کاربر
+        const userState = this.userStates[userId];
+        let accountText, keyboard;
+        
+        if (!userState || userState.step === 'welcome') {
+            // کاربر جدید - حساب کاربری ناقص
+            accountText = `💎 **حساب کاربری شما**
 
-📝 **مرحله:** اولین باره ثبت نام کرده
+❌ **وضعیت:** حساب کاربری ناقص
+📝 **مرحله:** هنوز ثبت‌نام نکرده‌اید
 ⏰ **تاریخ:** ${new Date().toLocaleDateString('fa-IR')}
 
-👤 **نام و نام خانوادگی:** [نام کاربر]
-📱 **شماره تلفن:** [شماره تلفن]
-🎯 **در مرحله ثبت نام کارگاه**`;
-        
-        const keyboard = {
-            keyboard: [
-                [{ text: "📝 ثبت‌نام در مدرسه تلاوت" }],
-                [{ text: "🔙 بازگشت" }]
-            ],
-            resize_keyboard: true
-        };
+👤 **نام و نام خانوادگی:** [تعیین نشده]
+📱 **شماره تلفن:** [تعیین نشده]
+🎯 **برای تکمیل:** ابتدا ثبت‌نام کنید`;
+            
+            keyboard = {
+                keyboard: [
+                    [{ text: "💎 حساب کاربری" }]
+                ],
+                resize_keyboard: true
+            };
+            
+        } else if (userState.step === 'scenario2_waiting_for_name') {
+            // کاربر در مرحله انتظار برای نام - حساب کاربری ناقص
+            accountText = `💎 **حساب کاربری شما**
+
+❌ **وضعیت:** حساب کاربری ناقص
+📝 **مرحله:** در انتظار ورود نام و نام خانوادگی
+⏰ **تاریخ:** ${new Date().toLocaleDateString('fa-IR')}
+
+👤 **نام و نام خانوادگی:** [در انتظار ورود]
+📱 **شماره تلفن:** ${userState.data?.phone || '[تعیین نشده]'}
+🎯 **برای تکمیل:** نام و نام خانوادگی خود را وارد کنید`;
+            
+            keyboard = {
+                keyboard: [
+                    [{ text: "💎 حساب کاربری" }]
+                ],
+                resize_keyboard: true
+            };
+            
+        } else if (userState.step === 'completed' || userState.step === 'scenario2_completed') {
+            // کاربر تکمیل شده - حساب کاربری کامل
+            const fullName = userState.data?.fullName || 'نامشخص';
+            const phone = userState.data?.phone || 'نامشخص';
+            
+            accountText = `💎 **حساب کاربری شما**
+
+✅ **وضعیت:** حساب کاربری کامل
+📝 **مرحله:** ثبت‌نام تکمیل شده
+⏰ **تاریخ:** ${new Date().toLocaleDateString('fa-IR')}
+
+👤 **نام و نام خانوادگی:** ${fullName}
+📱 **شماره تلفن:** ${phone}
+🎯 **وضعیت:** آماده برای ثبت‌نام در کارگاه`;
+            
+            keyboard = {
+                keyboard: [
+                    [{ text: "💎 حساب کاربری" }]
+                ],
+                resize_keyboard: true
+            };
+            
+        } else {
+            // سایر مراحل - حساب کاربری ناقص
+            accountText = `💎 **حساب کاربری شما**
+
+❌ **وضعیت:** حساب کاربری ناقص
+📝 **مرحله:** ${userState.step || 'نامشخص'}
+⏰ **تاریخ:** ${new Date().toLocaleDateString('fa-IR')}
+
+👤 **نام و نام خانوادگی:** [تعیین نشده]
+📱 **شماره تلفن:** ${userState.data?.phone || '[تعیین نشده]'}
+🎯 **برای تکمیل:** مراحل ثبت‌نام را ادامه دهید`;
+            
+            keyboard = {
+                keyboard: [
+                    [{ text: "💎 حساب کاربری" }]
+                ],
+                resize_keyboard: true
+            };
+        }
         
         ctx.reply(accountText, { reply_markup: keyboard });
         console.log(`✅ [15REG] حساب کاربری برای کاربر ${userId} نمایش داده شد`);
@@ -2342,25 +2424,33 @@ class RegistrationModule {
                  first_name: callback.from.first_name || 'کاربر'
              },
              chat: { id: chatId },
-             reply: async (text, options = {}) => {
-                 try {
-                     console.log(`📤 [15REG] ارسال پیام سناریو 2 به ${chatId}: ${text}`);
-                     
-                     if (options && options.reply_markup) {
-                         // ارسال با keyboard
-                         const { sendMessage } = require('./4bale');
-                         await sendMessage(chatId, text, options.reply_markup);
-                         console.log(`✅ [15REG] پیام سناریو 2 با keyboard ارسال شد`);
-                     } else {
-                         // ارسال بدون keyboard
-                         const { sendMessage } = require('./4bale');
-                         await sendMessage(chatId, text);
-                         console.log(`✅ [15REG] پیام سناریو 2 بدون keyboard ارسال شد`);
-                     }
-                 } catch (error) {
-                     console.error(`❌ [15REG] خطا در ارسال پیام سناریو 2:`, error.message);
-                 }
-             }
+                         reply: async (text, options = {}) => {
+                try {
+                    console.log(`📤 [15REG] ارسال پیام سناریو 2 به ${chatId}: ${text}`);
+                    
+                    if (options && options.reply_markup) {
+                        // بررسی نوع keyboard
+                        if (options.reply_markup.inline_keyboard) {
+                            // کیبرد شیشه‌ای - استفاده از sendMessageWithInlineKeyboard
+                            const { sendMessageWithInlineKeyboard } = require('./4bale');
+                            await sendMessageWithInlineKeyboard(chatId, text, options.reply_markup.inline_keyboard);
+                            console.log(`✅ [15REG] پیام سناریو 2 با inline keyboard ارسال شد`);
+                        } else {
+                            // کیبرد معمولی - استفاده از sendMessage
+                            const { sendMessage } = require('./4bale');
+                            await sendMessage(chatId, text, options.reply_markup);
+                            console.log(`✅ [15REG] پیام سناریو 2 با keyboard ارسال شد`);
+                        }
+                    } else {
+                        // ارسال بدون keyboard
+                        const { sendMessage } = require('./4bale');
+                        await sendMessage(chatId, text);
+                        console.log(`✅ [15REG] پیام سناریو 2 بدون keyboard ارسال شد`);
+                    }
+                } catch (error) {
+                    console.error(`❌ [15REG] خطا در ارسال پیام سناریو 2:`, error.message);
+                }
+            }
          };
          
          switch (callbackData) {
@@ -2391,10 +2481,9 @@ class RegistrationModule {
          
          const cancelText = `❌ عملیات لغو شد. برای شروع مجدد /start را بزنید.`;
          
-         // کیبرد معمولی ثابت
+         // کیبرد معمولی ثابت (فقط حساب کاربری)
          const mainKeyboard = {
              keyboard: [
-                 [{ text: "📝 مدرسه تلاوت" }],
                  [{ text: "💎 حساب کاربری" }]
              ],
              resize_keyboard: true
@@ -2467,10 +2556,9 @@ class RegistrationModule {
              ]
          };
          
-         // کیبرد معمولی ثابت
+         // کیبرد معمولی ثابت (فقط حساب کاربری)
          const mainKeyboard = {
              keyboard: [
-                 [{ text: "📝 مدرسه تلاوت" }],
                  [{ text: "💎 حساب کاربری" }]
              ],
              resize_keyboard: true
