@@ -2383,7 +2383,9 @@ class RegistrationModule {
          // کیبرد معمولی ثابت
          const mainKeyboard = {
              keyboard: [
-                 [{ text: "💎 حساب کاربری" }]
+                 [{ text: "💎 حساب کاربری" }],
+                 [{ text: "شرایط ثبت نام و پرداخت" }],
+                 [{ text: "🔙 بازگشت" }, { text: "❌ لغو" }]
              ],
              resize_keyboard: true
          };
@@ -2412,12 +2414,13 @@ class RegistrationModule {
      // پردازش ثبت‌نام در کارگاه در سناریو 2
      async handleScenario2WorkshopRegistration(ctx) {
          const userId = ctx.from.id;
+         const chatId = ctx.chat.id;
          console.log(`📚 [15REG] ثبت‌نام در کارگاه سناریو 2 برای کاربر ${userId}`);
          
-         // انتقال به جریان ثبت‌نام کارگاه
-         await this.handleQuranStudentRegistration(ctx);
+         // انتقال مستقیم به انتخاب کارگاه (بدون ثبت نام مجدد)
+         await this.handleQuranStudentRegistrationCallback(chatId, userId, null);
          
-         console.log(`✅ [15REG] انتقال به ثبت‌نام کارگاه برای کاربر ${userId} در سناریو 2`);
+         console.log(`✅ [15REG] انتقال مستقیم به انتخاب کارگاه برای کاربر ${userId} در سناریو 2`);
      }
      
      // پردازش ورود نام در سناریو 2
@@ -2458,18 +2461,16 @@ class RegistrationModule {
          // کیبرد معمولی ثابت
          const mainKeyboard = {
              keyboard: [
-                 [{ text: "💎 حساب کاربری" }]
+                 [{ text: "💎 حساب کاربری" }],
+                 [{ text: "شرایط ثبت نام و پرداخت" }],
+                 [{ text: "🔙 بازگشت" }, { text: "❌ لغو" }]
              ],
              resize_keyboard: true
          };
          
-         // ارسال پیام تکمیل با کیبرد شیشه‌ای
+         // ارسال پیام تکمیل با کیبرد شیشه‌ای و کیبرد معمولی
          await sendMessageWithInlineKeyboard(ctx.chat.id, completionText, inlineKeyboard.inline_keyboard);
-         
-         // ارسال کیبرد معمولی جداگانه
-         await sendMessage(ctx.chat.id, "کیبرد اصلی:", { 
-             reply_markup: mainKeyboard 
-         });
+         await sendMessage(ctx.chat.id, "کیبرد اصلی:", mainKeyboard);
          
          console.log(`✅ [15REG] تکمیل حساب کاربری سناریو 2 برای کاربر ${userId} نمایش داده شد`);
      }
