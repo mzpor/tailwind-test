@@ -117,29 +117,18 @@ class RegistrationModule {
         const inlineKeyboard = {
             inline_keyboard: [
                 [
-                    { text: "انصراف", callback_data: "scenario2_cancel" },
+                    { text: "📚 ثبت‌نام در کارگاه", callback_data: "scenario2_workshop_registration" },
+                    { text: "انصراف", callback_data: "scenario2_cancel" }
+                ],
+                [
                     { text: "بازگشت", callback_data: "scenario2_back" }
                 ]
             ]
         };
         
-        // کیبرد معمولی ثابت (مدرسه تلاوت + حساب کاربری)
-        const mainKeyboard = {
-            keyboard: [
-                [{ text: "📝 مدرسه تلاوت" }],
-                [{ text: "💎 حساب کاربری" }]
-            ],
-            resize_keyboard: true
-        };
-        
-        // ارسال پیام با کیبرد شیشه‌ای و کیبرد معمولی
+        // ارسال پیام با کیبرد شیشه‌ای
         ctx.reply(welcomeText, { 
             reply_markup: inlineKeyboard 
-        });
-        
-        // ارسال کیبرد معمولی جداگانه
-        ctx.reply("کیبرد اصلی:", { 
-            reply_markup: mainKeyboard 
         });
         
         console.log(`✅ [15REG] سناریو 2 اجرا شد برای کاربر ${userId} - انتظار برای نام`);
