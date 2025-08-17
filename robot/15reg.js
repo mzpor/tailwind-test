@@ -61,41 +61,53 @@ class RegistrationModule {
         const userId = ctx.from.id;
         console.log(`🔍 [15REG] شروع ماژول برای کاربر ${userId}`);
         
-        // بررسی وضعیت کاربر
+        // 🔥 بررسی وضعیت کاربر
         if (this.userStates[userId] && this.userStates[userId].step === 'completed') {
             // کاربر قبلاً ثبت‌نام شده - نمایش کیبرد متناسب با نقش
             console.log(`✅ [15REG] کاربر ${userId} قبلاً ثبت‌نام شده، نمایش کیبرد نقش`);
             this.showRoleBasedKeyboard(ctx);
-        } else if (this.userStates[userId] && this.userStates[userId].step !== 'completed') {
-            // کاربر در حال ثبت‌نام است
-            console.log(`🔄 [15REG] ادامه ثبت‌نام برای کاربر ${userId} در مرحله: ${this.userStates[userId].step}`);
-            this.continueRegistration(ctx);
         } else {
-            // کاربر جدید
-            console.log(`🎉 [15REG] شروع جدید برای کاربر ${userId}`);
+            // 🔥 برای همه کاربران دیگر (جدید یا در حال ثبت‌نام)، همیشه از مرحله welcome شروع شود
+            console.log(`🎉 [15REG] کاربر ${userId} در مرحله ${this.userStates[userId]?.step || 'جدید'}، شروع از مرحله welcome`);
             this.showWelcome(ctx);
         }
     }
 
     // نمایش خوش‌آمدگویی
     async showWelcome(ctx) {
-        const welcomeText = `🎉 به ربات دستیار تلاوت قران خوش امدید.
+        const welcomeText = `👋 به مدرسه تلاوت خوش آمدید!
 
-📱 برای شروع، لطفاً ابتدا ثبت‌نام کنید:`;
+برای ثبت‌نام در کلاس‌ها، روی دکمه زیر کلیک کنید. همچنین می‌توانید وضعیت حساب کاربری خود را مشاهده نمایید.`;
         
         ctx.reply(welcomeText);
         
-        // نمایش دکمه درخواست شماره تلفن
-        this.showContactButton(ctx);
+        // نمایش دکمه‌های جدید
+        this.showWelcomeButtons(ctx);
         
         // تنظیم وضعیت کاربر
         const userId = ctx.from.id;
         this.userStates[userId] = {
-            step: 'phone',
+            step: 'welcome',
             data: {},
             timestamp: Date.now()
         };
         this.saveData();
+    }
+
+    // نمایش دکمه‌های خوش‌آمدگویی
+    showWelcomeButtons(ctx) {
+        const welcomeKeyboard = {
+            keyboard: [
+                [{ text: "📝 ثبت‌نام در مدرسه تلاوت" }],
+                [{ text: "💎 حساب کاربری" }]
+            ],
+            resize_keyboard: true
+        };
+        
+        // ارسال با keyboard
+        ctx.reply("👆 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:", { 
+            reply_markup: welcomeKeyboard 
+        });
     }
 
     // نمایش دکمه request_contact
@@ -118,9 +130,16 @@ class RegistrationModule {
         
         console.log(`🔍 [15REG] ادامه ثبت‌نام برای کاربر ${userId} در مرحله: ${userState.step}`);
         
-        if (userState.step === 'phone') {
-            ctx.reply('📱 لطفاً شماره تلفن خود را ارسال کنید:');
-            this.showContactButton(ctx);
+        // 🔥 همیشه ابتدا از مرحله welcome شروع شود
+        if (userState.step === 'welcome') {
+            // کاربر در مرحله خوش‌آمدگویی - نمایش دکمه‌ها
+            await this.showWelcomeButtons(ctx);
+        } else if (userState.step === 'phone') {
+            // 🔥 اگر کاربر در مرحله phone باشد، ابتدا باید خوش‌آمدگویی ببیند
+            console.log(`📱 [15REG] کاربر در مرحله phone، اما ابتدا باید خوش‌آمدگویی ببیند`);
+            this.userStates[userId].step = 'welcome';
+            this.saveData();
+            await this.showWelcome(ctx);
         } else if (userState.step === 'waiting_for_name') {
             // 🔥 مرحله انتظار برای نام - درخواست نام و فامیل
             console.log(`🔍 [15REG] کاربر در مرحله انتظار برای نام، درخواست نام و فامیل`);
@@ -474,6 +493,27 @@ class RegistrationModule {
         if (messageText === '📝 تمایل به ثبت‌نام') {
             console.log(`📝 [15REG] دکمه "تمایل به ثبت‌نام" فشرده شد`);
             await this.handleAssistantRegistrationRequest(artificialCtx);
+            return true;
+        }
+        
+        // اگر دکمه ثبت‌نام در مدرسه فشرده شد
+        if (messageText === '📝 ثبت‌نام در مدرسه تلاوت') {
+            console.log(`📝 [15REG] دکمه ثبت‌نام در مدرسه فشرده شد`);
+            await this.handleSchoolRegistration(artificialCtx);
+            return true;
+        }
+        
+        // اگر دکمه حساب کاربری فشرده شد
+        if (messageText === '💎 حساب کاربری') {
+            console.log(`💎 [15REG] دکمه حساب کاربری فشرده شد`);
+            await this.handleUserAccount(artificialCtx);
+            return true;
+        }
+        
+        // اگر دکمه بازگشت فشرده شد
+        if (messageText === '🔙 بازگشت') {
+            console.log(`🔙 [15REG] دکمه بازگشت فشرده شد`);
+            await this.showWelcome(artificialCtx);
             return true;
         }
         
@@ -989,17 +1029,22 @@ class RegistrationModule {
         // 🔥 بررسی وضعیت کاربر
         const userState = this.userStates[userId];
         
-        if (!userState) {
-            // 🔥 کاربر جدید - نمایش خوش‌آمدگویی و درخواست تلفن
-            console.log(`🎉 [15REG] کاربر جدید، نمایش خوش‌آمدگویی`);
+        // 🔥 همیشه ابتدا پیام خوش‌آمدگویی نمایش داده شود
+        if (!userState || userState.step === 'welcome') {
+            // 🔥 کاربر جدید یا در مرحله خوش‌آمدگویی
+            console.log(`🎉 [15REG] کاربر جدید یا در مرحله خوش‌آمدگویی، نمایش خوش‌آمدگویی`);
             await this.showWelcome(ctx);
             return true;
         }
         
+        // 🔥 اگر کاربر در مرحله phone باشد، مستقیماً به مرحله phone نرود
+        // 🔥 ابتدا باید از مرحله خوش‌آمدگویی بگذرد
         if (userState.step === 'phone') {
-            // 🔥 کاربر در مرحله تلفن - نمایش دکمه contact
-            console.log(`📱 [15REG] کاربر در مرحله تلفن، نمایش دکمه contact`);
-            await this.showContactButton(ctx);
+            console.log(`📱 [15REG] کاربر در مرحله phone، اما ابتدا باید خوش‌آمدگویی ببیند`);
+            // ریست کردن به مرحله welcome
+            this.userStates[userId].step = 'welcome';
+            this.saveData();
+            await this.showWelcome(ctx);
             return true;
         }
         
@@ -1888,6 +1933,50 @@ class RegistrationModule {
         
         ctx.reply(exitText, { reply_markup: keyboard });
         console.log(`✅ [15REG] پنل خروج برای کاربر ${userId} با نقش ${roleText} نمایش داده شد`);
+    }
+    
+    // متد جدید: پردازش دکمه ثبت‌نام در مدرسه
+    async handleSchoolRegistration(ctx) {
+        const userId = ctx.from.id;
+        
+        console.log(`📝 [15REG] شروع ثبت‌نام در مدرسه برای کاربر ${userId}`);
+        
+        // تغییر مرحله به phone
+        this.userStates[userId].step = 'phone';
+        this.saveData();
+        
+        // نمایش دکمه درخواست شماره تلفن
+        await this.showContactButton(ctx);
+        
+        console.log(`✅ [15REG] درخواست شماره تلفن برای کاربر ${userId} نمایش داده شد`);
+    }
+    
+    // متد جدید: پردازش دکمه حساب کاربری
+    async handleUserAccount(ctx) {
+        const userId = ctx.from.id;
+        
+        console.log(`💎 [15REG] نمایش حساب کاربری برای کاربر ${userId}`);
+        
+        const accountText = `💎 **حساب کاربری شما**
+
+📱 **وضعیت:** کاربر جدید
+📝 **مرحله:** ثبت‌نام نشده
+⏰ **تاریخ:** ${new Date().toLocaleDateString('fa-IR')}
+
+🔒 **برای مشاهده اطلاعات کامل، ابتدا ثبت‌نام کنید**
+
+👆 **برای شروع ثبت‌نام:**`;
+        
+        const keyboard = {
+            keyboard: [
+                [{ text: "📝 ثبت‌نام در مدرسه تلاوت" }],
+                [{ text: "🔙 بازگشت" }]
+            ],
+            resize_keyboard: true
+        };
+        
+        ctx.reply(accountText, { reply_markup: keyboard });
+        console.log(`✅ [15REG] حساب کاربری برای کاربر ${userId} نمایش داده شد`);
     }
     
     // 🔥 متد جدید: پردازش درخواست ثبت‌نام کمک مربی
