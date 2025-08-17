@@ -79,10 +79,18 @@ class RegistrationModule {
 
 برای ثبت‌نام در کلاس‌ها، روی دکمه زیر کلیک کنید. همچنین می‌توانید وضعیت حساب کاربری خود را مشاهده نمایید.`;
         
-        ctx.reply(welcomeText);
+        const welcomeKeyboard = {
+            keyboard: [
+                [{ text: "📝 ثبت‌نام در مدرسه تلاوت" }],
+                [{ text: "💎 حساب کاربری" }]
+            ],
+            resize_keyboard: true
+        };
         
-        // نمایش دکمه‌های جدید
-        this.showWelcomeButtons(ctx);
+        // ارسال پیام خوش‌آمدگویی همراه با کیبرد
+        ctx.reply(welcomeText, { 
+            reply_markup: welcomeKeyboard 
+        });
         
         // تنظیم وضعیت کاربر
         const userId = ctx.from.id;
@@ -94,21 +102,7 @@ class RegistrationModule {
         this.saveData();
     }
 
-    // نمایش دکمه‌های خوش‌آمدگویی
-    showWelcomeButtons(ctx) {
-        const welcomeKeyboard = {
-            keyboard: [
-                [{ text: "📝 ثبت‌نام در مدرسه تلاوت" }],
-                [{ text: "💎 حساب کاربری" }]
-            ],
-            resize_keyboard: true
-        };
-        
-        // ارسال با keyboard
-        ctx.reply("👆 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:", { 
-            reply_markup: welcomeKeyboard 
-        });
-    }
+
 
     // نمایش دکمه request_contact
     showContactButton(ctx) {
@@ -132,8 +126,8 @@ class RegistrationModule {
         
         // 🔥 همیشه ابتدا از مرحله welcome شروع شود
         if (userState.step === 'welcome') {
-            // کاربر در مرحله خوش‌آمدگویی - نمایش دکمه‌ها
-            await this.showWelcomeButtons(ctx);
+            // کاربر در مرحله خوش‌آمدگویی - نمایش خوش‌آمدگویی کامل
+            await this.showWelcome(ctx);
         } else if (userState.step === 'phone') {
             // 🔥 اگر کاربر در مرحله phone باشد، ابتدا باید خوش‌آمدگویی ببیند
             console.log(`📱 [15REG] کاربر در مرحله phone، اما ابتدا باید خوش‌آمدگویی ببیند`);

@@ -1,41 +1,28 @@
 // 🧪 تست متد showWelcome در 15reg.js
-const RegistrationModule = require('./15reg');
+const RegistrationModule = require('./15reg.js');
 
-async function testWelcome() {
-    console.log('🧪 [TEST] شروع تست showWelcome...\n');
-
-    try {
-        // ایجاد نمونه ماژول
-        const registrationModule = new RegistrationModule();
-        console.log('✅ [TEST] ماژول ثبت‌نام ایجاد شد');
-
-        // شبیه‌سازی ctx
-        const mockCtx = {
-            from: { id: 999999999 },
-            chat: { id: 999999999 },
-            reply: (text, options = {}) => {
-                console.log(`📤 [TEST] پیام ارسال شد: ${text}`);
-                if (options.reply_markup) {
-                    console.log(`⌨️ [TEST] Keyboard: ${JSON.stringify(options.reply_markup)}`);
-                }
-                return Promise.resolve();
+// تست نمایش خوش‌آمدگویی بدون پیام دوم
+async function testWelcomeWithoutSecondMessage() {
+    console.log('🧪 تست نمایش خوش‌آمدگویی بدون پیام دوم...');
+    
+    const registration = new RegistrationModule();
+    
+    // ایجاد ctx مصنوعی
+    const ctx = {
+        from: { id: 12345 },
+        reply: (text, options) => {
+            console.log(`📝 پیام ارسالی: "${text}"`);
+            if (options && options.reply_markup) {
+                console.log(`⌨️ دکمه‌ها:`, JSON.stringify(options.reply_markup, null, 2));
             }
-        };
-
-        // تست متد showWelcome
-        console.log('\n🚀 [TEST] تست متد showWelcome...');
-        await registrationModule.showWelcome(mockCtx);
-        
-        // بررسی وضعیت کاربر
-        const userState = registrationModule.userStates[999999999];
-        console.log(`📊 [TEST] وضعیت کاربر: ${JSON.stringify(userState)}`);
-
-        console.log('\n✅ [TEST] تست با موفقیت انجام شد!');
-        
-    } catch (error) {
-        console.error('❌ [TEST] خطا در تست:', error.message);
-    }
+        }
+    };
+    
+    // تست showWelcome
+    console.log('\n🎯 تست showWelcome:');
+    await registration.showWelcome(ctx);
+    
+    console.log('\n✅ تست کامل شد!');
 }
 
-// اجرای تست
-testWelcome();
+testWelcomeWithoutSecondMessage().catch(console.error);

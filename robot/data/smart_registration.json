@@ -1,9 +1,14 @@
 {
   "userStates": {
-    "574330749": {
-      "step": "phone",
+    "12345": {
+      "step": "welcome",
       "data": {},
-      "timestamp": 1755404488638
+      "timestamp": 1755404894948
+    },
+    "574330749": {
+      "step": "welcome",
+      "data": {},
+      "timestamp": 1755404996762
     },
     "888888888": {
       "step": "welcome",
@@ -60,5 +65,5 @@
     },
     "1755170093362": {}
   },
-  "lastUpdated": "2025-08-17T04:21:40.634Z"
+  "lastUpdated": "2025-08-17T04:29:56.762Z"
 }
