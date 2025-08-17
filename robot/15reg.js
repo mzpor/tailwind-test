@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { sendMessage, answerCallbackQuery } = require('./4bale');
+const { sendMessage, sendMessageWithInlineKeyboard, answerCallbackQuery } = require('./4bale');
 const { USER_ACCESS_CONFIG, addUserToRole, MAIN_BUTTONS_CONFIG, getQuranStudentScenario } = require('./3config');
 
 // اضافه کردن ماژول پرداخت
@@ -2464,12 +2464,10 @@ class RegistrationModule {
          };
          
          // ارسال پیام تکمیل با کیبرد شیشه‌ای
-         ctx.reply(completionText, { 
-             reply_markup: inlineKeyboard 
-         });
+         await sendMessageWithInlineKeyboard(ctx.chat.id, completionText, inlineKeyboard.inline_keyboard);
          
          // ارسال کیبرد معمولی جداگانه
-         ctx.reply("کیبرد اصلی:", { 
+         await sendMessage(ctx.chat.id, "کیبرد اصلی:", { 
              reply_markup: mainKeyboard 
          });
          
