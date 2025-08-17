@@ -1557,6 +1557,10 @@ class RegistrationModule {
         } else if (data === 'back') {
             console.log(`🔙 [15REG] بازگشت درخواست شد`);
             return await this.handleBackToMain(chatId, userId, callbackQueryId);
+        } else if (data.startsWith('scenario2_')) {
+            // پردازش callback های سناریو 2
+            console.log(`🎯 [15REG] Callback سناریو 2: ${data}`);
+            return await this.handleScenario2Callback(callback, data);
         } else if (data.startsWith('assistant_')) {
             // ارسال callback به ماژول مدیریت کمک مربی
             console.log(`👨‍🏫 [15REG] Callback مدیریت کمک مربی: ${data}`);
@@ -2328,23 +2332,54 @@ class RegistrationModule {
      // ===== متدهای سناریو 2 =====
      
      // پردازش callback query های سناریو 2
-     async handleScenario2Callback(ctx, callbackData) {
-         const userId = ctx.from.id;
+     async handleScenario2Callback(callback, callbackData) {
+         const userId = callback.from.id;
+         const chatId = callback.message.chat.id;
          console.log(`🔘 [15REG] Callback سناریو 2 دریافت شد: ${callbackData} برای کاربر ${userId}`);
+         
+         // ساخت ctx مصنوعی برای compatibility
+         const artificialCtx = {
+             from: { 
+                 id: parseInt(userId),
+                 first_name: callback.from.first_name || 'کاربر'
+             },
+             chat: { id: chatId },
+             reply: async (text, options = {}) => {
+                 try {
+                     console.log(`📤 [15REG] ارسال پیام سناریو 2 به ${chatId}: ${text}`);
+                     
+                     if (options && options.reply_markup) {
+                         // ارسال با keyboard
+                         const { sendMessage } = require('./4bale');
+                         await sendMessage(chatId, text, options.reply_markup);
+                         console.log(`✅ [15REG] پیام سناریو 2 با keyboard ارسال شد`);
+                     } else {
+                         // ارسال بدون keyboard
+                         const { sendMessage } = require('./4bale');
+                         await sendMessage(chatId, text);
+                         console.log(`✅ [15REG] پیام سناریو 2 بدون keyboard ارسال شد`);
+                     }
+                 } catch (error) {
+                     console.error(`❌ [15REG] خطا در ارسال پیام سناریو 2:`, error.message);
+                 }
+             }
+         };
          
          switch (callbackData) {
              case 'scenario2_cancel':
-                 await this.handleScenario2Cancel(ctx);
+                 await this.handleScenario2Cancel(artificialCtx);
                  break;
              case 'scenario2_back':
-                 await this.handleScenario2Back(ctx);
+                 await this.handleScenario2Back(artificialCtx);
                  break;
              case 'scenario2_workshop_registration':
-                 await this.handleScenario2WorkshopRegistration(ctx);
+                 await this.handleScenario2WorkshopRegistration(artificialCtx);
                  break;
              default:
                  console.log(`⚠️ [15REG] Callback نامعتبر سناریو 2: ${callbackData}`);
          }
+         
+         return true;
      }
      
      // پردازش انصراف در سناریو 2

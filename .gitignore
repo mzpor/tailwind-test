@@ -33,3 +33,6 @@ src/lib/gateway-config.json
 /src/lib
 /src
 src/lib/gateway-config.json
+robot/data/smart_registration.json
+src/lib/gateway-config.json
+robot/data/reports_config.json
