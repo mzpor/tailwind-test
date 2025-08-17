@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sendMessage, answerCallbackQuery } = require('./4bale');
-const { USER_ACCESS_CONFIG, addUserToRole, MAIN_BUTTONS_CONFIG } = require('./3config');
+const { USER_ACCESS_CONFIG, addUserToRole, MAIN_BUTTONS_CONFIG, getQuranStudentScenario } = require('./3config');
 
 // اضافه کردن ماژول پرداخت
 const PaymentModule = require('./16pay');
@@ -100,6 +100,50 @@ class RegistrationModule {
             timestamp: Date.now()
         };
         this.saveData();
+    }
+    
+    // نمایش خوش‌آمدگویی سناریو 2
+    async showScenario2Welcome(ctx) {
+        const userId = ctx.from.id;
+        
+        // تغییر مرحله به انتظار برای نام در سناریو 2
+        this.userStates[userId].step = 'scenario2_waiting_for_name';
+        this.saveData();
+        
+        const welcomeText = `🎉 سناریو 2
+
+لطفا نام و نام خانوادگی خود را وارد کنید(فقط حروف فارسی):`;
+        
+        // کیبرد شیشه‌ای برای سناریو 2
+        const inlineKeyboard = {
+            inline_keyboard: [
+                [
+                    { text: "انصراف", callback_data: "scenario2_cancel" },
+                    { text: "بازگشت", callback_data: "scenario2_back" }
+                ]
+            ]
+        };
+        
+        // کیبرد معمولی ثابت (مدرسه تلاوت + حساب کاربری)
+        const mainKeyboard = {
+            keyboard: [
+                [{ text: "📝 مدرسه تلاوت" }],
+                [{ text: "💎 حساب کاربری" }]
+            ],
+            resize_keyboard: true
+        };
+        
+        // ارسال پیام با کیبرد شیشه‌ای و کیبرد معمولی
+        ctx.reply(welcomeText, { 
+            reply_markup: inlineKeyboard 
+        });
+        
+        // ارسال کیبرد معمولی جداگانه
+        ctx.reply("کیبرد اصلی:", { 
+            reply_markup: mainKeyboard 
+        });
+        
+        console.log(`✅ [15REG] سناریو 2 اجرا شد برای کاربر ${userId} - انتظار برای نام`);
     }
 
 
@@ -437,10 +481,17 @@ class RegistrationModule {
             return true;
         }
         
-        // اگر نام و فامیل وارد شد
+        // اگر نام و فامیل وارد شد (سناریو 1)
         if (messageText && this.userStates[userId]?.step === 'waiting_for_name') {
-            console.log(`👤 [15REG] نام و فامیل دریافت شد`);
+            console.log(`👤 [15REG] نام و فامیل سناریو 1 دریافت شد`);
             await this.handleFullNameInput(artificialCtx, messageText);
+            return true;
+        }
+        
+        // اگر نام و فامیل وارد شد (سناریو 2)
+        if (messageText && this.userStates[userId]?.step === 'scenario2_waiting_for_name') {
+            console.log(`👤 [15REG] نام و فامیل سناریو 2 دریافت شد`);
+            await this.handleScenario2NameInput(artificialCtx, messageText);
             return true;
         }
         
@@ -598,8 +649,19 @@ class RegistrationModule {
         console.log(`🔍 [15REG] نقش تشخیص داده شد: ${userRole}`);
         
         if (userRole === 'quran_student') {
-            // قرآن‌آموز - نمایش پروفایل
-            await this.showQuranStudentProfile(ctx);
+            // قرآن‌آموز - بررسی سناریو
+            const scenario = getQuranStudentScenario();
+            console.log(`🎯 [15REG] سناریو قرآن‌آموز: ${scenario}`);
+            
+            if (scenario === 1) {
+                // سناریو 1: درخواست نام و فامیل
+                console.log(`📝 [15REG] اجرای سناریو 1: درخواست نام و فامیل`);
+                await this.showQuranStudentProfile(ctx);
+            } else if (scenario === 2) {
+                // سناریو 2: خوش‌آمدگویی + کیبرد معمولی
+                console.log(`🎉 [15REG] اجرای سناریو 2: خوش‌آمدگویی + کیبرد معمولی`);
+                await this.showScenario2Welcome(ctx);
+            }
         } else {
             // نقش دیگر - منوی مربوطه
             await this.showRoleMenu(ctx, userRole);
@@ -688,18 +750,37 @@ class RegistrationModule {
             await this.handleCoachWelcome(ctx, userRole, firstName);
             
         } else {
-            // قرآن‌آموز - فقط شماره تلفن ذخیره شود
-            console.log(`📱 [15REG] قرآن‌آموز تشخیص داده شد، درخواست نام و فامیل`);
+            // قرآن‌آموز - بررسی سناریو
+            const scenario = getQuranStudentScenario();
+            console.log(`🎯 [15REG] سناریو قرآن‌آموز: ${scenario}`);
             
-            // فقط شماره تلفن ذخیره شود (بدون نام)
-            this.userStates[userId].data = {
-                phone: phoneNumber,  // شماره تلفن واقعی
-                userRole: userRole   // نقش ذخیره شد
-            };
-            this.userStates[userId].step = 'waiting_for_name';  // مرحله جدید: انتظار برای نام
-            this.saveData();
-            
-            await this.handleQuranStudentRegistration(ctx);
+            if (scenario === 1) {
+                // سناریو 1: درخواست نام و فامیل
+                console.log(`📝 [15REG] اجرای سناریو 1: درخواست نام و فامیل`);
+                
+                // فقط شماره تلفن ذخیره شود (بدون نام)
+                this.userStates[userId].data = {
+                    phone: phoneNumber,  // شماره تلفن واقعی
+                    userRole: userRole   // نقش ذخیره شد
+                };
+                this.userStates[userId].step = 'waiting_for_name';  // مرحله جدید: انتظار برای نام
+                this.saveData();
+                
+                await this.handleQuranStudentRegistration(ctx);
+            } else if (scenario === 2) {
+                // سناریو 2: خوش‌آمدگویی + کیبرد معمولی
+                console.log(`🎉 [15REG] اجرای سناریو 2: خوش‌آمدگویی + کیبرد معمولی`);
+                
+                // ذخیره اطلاعات و تکمیل ثبت‌نام
+                this.userStates[userId].data = {
+                    phone: phoneNumber,  // شماره تلفن واقعی
+                    userRole: userRole   // نقش ذخیره شد
+                };
+                this.userStates[userId].step = 'completed';  // تکمیل ثبت‌نام
+                this.saveData();
+                
+                await this.showScenario2Welcome(ctx);
+            }
         }
     }
 
@@ -2244,10 +2325,145 @@ class RegistrationModule {
          }
      }
      
-
-
-
-
+     // ===== متدهای سناریو 2 =====
+     
+     // پردازش callback query های سناریو 2
+     async handleScenario2Callback(ctx, callbackData) {
+         const userId = ctx.from.id;
+         console.log(`🔘 [15REG] Callback سناریو 2 دریافت شد: ${callbackData} برای کاربر ${userId}`);
+         
+         switch (callbackData) {
+             case 'scenario2_cancel':
+                 await this.handleScenario2Cancel(ctx);
+                 break;
+             case 'scenario2_back':
+                 await this.handleScenario2Back(ctx);
+                 break;
+             case 'scenario2_workshop_registration':
+                 await this.handleScenario2WorkshopRegistration(ctx);
+                 break;
+             default:
+                 console.log(`⚠️ [15REG] Callback نامعتبر سناریو 2: ${callbackData}`);
+         }
+     }
+     
+     // پردازش انصراف در سناریو 2
+     async handleScenario2Cancel(ctx) {
+         const userId = ctx.from.id;
+         console.log(`❌ [15REG] انصراف سناریو 2 برای کاربر ${userId}`);
+         
+         // حذف وضعیت کاربر
+         delete this.userStates[userId];
+         this.saveData();
+         
+         const cancelText = `❌ عملیات لغو شد. برای شروع مجدد /start را بزنید.`;
+         
+         // کیبرد معمولی ثابت
+         const mainKeyboard = {
+             keyboard: [
+                 [{ text: "📝 مدرسه تلاوت" }],
+                 [{ text: "💎 حساب کاربری" }]
+             ],
+             resize_keyboard: true
+         };
+         
+         ctx.reply(cancelText, { 
+             reply_markup: mainKeyboard 
+         });
+         
+         console.log(`✅ [15REG] انصراف سناریو 2 برای کاربر ${userId} پردازش شد`);
+     }
+     
+     // پردازش بازگشت در سناریو 2
+     async handleScenario2Back(ctx) {
+         const userId = ctx.from.id;
+         console.log(`🔙 [15REG] بازگشت سناریو 2 برای کاربر ${userId}`);
+         
+         // برگشت به مرحله welcome
+         this.userStates[userId].step = 'welcome';
+         this.saveData();
+         
+         await this.showWelcome(ctx);
+         
+         console.log(`✅ [15REG] بازگشت سناریو 2 برای کاربر ${userId} پردازش شد`);
+     }
+     
+     // پردازش ثبت‌نام در کارگاه در سناریو 2
+     async handleScenario2WorkshopRegistration(ctx) {
+         const userId = ctx.from.id;
+         console.log(`📚 [15REG] ثبت‌نام در کارگاه سناریو 2 برای کاربر ${userId}`);
+         
+         // انتقال به جریان ثبت‌نام کارگاه
+         await this.handleQuranStudentRegistration(ctx);
+         
+         console.log(`✅ [15REG] انتقال به ثبت‌نام کارگاه برای کاربر ${userId} در سناریو 2`);
+     }
+     
+     // پردازش ورود نام در سناریو 2
+     async handleScenario2NameInput(ctx, fullName) {
+         const userId = ctx.from.id;
+         console.log(`👤 [15REG] نام سناریو 2 دریافت شد: ${fullName} برای کاربر ${userId}`);
+         
+         // بررسی حروف فارسی
+         if (!this.isPersianText(fullName)) {
+             ctx.reply('❌ لطفاً فقط حروف فارسی وارد کنید.');
+             return;
+         }
+         
+         // استخراج نام و نام خانوادگی
+         const nameParts = fullName.split(/[\s\u200C\u200D]+/).filter(part => part.length > 0);
+         const firstName = nameParts.length > 0 ? nameParts[0] : fullName;
+         const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+         
+         // ذخیره در smart_registration.json
+         this.userStates[userId].data.fullName = fullName;
+         this.userStates[userId].data.firstName = firstName;
+         this.userStates[userId].data.lastName = lastName;
+         this.userStates[userId].step = 'scenario2_completed';
+         this.saveData();
+         
+         console.log(`✅ [15REG] نام سناریو 2 ذخیره شد: ${fullName}`);
+         
+         // نمایش پیام تکمیل حساب کاربری
+         const completionText = `✅ حساب کاربری کامل شد`;
+         
+         // کیبرد شیشه‌ای برای ثبت‌نام در کارگاه
+         const inlineKeyboard = {
+             inline_keyboard: [
+                 [{ text: "📚 ثبت‌نام در کارگاه", callback_data: "scenario2_workshop_registration" }]
+             ]
+         };
+         
+         // کیبرد معمولی ثابت
+         const mainKeyboard = {
+             keyboard: [
+                 [{ text: "📝 مدرسه تلاوت" }],
+                 [{ text: "💎 حساب کاربری" }]
+             ],
+             resize_keyboard: true
+         };
+         
+         // ارسال پیام تکمیل با کیبرد شیشه‌ای
+         ctx.reply(completionText, { 
+             reply_markup: inlineKeyboard 
+         });
+         
+         // ارسال کیبرد معمولی جداگانه
+         ctx.reply("کیبرد اصلی:", { 
+             reply_markup: mainKeyboard 
+         });
+         
+         console.log(`✅ [15REG] تکمیل حساب کاربری سناریو 2 برای کاربر ${userId} نمایش داده شد`);
+     }
+     
+     // بررسی حروف فارسی
+     isPersianText(text) {
+         const persianRegex = /^[\u0600-\u06FF\s\u200C\u200D]+$/;
+         return persianRegex.test(text);
+     }
+     
+     // ===== پایان متدهای سناریو 2 =====
+     
  }
  
  module.exports = RegistrationModule;

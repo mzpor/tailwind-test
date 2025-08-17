@@ -16,6 +16,7 @@ console.log('✅ [INDEX] 8logs module loaded');
 
 const { updateRobotHeartbeat, updateSystemStatus } = require('./3config');
 console.log('✅ [INDEX] 3config module loaded');
+console.log('✅ [INDEX] 3config module loaded');
 
 // گزارش فعال شدن بات
 console.log('🚀 [INDEX] Calling logStartup...');

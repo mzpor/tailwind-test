@@ -6,9 +6,12 @@
       "timestamp": 1755404894948
     },
     "574330749": {
-      "step": "welcome",
-      "data": {},
-      "timestamp": 1755404996762
+      "step": "completed",
+      "data": {
+        "phone": "989942878984",
+        "userRole": "quran_student"
+      },
+      "timestamp": 1755421005601
     },
     "888888888": {
       "step": "welcome",
@@ -38,14 +41,9 @@
         "userRole": "quran_student",
         "fullName": "علی محرابی",
         "firstName": "علی",
-        "lastName": "محرابی",
-        "workshopId": "w-1404-03",
-        "month": "1404/05",
-        "paymentStatus": "paid",
-        "coachId": "7",
-        "registrationDate": "2025-08-16"
+        "lastName": "محرابی"
       },
-      "timestamp": 1755359957501
+      "timestamp": 1755416429470
     },
     "2045777722": {
       "step": "completed",
@@ -65,5 +63,5 @@
     },
     "1755170093362": {}
   },
-  "lastUpdated": "2025-08-17T04:29:56.762Z"
+  "lastUpdated": "2025-08-17T08:56:53.878Z"
 }

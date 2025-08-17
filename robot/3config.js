@@ -102,6 +102,9 @@ const MAIN_BUTTONS_CONFIG = {
     ASSISTANT: 0,       // کمک مربی: 1 = نمایش، 0 = مخفی
     STUDENT: 0          // قرآن‌آموز: 1 = نمایش، 0 = مخفی
   },
+  
+  // ===== کانفیگ سناریو ثبت‌نام قرآن‌آموز =====
+  QURAN_STUDENT_SCENARIO: 2,  // 1 = سناریو 1 (درخواست نام و فامیل)، 2 = سناریو 2 (خوش‌آمدگویی + کیبرد معمولی)
   SETTINGS: 1,  
   // کنترل نمایش دکمه تنظیمات برای هر نقش
   SETTINGS_BY_ROLE: {
@@ -157,6 +160,24 @@ const getButtonVisibilityForRole = (role) => {
     registerInfo: isRegisterInfoVisibleForRole(role),
     settings: isSettingsVisibleForRole(role)
   };
+};
+
+// ===== توابع کنترل سناریو ثبت‌نام قرآن‌آموز =====
+
+// دریافت سناریو فعلی
+const getQuranStudentScenario = () => {
+  return MAIN_BUTTONS_CONFIG.QURAN_STUDENT_SCENARIO;
+};
+
+// تغییر سناریو
+const setQuranStudentScenario = (scenario) => {
+  if (scenario === 1 || scenario === 2) {
+    MAIN_BUTTONS_CONFIG.QURAN_STUDENT_SCENARIO = scenario;
+    console.log(`🔄 [SCENARIO] Quran student scenario changed to: ${scenario}`);
+    return true;
+  }
+  console.warn(`⚠️ [SCENARIO] Invalid scenario value: ${scenario}. Must be 1 or 2.`);
+  return false;
 };
 
 // ===== کنترل نمایش گروه‌ها برای نقش‌های مختلف =====
@@ -1788,6 +1809,9 @@ module.exports = {
   setSettingsVisibilityForRole,
   getMainButtonsConfig,
   getButtonVisibilityForRole,
+  // ===== توابع کنترل سناریو ثبت‌نام قرآن‌آموز =====
+  getQuranStudentScenario,
+  setQuranStudentScenario,
   // ===== کانفیگ سیستم ارزیابی =====
   EVALUATION_SYSTEM_CONFIG,
   isEvaluationSystemEnabled,
