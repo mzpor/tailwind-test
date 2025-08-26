@@ -442,34 +442,79 @@ const handleCoachesCallback = async (callbackQuery) => {
       if (result.success) {
         // پس از تغییر وضعیت، لیست دانشجویان را دوباره نمایش دهیم
         // باید coachId را از callback data قبلی دریافت کنیم
-        // فعلاً از smart_registration.json استفاده می‌کنیم
-        const registrations = loadRegistrations();
-        let coachId = null;
-        
-        // پیدا کردن coachId از اطلاعات دانشجو
-        if (registrations.userStates[studentId] && 
-            registrations.userStates[studentId].data && 
-            registrations.userStates[studentId].data.coachId) {
-          coachId = registrations.userStates[studentId].data.coachId;
-        }
-        
-        if (coachId) {
-          const keyboard = generateStudentsKeyboard(coachId);
-          const { getRoleDisplayName } = require('./3config');
-          const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\n${getRoleDisplayName('STUDENT')}: ${studentId}\nوضعیت جدید: ${status}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
-          
-          return { 
-            text, 
-            keyboard, 
+        // از smart_registration.json استفاده می‌کنیم
+        try {
+          const registrations = loadRegistrations();
+          let coachId = null;
+
+          // بررسی وجود registrations
+          if (!registrations) {
+            console.error(`❌ [OSATD] خطا: داده‌های ثبت‌نام بارگذاری نشده است`);
+            const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}\n\n⚠️ *نکته:* اطلاعات مربی برای این دانشجو یافت نشد`;
+            return {
+              text,
+              parse_mode: 'Markdown',
+              edit_message: true
+            };
+          }
+
+          // بررسی وجود studentId در registrations
+          if (!registrations[studentId]) {
+            console.error(`❌ [OSATD] خطا: اطلاعات دانشجو ${studentId} در داده‌های ثبت‌نام یافت نشد`);
+            const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}\n\n⚠️ *نکته:* اطلاعات مربی برای این دانشجو یافت نشد`;
+            return {
+              text,
+              parse_mode: 'Markdown',
+              edit_message: true
+            };
+          }
+
+          // پشتیبانی از ساختار جدید: registrations[studentId].last_workshop_id
+          if (registrations[studentId] && registrations[studentId].last_workshop_id) {
+            coachId = registrations[studentId].last_workshop_id;
+          }
+          // پشتیبانی از ساختار قدیمی: registrations.userStates[studentId].data.coachId
+          else if (registrations.userStates &&
+                   registrations.userStates[studentId] &&
+                   registrations.userStates[studentId].data &&
+                   registrations.userStates[studentId].data.coachId) {
+            coachId = registrations.userStates[studentId].data.coachId;
+          }
+          // پشتیبانی از ساختار قدیمی دیگر: registrations.userStates[studentId].data.last_workshop_id
+          else if (registrations.userStates &&
+                   registrations.userStates[studentId] &&
+                   registrations.userStates[studentId].data &&
+                   registrations.userStates[studentId].data.last_workshop_id) {
+            coachId = registrations.userStates[studentId].data.last_workshop_id;
+          }
+
+          if (coachId) {
+            const keyboard = generateStudentsKeyboard(coachId);
+            const { getRoleDisplayName } = require('./3config');
+            const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\n${getRoleDisplayName('STUDENT')}: ${studentId}\nوضعیت جدید: ${status}\n\n📚 *${getRoleDisplayName('STUDENT')}ان این ${getRoleDisplayName('COACH')}*\n\n${getRoleDisplayName('STUDENT')} مورد نظر خود را انتخاب کنید:`;
+
+            return {
+              text,
+              keyboard,
+              parse_mode: 'Markdown',
+              edit_message: true  // ویرایش پیام موجود
+            };
+          } else {
+            console.warn(`⚠️ [OSATD] هشدار: coachId برای دانشجو ${studentId} یافت نشد`);
+            const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}\n\n⚠️ *نکته:* اطلاعات مربی برای این دانشجو یافت نشد`;
+            return {
+              text,
+              parse_mode: 'Markdown',
+              edit_message: true
+            };
+          }
+        } catch (error) {
+          console.error(`❌ [OSATD] خطا در دریافت اطلاعات مربی برای دانشجو ${studentId}:`, error);
+          const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}\n\n⚠️ *نکته:* خطا در دریافت اطلاعات مربی - لطفاً با مدیر سیستم تماس بگیرید`;
+          return {
+            text,
             parse_mode: 'Markdown',
-            edit_message: true  // ویرایش پیام موجود
-          };
-        } else {
-          const text = `✅ *وضعیت حضور و غیاب به‌روزرسانی شد*\n\nدانشجو: ${studentId}\nوضعیت جدید: ${status}`;
-          return { 
-            text, 
-            parse_mode: 'Markdown',
-            edit_message: true 
+            edit_message: true
           };
         }
       } else {
