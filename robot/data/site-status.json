@@ -1,7 +1,7 @@
 {
   "registration": {
-    "enabled": true,
-    "lastUpdate": 1756187261446,
+    "enabled": false,
+    "lastUpdate": 1756187596417,
     "updatedFrom": "ربات",
     "maxCapacity": 100,
     "currentRegistrations": 0

@@ -1,64 +1,85 @@
 {
   "coach": {
-    "2": {
-      "name": "استاد محمد رشوند",
-      "phone": "0",
-      "cost": "10,000 تومان",
-      "link": "https://t.me/workshop_rashvand",
-      "description": "کارگاه تخصصی حفظ قرآن کریم",
-      "capacity": 15,
-      "duration": "3 ماه",
-      "level": "مبتدی تا متوسط"
+    "01": {
+      "name": "آقای رشوند",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/3sV36PP1E5",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
+      "level": "مبتدی"
     },
-    "3": {
-      "name": "استاد علی حتم خانی",
-      "phone": "0",
-      "cost": "1000 تومان",
-      "link": "https://t.me/workshop_hatamkhani",
-      "description": "کارگاه تجوید و صوت و لحن",
-      "capacity": 12,
-      "duration": "4 ماه",
-      "level": "متوسط تا پیشرفته"
+    "02": {
+      "name": "آقای حتم خانی",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/5JK61daYRd",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
+      "level": "مبتدی"
     },
-    "4": {
-      "name": "استاد احمد حاجی زاده",
-      "phone": "0",
-      "cost": "1،000 تومان",
-      "link": "https://t.me/workshop_hajizadeh",
-      "description": "کارگاه تفسیر قرآن کریم",
-      "capacity": 20,
-      "duration": "6 ماه",
-      "level": "همه سطوح"
-    },
-    "5": {
-      "name": "استاد محسن قربانیان",
-      "phone": "0",
-      "cost": "1000 تومان",
-      "link": "https://t.me/workshop_ghorbanian",
-      "description": "کارگاه تخصصی قرائت قرآن",
-      "capacity": 10,
-      "duration": "5 ماه",
-      "level": "پیشرفته"
-    },
-    "6": {
-      "name": "استاد رضا کاظمی",
-      "phone": "0",
-      "cost": "1000 تومان",
-      "link": "ل",
-      "description": "کارگاه مفاهیم و معارف قرآنی",
-      "capacity": 18,
-      "duration": "4 ماه",
+    "03": {
+      "name": "آقای حاجی زاده",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/Esvrn4wKMq",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
       "level": "متوسط"
     },
-    "7": {
-      "name": "مردانی",
-      "phone": "",
-      "cost": "1000 تومان",
-      "link": "لینک",
-      "description": "توضیحات موجود نیست",
-      "capacity": 20,
-      "duration": "1 ماه",
-      "level": "همه سطوح"
+    "04": {
+      "name": "آقای کاظمی",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/FFb6sB5dXL",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
+      "level": "متوسط"
+    },
+    "05": {
+      "name": "آقای دیوانی (آقای درویشی)",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/2sUTdNS397",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
+      "level": "متوسط"
+    },
+    "06": {
+      "name": "آقای قربانیان",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/GNpsQz1f1G",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
+      "level": "متوسط"
+    },
+    "07": {
+      "name": "آقای رشتبری ۱",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/6sgm8oKDJ3",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
+      "level": "پیشرفته"
+    },
+    "08": {
+      "name": "آقای رشتبری ۲",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/EnZWWfzcqE",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
+      "level": "پیشرفته"
+    },
+    "09": {
+      "name": "آقای رشتبری ۳",
+      "cost": "500,000 تومان",
+      "link": "ble.ir/join/FXB39m6zQy",
+      "description": "کارگاه تلاوت قرآن",
+      "capacity": "حداکثر ۳۰",
+      "duration": "۱ ماه",
+      "level": "پیشرفته"
     }
   },
   "assistant": {
