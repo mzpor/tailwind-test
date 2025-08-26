@@ -46,19 +46,64 @@ const loadCoaches = () => {
   return [];
 };
 
-// تابع بارگذاری ثبت‌نام‌ها
+// تابع بارگذاری ثبت‌نام‌ها (پشتیبانی از دو ساختار قدیم/جدید)
 const loadRegistrations = () => {
   try {
     if (fs.existsSync(REGISTRATION_FILE)) {
       const data = fs.readFileSync(REGISTRATION_FILE, 'utf8');
-      const registrations = JSON.parse(data);
+      const raw = JSON.parse(data);
       console.log(`✅ [OSATD] Loaded registrations from file`);
-      return registrations;
+      return raw;
     }
   } catch (error) {
     console.error('❌ [OSATD] Error loading registrations:', error);
   }
-  return { userStates: {} };
+  return {};
+};
+
+// نرمال‌سازی ثبت‌نام‌ها به لیست یکنواخت
+const normalizeRegistrations = (raw) => {
+  try {
+    if (!raw) return [];
+
+    // ساختار قدیمی: { userStates: { [userId]: { step, data: { ... }, timestamp } } }
+    if (raw.userStates && typeof raw.userStates === 'object') {
+      return Object.entries(raw.userStates).map(([userId, userState]) => {
+        const data = userState?.data || {};
+        return {
+          userId,
+          state: data.paymentStatus === 'paid' ? 'DONEPAY' : (userState.step || data.state || ''),
+          name: data.fullName || data.firstName || data.lastName ? `${data.fullName || `${data.firstName || ''} ${data.lastName || ''}`}`.trim() : `کاربر ${userId}`,
+          phone: data.phone || '',
+          coachId: data.coachId || data.last_workshop_id || '',
+          last_workshop_id: data.coachId || data.last_workshop_id || '',
+          last_workshop_name: data.workshopName || data.last_workshop_name || '',
+          month: data.month || '',
+          registrationDate: data.registrationDate || userState.timestamp || null
+        };
+      });
+    }
+
+    // ساختار جدید: { [userId]: { state, name, phone, last_workshop_id, last_workshop_name, ... } }
+    if (typeof raw === 'object') {
+      return Object.entries(raw).map(([userId, rec]) => ({
+        userId,
+        state: rec.state || '',
+        name: rec.name || `کاربر ${userId}`,
+        phone: rec.phone || '',
+        coachId: rec.last_workshop_id || '',
+        last_workshop_id: rec.last_workshop_id || '',
+        last_workshop_name: rec.last_workshop_name || '',
+        month: rec.register_date ? (rec.register_date.substring(0,7).replace('-', '/')) : '',
+        registrationDate: rec.register_completed_at || rec.register_date || null
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('❌ [OSATD] Error normalizing registrations:', error);
+    return [];
+  }
 };
 
 // تابع بارگذاری حضور و غیاب
@@ -99,33 +144,22 @@ const saveAttendance = (attendanceData) => {
 const getCoachesList = () => {
   try {
     const coaches = loadCoaches();
-    const registrations = loadRegistrations();
-    
+    const raw = loadRegistrations();
+    const regs = normalizeRegistrations(raw);
+
     const coachesList = coaches.map(coach => {
-      // شمارش تعداد ثبت‌نام شده‌ها برای این مربی
-      let studentCount = 0;
-      
-      Object.values(registrations.userStates).forEach(userState => {
-        if (userState.data && 
-            userState.data.userRole === 'quran_student' && 
-            userState.data.coachId === coach.id &&
-            userState.data.paymentStatus === 'paid') {
-          // فقط دانشجویانی که در این کارگاه ثبت‌نام کرده‌اند و پرداخت کرده‌اند
-          studentCount++;
-        }
-      });
-      
+      const studentCount = regs.filter(r => r.state === 'DONEPAY' && String(r.coachId) === String(coach.id)).length;
       return {
         id: coach.id,
         name: coach.name,
         phone: coach.phone,
-        studentCount: studentCount
+        studentCount
       };
     });
-    
+
     console.log(`✅ [OSATD] Generated coaches list with ${coachesList.length} coaches`);
     return coachesList;
-    
+
   } catch (error) {
     console.error('❌ [OSATD] Error getting coaches list:', error);
     return [];
@@ -136,37 +170,28 @@ const getCoachesList = () => {
 const getCoachStudents = (coachId) => {
   try {
     console.log(`🔍 [OSATD] getCoachStudents called with coachId=${coachId}`);
-    
-    const registrations = loadRegistrations();
+
+    const raw = loadRegistrations();
+    const regs = normalizeRegistrations(raw);
     const attendance = loadAttendance();
-    
-    const students = [];
-    
-    Object.entries(registrations.userStates).forEach(([userId, userState]) => {
-      if (userState.data && 
-          userState.data.userRole === 'quran_student' && 
-          userState.data.coachId === coachId &&
-          userState.data.paymentStatus === 'paid') {
-        // فقط دانشجویانی که در این کارگاه ثبت‌نام کرده‌اند و پرداخت کرده‌اند
-        const attendanceStatus = attendance[userId] || 'حاضر';
-        
-        students.push({
-          id: userId,
-          name: userState.data.fullName || userState.data.firstName || `دانشجو ${userId}`,
-          phone: userState.data.phone || '',
-          workshopId: userState.data.workshopId || '',
-          month: userState.data.month || '',
-          attendance: attendanceStatus,
-          registrationDate: userState.timestamp
-        });
-      }
-    });
-    
+
+    const students = regs
+      .filter(r => r.state === 'DONEPAY' && String(r.coachId) === String(coachId))
+      .map(r => ({
+        id: r.userId,
+        name: r.name || `دانشجو ${r.userId}`,
+        phone: r.phone || '',
+        workshopId: r.last_workshop_id || '',
+        month: r.month || '',
+        attendance: attendance[r.userId] || 'حاضر',
+        registrationDate: r.registrationDate || null
+      }));
+
     console.log(`✅ [OSATD] Found ${students.length} students for coach ${coachId}`);
     console.log(`🔍 [OSATD] Students:`, students.map(s => `${s.name} (${s.id})`));
-    
+
     return students;
-    
+
   } catch (error) {
     console.error('❌ [OSATD] Error getting coach students:', error);
     return [];
