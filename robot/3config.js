@@ -6,11 +6,29 @@
 // ماژول‌های مورد نیاز
 const path = require('path');
 const fs = require('fs');
+// بارگذاری متغیرهای محیطی از robot/.env (در صورت وجود)
+try {
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
+  console.log('✅ [CONFIG] dotenv loaded from robot/.env');
+} catch (e) {
+  console.log('⚠️ [CONFIG] dotenv not loaded:', e.message);
+}
 
 // تنظیمات API تلگرام
-//const BOT_TOKEN = '1714651531:y2xOK6EBg5nzVV6fEWGqtOdc3nVqVgOuf4PZVQ7S';
-//BOT_TOKEN = '1714651531:y2xOK6EBg5nzVV6fEWGqtOdc3nVqVgOuf4PZVQ7S'//#یار مدیر  modyar
-BOT_TOKEN = "1778171143:vD6rjJXAYidLL7hQyQkBeu5TJ9KpRd4zAKegqUt3" // #محرابی  mtelbot
+// ترجیح: از متغیر محیطی استفاده شود. در صورت نبود، از مقدار جایگزین استفاده می‌شود (غیرتوصیه‌شده)
+const BOT_TOKEN = process.env.BALE_TOKEN || "498355142:R99u7YEYGmO9zcygk6lHAbpldP1NzS2deAQoTgB7";  // fallback فقط برای توسعه محلی
+if (!process.env.BALE_TOKEN) {
+  console.warn('⚠️ [CONFIG] BALE_TOKEN not found in env, using fallback hardcoded token (not recommended)');
+}
+
+const PAYMENT_PROVIDER_TOKEN = process.env.BALE_PAYMENT_TOKEN || "WALLET-xJUNpnH5VP2YfAAb";  // fallback فقط برای توسعه محلی
+if (!process.env.BALE_PAYMENT_TOKEN) {
+  console.warn('⚠️ [CONFIG] BALE_PAYMENT_TOKEN not found in env, using fallback hardcoded token (not recommended)');
+}
+
+// لینک پیش‌فرض گروه (در صورت نبود لینک در کارگاه)
+GROUP_LINK_FALLBACK = "ble.ir/join/Gah9cS9LzQ"
+
 const BASE_URL = `https://tapi.bale.ai/bot${BOT_TOKEN}`;
 const API_URL = () => BASE_URL;
 
