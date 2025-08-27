@@ -179,6 +179,12 @@ function createGroupCloseKeyboard(groupId, groupTitle) {
     }]);
   }
   
+  // دکمه حذف گروه
+  keyboard.push([{
+    text: '🗑️ حذف گروه از لیست',
+    callback_data: `remove_group_${groupId}`
+  }]);
+  
   // دکمه بازگشت
   keyboard.push([{
     text: '🔙 بازگشت به لیست گروه‌ها',
@@ -210,33 +216,68 @@ async function handleGroupCloseManagement(userId, action) {
     console.log('🔍 DEBUG: Access granted, processing action:', action);
     
     if (action === 'groups') {
-      // نمایش لیست گروه‌ها
-      console.log('🔍 DEBUG: getGroupsList called');
-      const groups = await getGroupsList();
-      console.log('🔍 DEBUG: Groups list:', groups);
+      // نمایش لیست گروه‌های دارای تنظیمات بستن
+      console.log('🔍 DEBUG: Loading close data for groups list');
+      const closeData = loadGroupCloseData();
+      console.log('🔍 DEBUG: Close data loaded:', closeData);
       
-      if (groups.length === 0) {
-        console.log('🔍 DEBUG: No groups found');
-        return {
-          text: '📝 هیچ گروهی یافت نشد.',
-          keyboard: [[{
-            text: '🔙 بازگشت به منوی اصلی',
-            callback_data: 'back_to_main'
-          }]]
-        };
+      // فقط گروه‌هایی که در close management هستند
+      const managedGroups = [];
+      if (closeData.groups && Object.keys(closeData.groups).length > 0) {
+        const allGroups = await getGroupsList();
+        console.log('🔍 DEBUG: All groups:', allGroups);
+        
+        for (const group of allGroups) {
+          if (closeData.groups[group.id]) {
+            managedGroups.push(group);
+          }
+        }
       }
       
-      console.log('🔍 DEBUG: Creating groups keyboard');
-      const keyboard = createGroupsKeyboard(groups);
-      console.log('🔍 DEBUG: Keyboard created:', keyboard);
+      console.log('🔍 DEBUG: Managed groups:', managedGroups);
       
-      const text = `🚫 مدیریت بستن گروه‌ها
+      const keyboard = [];
+      
+      if (managedGroups.length > 0) {
+        // نمایش گروه‌های مدیریت شده
+        managedGroups.forEach((group, index) => {
+          const buttonText = `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`;
+          keyboard.push([{
+            text: buttonText,
+            callback_data: `close_group_${group.id}`
+          }]);
+        });
+      }
+      
+      // دکمه افزودن گروه جدید
+      keyboard.push([{
+        text: '➕ افزودن گروه جدید',
+        callback_data: 'add_new_close_group'
+      }]);
+      
+      // دکمه بازگشت
+      keyboard.push([{
+        text: '🔙 بازگشت به منوی اصلی',
+        callback_data: 'back_to_main'
+      }]);
+      
+      let text;
+      if (managedGroups.length === 0) {
+        text = `🚫 مدیریت بستن گروه‌ها
 
-📋 گروه‌های موجود:
-${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`).join('\n')}
+📝 هیچ گروهی در حال حاضر تحت مدیریت بستن نیست.
 
-👆 لطفاً گروه مورد نظر را انتخاب کنید:
+➕ برای شروع، روی "افزودن گروه جدید" کلیک کنید:
 ⏰ ${getTimeStamp()}`;
+      } else {
+        text = `🚫 مدیریت بستن گروه‌ها
+
+📋 گروه‌های تحت مدیریت:
+${managedGroups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`).join('\n')}
+
+👆 لطفاً گروه مورد نظر را انتخاب کنید یا گروه جدیدی اضافه کنید:
+⏰ ${getTimeStamp()}`;
+      }
       
       console.log('🔍 DEBUG: Returning result with text and keyboard');
       console.log('🔍 DEBUG: Text length:', text.length);
@@ -667,6 +708,107 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
       // بازگشت به تنظیم روزها
       return await handleGroupCloseManagement(userId, `set_days_${groupId}`);
+      
+    } else if (action.startsWith('remove_group_')) {
+      // حذف گروه از لیست
+      const groupId = action.replace('remove_group_', '');
+      const closeData = loadGroupCloseData();
+      
+      // حذف کامل گروه از سیستم
+      if (closeData.groups[groupId]) {
+        delete closeData.groups[groupId];
+        saveGroupCloseData(closeData);
+        console.log(`🔍 DEBUG: Group ${groupId} removed from close management system`);
+      }
+      
+      // بازگشت به لیست گروه‌های مدیریت شده
+      return await handleGroupCloseManagement(userId, 'groups');
+      
+    } else if (action === 'add_new_close_group') {
+      // نمایش لیست تمام گروه‌ها برای افزودن
+      console.log('🔍 DEBUG: add_new_close_group action triggered');
+      const allGroups = await getGroupsList();
+      const closeData = loadGroupCloseData();
+      
+      // فیلتر کردن گروه‌هایی که قبلاً اضافه نشده‌اند
+      const availableGroups = allGroups.filter(group => !closeData.groups[group.id]);
+      
+      console.log('🔍 DEBUG: Available groups for adding:', availableGroups);
+      
+      if (availableGroups.length === 0) {
+        return {
+          text: `📝 تمام گروه‌ها قبلاً به سیستم مدیریت بستن اضافه شده‌اند.
+
+🔙 برای بازگشت به منوی اصلی کلیک کنید:
+⏰ ${getTimeStamp()}`,
+          keyboard: [[{
+            text: '🔙 بازگشت به منوی اصلی',
+            callback_data: 'groups'
+          }]]
+        };
+      }
+      
+      const keyboard = [];
+      
+      // نمایش گروه‌های قابل افزودن
+      availableGroups.forEach((group, index) => {
+        const buttonText = `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`;
+        keyboard.push([{
+          text: buttonText,
+          callback_data: `add_group_${group.id}`
+        }]);
+      });
+      
+      // دکمه بازگشت
+      keyboard.push([{
+        text: '🔙 بازگشت به منوی اصلی',
+        callback_data: 'groups'
+      }]);
+      
+      const text = `➕ افزودن گروه جدید به سیستم مدیریت بستن
+
+📋 گروه‌های قابل افزودن:
+${availableGroups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`).join('\n')}
+
+👆 لطفاً گروه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
+      
+    } else if (action.startsWith('add_group_')) {
+      // افزودن گروه جدید به سیستم مدیریت بستن
+      const groupId = action.replace('add_group_', '');
+      const closeData = loadGroupCloseData();
+      const allGroups = await getGroupsList();
+      const group = allGroups.find(g => g.id === groupId);
+      
+      if (!group) {
+        return {
+          text: '❌ گروه مورد نظر یافت نشد.',
+          keyboard: [[{
+            text: '🔙 بازگشت',
+            callback_data: 'add_new_close_group'
+          }]]
+        };
+      }
+      
+      // ایجاد تنظیمات پیش‌فرض برای گروه جدید
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {
+          closed: false,
+          message: '🚫 گروه موقتاً بسته است.',
+          schedule: {
+            startTime: '09:00',
+            endTime: '22:00',
+            activeDays: [0, 1, 2, 3, 4, 5, 6] // همه روزها
+          }
+        };
+        saveGroupCloseData(closeData);
+        console.log(`🔍 DEBUG: Group ${groupId} added to close management system with default settings`);
+      }
+      
+      // بازگشت به مدیریت گروه
+      return await handleGroupCloseManagement(userId, `close_group_${groupId}`);
       
     } else if (action === 'back_to_groups') {
       // بازگشت به لیست گروه‌ها

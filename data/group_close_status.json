@@ -1,16 +1,5 @@
 {
   "groups": {
-    "5719796514": {
-      "schedule": {
-        "startTime": "17:03",
-        "endTime": "22:01",
-        "activeDays": [
-          4
-        ]
-      },
-      "closed": false,
-      "message": "🚫 گروه در حال تعمیر است."
-    },
     "5417069312": {
       "schedule": {
         "startTime": "17:00",
@@ -46,6 +35,23 @@
         "endTime": "20:44",
         "activeDays": [
           4
+        ]
+      }
+    },
+    "5719796514": {
+      "closed": false,
+      "message": "🚫 گروه موقتاً بسته است.",
+      "schedule": {
+        "startTime": "09:00",
+        "endTime": "22:00",
+        "activeDays": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
         ]
       }
     }
