@@ -234,7 +234,7 @@ class PracticeManager {
   // دریافت تمام اعضای گروه (بدون ادمین‌ها)
   getAllGroupMembers(chatId) {
     try {
-      const membersDataPath = './members.json';
+      const membersDataPath = './robot/data/members.json';
       if (!fs.existsSync(membersDataPath)) {
         console.log('❌ [PRACTICE_MANAGER] Members file not found');
         return [];
@@ -243,21 +243,8 @@ class PracticeManager {
       const membersData = JSON.parse(fs.readFileSync(membersDataPath, 'utf8'));
       const allGroupMembers = membersData.groups[chatId] || [];
       
-      // فیلتر کردن ادمین‌ها (فقط کاربران عادی)
-      const regularMembers = allGroupMembers.filter(member => {
-        // بررسی اینکه آیا کاربر ادمین است یا نه
-        const userRole = member.role || 'STUDENT';
-        const isAdmin = userRole === 'SCHOOL_ADMIN' || userRole === 'GROUP_ADMIN';
-        
-        if (isAdmin) {
-          console.log(`🚫 [PRACTICE_MANAGER] Filtering out admin user: ${member.name} (role: ${userRole})`);
-        }
-        
-        return !isAdmin; // فقط کاربران غیر ادمین
-      });
-      
-      console.log(`📊 [PRACTICE_MANAGER] Found ${allGroupMembers.length} total members, ${regularMembers.length} regular members (admins filtered out) in group ${chatId}`);
-      return regularMembers;
+      console.log(`📊 [PRACTICE_MANAGER] Found ${allGroupMembers.length} total members in group ${chatId}`);
+      return allGroupMembers; // برگرداندن همه اعضا - فیلتر کردن در sendTodayPracticeList انجام می‌شود
 
     } catch (error) {
       console.error('❌ [PRACTICE_MANAGER] Error getting group members:', error);
