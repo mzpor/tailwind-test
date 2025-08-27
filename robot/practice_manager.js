@@ -45,16 +45,19 @@ class PracticeManager {
 
       // بررسی اینکه آیا ریپلای به پیام دیگری است
       if (!message.reply_to_message) {
+        console.log('❌ [PRACTICE_MANAGER] Message is not a reply');
         return false;
       }
 
       // بررسی اینکه آیا پیام اصلی صوتی است
       if (!message.reply_to_message.voice) {
+        console.log('❌ [PRACTICE_MANAGER] Reply is not to a voice message');
         return false;
       }
 
       // بررسی اینکه آیا پیام اصلی متعلق به همان کاربر است
       if (message.reply_to_message.from.id !== message.from.id) {
+        console.log(`❌ [PRACTICE_MANAGER] User ${message.from.id} is replying to ${message.reply_to_message.from.id}'s voice (not their own)`);
         return false;
       }
 
@@ -204,7 +207,7 @@ class PracticeManager {
     }
   }
 
-  // دریافت تمام اعضای گروه
+  // دریافت تمام اعضای گروه (بدون ادمین‌ها)
   getAllGroupMembers(chatId) {
     try {
       const membersDataPath = './members.json';
@@ -214,10 +217,23 @@ class PracticeManager {
       }
 
       const membersData = JSON.parse(fs.readFileSync(membersDataPath, 'utf8'));
-      const groupMembers = membersData.groups[chatId] || [];
+      const allGroupMembers = membersData.groups[chatId] || [];
       
-      console.log(`📊 [PRACTICE_MANAGER] Found ${groupMembers.length} members in group ${chatId}`);
-      return groupMembers;
+      // فیلتر کردن ادمین‌ها (فقط کاربران عادی)
+      const regularMembers = allGroupMembers.filter(member => {
+        // بررسی اینکه آیا کاربر ادمین است یا نه
+        const userRole = member.role || 'STUDENT';
+        const isAdmin = userRole === 'SCHOOL_ADMIN' || userRole === 'GROUP_ADMIN';
+        
+        if (isAdmin) {
+          console.log(`🚫 [PRACTICE_MANAGER] Filtering out admin user: ${member.name} (role: ${userRole})`);
+        }
+        
+        return !isAdmin; // فقط کاربران غیر ادمین
+      });
+      
+      console.log(`📊 [PRACTICE_MANAGER] Found ${allGroupMembers.length} total members, ${regularMembers.length} regular members (admins filtered out) in group ${chatId}`);
+      return regularMembers;
 
     } catch (error) {
       console.error('❌ [PRACTICE_MANAGER] Error getting group members:', error);
