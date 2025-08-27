@@ -4,9 +4,9 @@
       "closed": false,
       "message": "🚫 گروه موقتاً بسته است.",
       "schedule": {
-        "startTime": "19:20",
-        "endTime": "19:40",
-        "activeDays": [0, 2]
+        "startTime": "09:00",
+        "endTime": "22:00",
+        "activeDays": [0, 1, 2, 3, 4, 5, 6]
       }
     }
   },

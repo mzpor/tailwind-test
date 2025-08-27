@@ -656,19 +656,30 @@ function isGroupClosed(groupId) {
   
   const schedule = groupData.schedule;
   const now = new Date();
-  const currentDay = now.getDay(); // 0 = یکشنبه، 1 = دوشنبه، ...
+  // تبدیل JavaScript getDay() (0=یکشنبه) به فرمت کاربر (0=شنبه)
+  const currentDay = (now.getDay() + 1) % 7; // 0=شنبه، 1=یکشنبه، 2=دوشنبه، ...
   const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+  
+  console.log(`🔍 DEBUG: Group ${groupId} schedule check:`);
+  console.log(`  Current day: ${now.getDay()} (JS) -> ${currentDay} (user format)`);
+  console.log(`  Current time: ${currentTime}`);
+  console.log(`  Schedule: ${JSON.stringify(schedule)}`);
+  console.log(`  Active days: ${schedule.activeDays}`);
+  console.log(`  Time range: ${schedule.startTime} - ${schedule.endTime}`);
   
   // بررسی روز هفته
   if (!schedule.activeDays.includes(currentDay)) {
+    console.log(`  ❌ Day ${currentDay} not in active days ${schedule.activeDays}`);
     return true; // گروه در این روز بسته است
   }
   
   // بررسی ساعت
   if (currentTime < schedule.startTime || currentTime > schedule.endTime) {
+    console.log(`  ❌ Time ${currentTime} not in range ${schedule.startTime}-${schedule.endTime}`);
     return true; // گروه در این ساعت بسته است
   }
   
+  console.log(`  ✅ Group is OPEN - day ${currentDay} and time ${currentTime} are valid`);
   return false; // گروه باز است
 }
 
@@ -686,7 +697,8 @@ function getGroupCloseMessage(groupId) {
   if (groupData?.schedule) {
     const schedule = groupData.schedule;
     const now = new Date();
-    const currentDay = now.getDay();
+    // تبدیل JavaScript getDay() (0=یکشنبه) به فرمت کاربر (0=شنبه)
+    const currentDay = (now.getDay() + 1) % 7;
     const currentTime = now.toTimeString().slice(0, 5);
     
     if (!schedule.activeDays.includes(currentDay)) {
@@ -707,7 +719,7 @@ function getGroupCloseMessage(groupId) {
 
 // تابع کمکی برای نام روز
 function getDayName(dayIndex) {
-  const dayNames = ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه'];
+  const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
   return dayNames[dayIndex];
 }
 

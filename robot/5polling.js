@@ -2306,6 +2306,24 @@ function startPolling() {
 
         // اگر گروه بود، دستورات گروه را پردازش کن
         if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
+          // 🔒 بررسی وضعیت بسته بودن گروه
+          const { isGroupClosed, getGroupCloseMessage } = require('./9group_close_management');
+          if (isGroupClosed(msg.chat.id)) {
+            // گروه بسته است - پیام کاربر را مسدود کن
+            const closeMessage = getGroupCloseMessage(msg.chat.id);
+            
+            // حذف پیام کاربر
+            try {
+              await deleteMessage(msg.chat.id, msg.message_id);
+            } catch (error) {
+              console.log('Could not delete message:', error.message);
+            }
+            
+            // ارسال پیام بسته بودن گروه
+            await sendMessage(msg.chat.id, closeMessage);
+            continue; // پردازش بیشتر نکن
+          }
+          
           // بررسی اینکه آیا ربات ادمین است
           const isBotAdmin = await checkBotAdminStatus(msg.chat.id);
           
