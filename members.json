@@ -11,7 +11,17 @@
       {
         "id": 1790308237,
         "name": "محمدایرانسل",
-        "joinedAt": "2025-08-27T17:08:50.314Z"
+        "joinedAt": "2025-08-27T17:08:50.314Z",
+        "lastMessageDate": "2025-08-27T20:05:24.484Z",
+        "autoCollected": true
+      },
+      {
+        "id": 1114227010,
+        "name": "محمد همراه ۱",
+        "username": "mzpor1",
+        "joinDate": "2025-08-27T19:56:56.034Z",
+        "autoCollected": true,
+        "lastMessageDate": "2025-08-27T19:56:56.034Z"
       }
     ],
     "4535267863": [

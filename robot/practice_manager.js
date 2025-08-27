@@ -21,9 +21,25 @@ class PracticeManager {
         return false;
       }
 
-      // بررسی اینکه آیا شامل "تلاوتم" است
+      // خواندن کلمات کلیدی از کانفیگ
+      const settingsPath = '../data/settings.json';
+      let practiceKeywords = ['تلاوتم']; // مقدار پیش‌فرض
+      
+      if (fs.existsSync(settingsPath)) {
+        try {
+          const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+          practiceKeywords = settings.practice_keywords || ['تلاوتم'];
+        } catch (error) {
+          console.error('❌ [PRACTICE_MANAGER] Error reading practice keywords from config:', error);
+        }
+      }
+
+      // بررسی اینکه آیا شامل کلمات کلیدی است
       const text = message.text.trim();
-      if (text !== 'تلاوتم') {
+      const isValidKeyword = practiceKeywords.some(keyword => text === keyword);
+      
+      if (!isValidKeyword) {
+        console.log(`❌ [PRACTICE_MANAGER] Text "${text}" not in practice keywords: [${practiceKeywords.join(', ')}]`);
         return false;
       }
 
@@ -58,45 +74,63 @@ class PracticeManager {
       const userId = message.from.id;
       const userName = message.from.first_name + (message.from.last_name ? ' ' + message.from.last_name : '');
 
-      console.log(`🎤 [PRACTICE_MANAGER] Handling talawat message from ${userName} in chat ${chatId}`);
+      console.log(`🎤 [PRACTICE_MANAGER] handleTalawatMessage STARTED for ${userName} in chat ${chatId}`);
+      console.log(`👤 [PRACTICE_MANAGER] User ID: ${userId}, Chat ID: ${chatId}`);
 
       // بررسی زمان تمرین
-      if (!this.isPracticeTime()) {
+      console.log('⏰ [PRACTICE_MANAGER] Checking practice time...');
+      const practiceTimeResult = this.isPracticeTime();
+      console.log(`⏰ [PRACTICE_MANAGER] Practice time check result: ${practiceTimeResult}`);
+      
+      if (!practiceTimeResult) {
         console.log('⏰ [PRACTICE_MANAGER] Not practice time, sending guidance message');
         await this.sendNotPracticeTimeMessage(chatId);
         return true;
       }
 
       // بررسی اینکه آیا گروه باز است
+      console.log('🚫 [PRACTICE_MANAGER] Checking group status...');
       try {
         const { isGroupClosed } = require('./9group_close_management');
-        if (isGroupClosed(chatId)) {
+        const groupClosedResult = isGroupClosed(chatId);
+        console.log(`🚫 [PRACTICE_MANAGER] Group closed check result: ${groupClosedResult ? '🚫 CLOSED' : '✅ OPEN'}`);
+        
+        if (groupClosedResult) {
           console.log('🚫 [PRACTICE_MANAGER] Group is closed, cannot accept practice');
           const { getGroupCloseMessage } = require('./9group_close_management');
           const closeMessage = getGroupCloseMessage(chatId);
+          console.log(`🚫 [PRACTICE_MANAGER] Sending close message: ${closeMessage}`);
           await sendMessage(chatId, closeMessage);
           return true;
+        } else {
+          console.log('✅ [PRACTICE_MANAGER] Group is open, proceeding with practice registration');
         }
       } catch (error) {
         console.error('❌ [PRACTICE_MANAGER] Error checking group status:', error.message);
+        console.log('⚠️ [PRACTICE_MANAGER] Continuing despite group status check error');
         // ادامه پردازش حتی اگر بررسی وضعیت گروه با خطا مواجه شود
       }
 
       // ثبت تمرین
+      console.log('📝 [PRACTICE_MANAGER] Registering practice...');
       const registered = await this.registerPractice(message);
       if (!registered) {
         console.error(`❌ [PRACTICE_MANAGER] Failed to register practice for ${userName}`);
         return false;
       }
+      console.log(`✅ [PRACTICE_MANAGER] Practice registered successfully for ${userName}`);
 
       // ارسال لیست تمرین‌های امروز
+      console.log('📋 [PRACTICE_MANAGER] Sending today\'s practice list...');
       const listSent = await this.sendTodayPracticeList(chatId);
       if (!listSent) {
         console.error(`❌ [PRACTICE_MANAGER] Failed to send practice list for ${userName}`);
         return false;
       }
+      console.log(`✅ [PRACTICE_MANAGER] Practice list sent successfully`);
 
       console.log(`✅ [PRACTICE_MANAGER] Talawat message handled successfully for ${userName}`);
+      console.log(`🎯 [PRACTICE_MANAGER] handleTalawatMessage COMPLETED successfully`);
       return true;
 
     } catch (error) {
@@ -218,18 +252,23 @@ class PracticeManager {
       const practiceDays = settings.practice_days || [];
       const practiceHours = settings.practice_hours || [];
 
-      console.log(`⏰ [PRACTICE_MANAGER] Checking practice time - Day: ${currentDay} (user format), Hour: ${currentHour}`);
-      console.log(`📅 [PRACTICE_MANAGER] Practice days: ${practiceDays.join(', ')} (user format)`);
-      console.log(`🕐 [PRACTICE_MANAGER] Practice hours: ${practiceHours.join(', ')}`);
+      console.log(`⏰ [PRACTICE_MANAGER] ===== PRACTICE TIME CHECK START =====`);
+      console.log(`⏰ [PRACTICE_MANAGER] Current moment: ${now.format('YYYY-MM-DD HH:mm:ss')}`);
+      console.log(`⏰ [PRACTICE_MANAGER] JavaScript day: ${now.day()} (0=Sunday, 1=Monday, ...)`);
+      console.log(`⏰ [PRACTICE_MANAGER] User format day: ${currentDay} (0=شنبه, 1=یکشنبه, ...)`);
+      console.log(`⏰ [PRACTICE_MANAGER] Current hour: ${currentHour}`);
+      console.log(`📅 [PRACTICE_MANAGER] Practice days from settings: ${practiceDays.join(', ')} (user format)`);
+      console.log(`🕐 [PRACTICE_MANAGER] Practice hours from settings: ${practiceHours.join(', ')}`);
 
       const isValidDay = practiceDays.includes(currentDay);
       const isValidHour = practiceHours.includes(currentHour);
 
-      console.log(`🔍 [PRACTICE_MANAGER] Day check: ${currentDay} in ${practiceDays.join(', ')} = ${isValidDay}`);
-      console.log(`🔍 [PRACTICE_MANAGER] Hour check: ${currentHour} in ${practiceHours.join(', ')} = ${isValidHour}`);
+      console.log(`🔍 [PRACTICE_MANAGER] Day validation: ${currentDay} in [${practiceDays.join(', ')}] = ${isValidDay ? '✅ VALID' : '❌ INVALID'}`);
+      console.log(`🔍 [PRACTICE_MANAGER] Hour validation: ${currentHour} in [${practiceHours.join(', ')}] = ${isValidHour ? '✅ VALID' : '❌ INVALID'}`);
 
       const result = isValidDay && isValidHour;
-      console.log(`✅ [PRACTICE_MANAGER] Practice time check result: ${result}`);
+      console.log(`✅ [PRACTICE_MANAGER] Final practice time result: ${result ? '✅ YES - Practice time is active' : '❌ NO - Not practice time'}`);
+      console.log(`⏰ [PRACTICE_MANAGER] ===== PRACTICE TIME CHECK END =====`);
 
       return result;
 
@@ -297,11 +336,30 @@ class PracticeManager {
         return false;
       }
 
-      // بررسی اینکه آیا کپشن شامل کلمه "تمرین" است
-      const caption = message.caption.toLowerCase();
-      const practiceKeywords = ['تمرین', 'tamrin', 'practice', 'تمرینات', 'tamrinat'];
+      // خواندن کلمات کلیدی از کانفیگ
+      const settingsPath = '../data/settings.json';
+      let practiceKeywords = ['تمرین', 'tamrin', 'practice', 'تمرینات', 'tamrinat']; // مقدار پیش‌فرض
       
-      return practiceKeywords.some(keyword => caption.includes(keyword));
+      if (fs.existsSync(settingsPath)) {
+        try {
+          const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+          practiceKeywords = settings.practice_keywords || ['تمرین', 'tamrin', 'practice', 'تمرینات', 'tamrinat'];
+        } catch (error) {
+          console.error('❌ [PRACTICE_MANAGER] Error reading practice keywords from config:', error);
+        }
+      }
+
+      // بررسی اینکه آیا کپشن شامل کلمات کلیدی است
+      const caption = message.caption.toLowerCase();
+      const isValidKeyword = practiceKeywords.some(keyword => caption.includes(keyword));
+      
+      if (isValidKeyword) {
+        console.log(`✅ [PRACTICE_MANAGER] Practice message detected with keyword in caption: "${caption}"`);
+      } else {
+        console.log(`❌ [PRACTICE_MANAGER] Caption "${caption}" not in practice keywords: [${practiceKeywords.join(', ')}]`);
+      }
+      
+      return isValidKeyword;
       
     } catch (error) {
       console.error('❌ [PRACTICE_MANAGER] Error checking practice message:', error);
