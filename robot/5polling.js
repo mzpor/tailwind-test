@@ -47,7 +47,6 @@ const PaymentModule = require('./16pay');
 const { practiceManager } = require('./practice_manager');
 const { ArzyabiModule } = require('./17arzyabi');
 const SabtManager = require('./18sabt');
-const moment = require('moment-jalaali');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 // ایجاد یک instance واحد از SmartRegistrationModule
@@ -2858,53 +2857,39 @@ async function autoCollectNewMember(msg) {
     // بررسی اینکه آیا کاربر قبلاً در لیست اعضا وجود دارد
     const { loadMembersData } = require('./7group');
     const membersData = loadMembersData();
-    const { getGroupName } = require('./3config');
-
-    // دریافت عنوان گروه
-    const groupTitle = await getGroupName(msg.chat.id);
-
-    // اطمینان از وجود ساختار صحیح برای گروه
-    if (!membersData.groups[msg.chat.id]) {
-      membersData.groups[msg.chat.id] = {
-        title: groupTitle,
-        members: []
-      };
-    } else if (!membersData.groups[msg.chat.id].title) {
-      // اگر ساختار قدیمی بود، به ساختار جدید تبدیل کنیم
-      membersData.groups[msg.chat.id] = {
-        title: groupTitle,
-        members: Array.isArray(membersData.groups[msg.chat.id]) ? membersData.groups[msg.chat.id] : []
-      };
-    }
-
-    const existingMember = membersData.groups[msg.chat.id].members.find(member => member.id === userId);
-
+    const groupMembers = membersData.groups[msg.chat.id] || [];
+    
+    const existingMember = groupMembers.find(member => member.id === userId);
+    
     if (!existingMember) {
-      // اضافه کردن کاربر جدید به لیست اعضا با ساختار جدید
+      // اضافه کردن کاربر جدید به لیست اعضا
       console.log(`➕ [NEW-MEMBER] Adding new member to members list: ${userName}`);
-
-      const jalaaliDate = moment().format('jYYYY-jMM-jDDTHH:mm:ss.SSSZ');
-
+      
       const newMemberData = {
         id: userId,
         name: userName,
-        joinedAt: jalaaliDate
+        username: username,
+        joinDate: new Date().toISOString(),
+        autoCollected: true,
+        joinMethod: 'group_join',
+        lastMessageDate: new Date().toISOString()
       };
 
-      membersData.groups[msg.chat.id].members.push(newMemberData);
+      groupMembers.push(newMemberData);
+      membersData.groups[msg.chat.id] = groupMembers;
 
       // ذخیره اطلاعات جدید
       const { saveMembersData } = require('./7group');
       saveMembersData(membersData);
 
       console.log(`✅ [NEW-MEMBER] Successfully added new member ${userName} to group ${msg.chat.title}`);
-
+      
       // ارسال گزارش به گروه گزارش (اگر فعال باشد)
       if (AUTO_COLLECT_USER_CONFIG.report_to_admin) {
         try {
           const { getReportsEnabled } = require('./3config');
           if (getReportsEnabled()) {
-            const reportText = `🆕 عضو جدید وارد گروه شد\n📛 گروه: ${msg.chat.title}\n👤 کاربر: ${userName} (ID: ${userId})\n⏰ ${moment().format('jYYYY/jMM/jDD HH:mm:ss')}`;
+            const reportText = `🆕 عضو جدید وارد گروه شد\n📛 گروه: ${msg.chat.title}\n👤 کاربر: ${userName} (ID: ${userId})\n⏰ ${new Date().toLocaleString('fa-IR')}`;
             await sendMessage(REPORT_GROUP_ID, reportText);
             console.log(`📤 [NEW-MEMBER] Report sent to report group`);
           }
@@ -2914,7 +2899,14 @@ async function autoCollectNewMember(msg) {
       }
     } else {
       // به‌روزرسانی اطلاعات کاربر موجود
-      console.log(`🔄 [NEW-MEMBER] Member ${userName} already exists, skipping addition`);
+      existingMember.joinMethod = 'group_join';
+      existingMember.lastJoinDate = new Date().toISOString();
+      
+      // ذخیره تغییرات
+      const { saveMembersData } = require('./7group');
+      saveMembersData(membersData);
+      
+      console.log(`🔄 [NEW-MEMBER] Updated join info for existing member: ${userName}`);
     }
 
   } catch (error) {
