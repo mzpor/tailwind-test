@@ -66,7 +66,7 @@ async function sendMessage(chat_id, text, keyboard = null) {
     });
     console.log('📤 [BALE] sendMessage SUCCESS');
     console.log('📤 [BALE] Response:', JSON.stringify(response.data, null, 2));
-    return response;
+    return response.data;
   } catch (error) {
     console.error('❌ [BALE] sendMessage ERROR:', error.message);
     console.error('❌ [BALE] Error response:', error.response?.data);
@@ -109,7 +109,7 @@ async function sendMessageWithInlineKeyboard(chat_id, text, inline_keyboard = nu
     });
     console.log('📤 [BALE] sendMessageWithInlineKeyboard SUCCESS');
     console.log('📤 [BALE] Response:', JSON.stringify(response.data, null, 2));
-    return response;
+    return response.data;
   } catch (error) {
     console.error('❌ [BALE] sendMessageWithInlineKeyboard ERROR:', error.message);
     console.error('❌ [BALE] Error response:', error.response?.data);
