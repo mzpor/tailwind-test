@@ -5,13 +5,13 @@
   "adminMessage": "سلام مدیر عزیز! 👋",
   "practice_days": [
     0,
-    2
+    4
   ],
   "practice_hours": [
-    19,
-    20,
-    22
+   21
   ],
+  "practice_start_minute": 21,
+  "practice_end_minute": 25,
   "evaluation_days": [
     1,
     3,

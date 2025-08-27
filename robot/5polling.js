@@ -15,11 +15,11 @@ const {
   getAvailableRoles,
   getAllUsersWithRoles
 } = require('./6mid');
-const { 
-  ROLES, 
-  USERS_BY_ROLE, 
-  isButtonVisible, 
-  setButtonVisible, 
+const {
+  ROLES,
+  USERS_BY_ROLE,
+  isButtonVisible,
+  setButtonVisible,
   getButtonVisibilityConfig,
   isGroupEnabled,
   setGroupStatus,
@@ -29,7 +29,15 @@ const {
   isOsatdManagementEnabled,
   hasOsatdManagementAccess,
   MAIN_BUTTONS_CONFIG,
-  getRoleDisplayName
+  getRoleDisplayName,
+  isSettingsVisibleForRole,
+  // ===== توابع مدیریت گروه زمانی که ربات غیرفعال است =====
+  isGroupModerationEnabled,
+  shouldDeleteMessages,
+  shouldSendWarning,
+  getWarningMessage,
+  isGroupModerated,
+  isPracticeTime
 } = require('./3config');
 const { 
   getCurrentCoachId, 
@@ -344,7 +352,7 @@ function generateDynamicKeyboard(role, userId = null) {
     secondRow.push('مدیر');
     
     // اضافه کردن دکمه تنظیمات بر اساس کانفیگ
-    if (MAIN_BUTTONS_CONFIG.SETTINGS === 1) {
+    if (isSettingsVisibleForRole(role)) {
       secondRow.push('تنظیمات');
     }
     
@@ -1091,12 +1099,77 @@ function startPolling() {
         const callback_query = update.callback_query;
         const pre_checkout_query = update.pre_checkout_query;
         const successful_payment = update.message?.successful_payment;
-        
+
+        // ===== مدیریت گروه زمانی که ربات غیرفعال است =====
+        if (msg && msg.chat && msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
+          const chatId = msg.chat.id.toString();
+
+          // بررسی آیا این گروه باید مدیریت شود
+          if (isGroupModerationEnabled() && isGroupModerated(chatId)) {
+            // بررسی آیا ربات در زمان فعال بودن است
+            if (!isPracticeTime()) {
+              console.log(`🔒 [GROUP_MODERATION] Bot is inactive, moderating message in group ${chatId}`);
+
+              // حذف پیام کاربر اگر تنظیم شده باشد
+              if (shouldDeleteMessages() && msg.message_id) {
+                try {
+                  await deleteMessage(chatId, msg.message_id);
+                  console.log(`🗑️ [GROUP_MODERATION] Deleted message ${msg.message_id} in inactive time`);
+                } catch (error) {
+                  console.error(`❌ [GROUP_MODERATION] Error deleting message:`, error.message);
+                }
+              }
+
+              // ارسال پیام هشدار اگر تنظیم شده باشد و کاربر ادمین نباشد
+              if (shouldSendWarning() && !isAdmin(msg.from.id)) {
+                try {
+                  const warningMessage = getWarningMessage();
+                  await sendMessage(chatId, warningMessage);
+                  console.log(`⚠️ [GROUP_MODERATION] Sent warning message to group ${chatId}`);
+                } catch (error) {
+                  console.error(`❌ [GROUP_MODERATION] Error sending warning:`, error.message);
+                }
+              }
+
+              // اگر پیام حذف شده یا هشدار ارسال شده، ادامه پردازش نمی‌دهیم
+              if (shouldDeleteMessages() || shouldSendWarning()) {
+                continue; // به پیام بعدی می‌رویم
+              }
+            }
+          }
+        }
+
         // پردازش callback query (کیبورد شیشه‌ای)
         if (callback_query) {
           console.log('🔄 [POLLING] Callback query detected');
           console.log(`🔄 [POLLING] Callback data: ${callback_query.data}`);
-          console.log(`🔄 [POLLING] User ID: ${callback_query.from.id}, Chat ID: ${callback_query.message.chat.id}`);
+
+          // بررسی وجود callback_query.message و message.chat
+          if (!callback_query.message) {
+            console.log('⚠️ [POLLING] Callback query has no message object!');
+            console.log(`🔄 [POLLING] Callback query structure:`, JSON.stringify(callback_query, null, 2));
+            await answerCallbackQuery(callback_query.id, '❌ خطا در پردازش درخواست', true);
+            return;
+          }
+
+          if (!callback_query.message.chat) {
+            console.log('⚠️ [POLLING] Callback query message has no chat object!');
+            console.log(`🔄 [POLLING] Message structure:`, JSON.stringify(callback_query.message, null, 2));
+            await answerCallbackQuery(callback_query.id, '❌ خطا در پردازش درخواست', true);
+            return;
+          }
+
+          console.log(`🔄 [POLLING] Callback query structure:`, JSON.stringify({
+            hasMessage: !!callback_query.message,
+            messageType: callback_query.message?.constructor?.name,
+            hasChat: !!callback_query.message?.chat,
+            chatType: callback_query.message?.chat?.type,
+            chatId: callback_query.message?.chat?.id,
+            fromId: callback_query.from?.id
+          }, null, 2));
+
+          const chatId = callback_query.message?.chat?.id || callback_query.from.id;
+          console.log(`🔄 [POLLING] User ID: ${callback_query.from.id}, Chat ID: ${chatId}`);
           console.log(`🔄 [POLLING] Callback data type: ${typeof callback_query.data}`);
           console.log(`🔄 [POLLING] Callback data length: ${callback_query.data.length}`);
           console.log(`🔄 [POLLING] Callback data starts with 'practice_': ${callback_query.data.startsWith('practice_')}`);
@@ -1120,7 +1193,11 @@ function startPolling() {
             callback_query.data !== 'kargah_management') {
             try {
               console.log('🗑️ [POLLING] Attempting to delete previous message...');
-              await deleteMessage(callback_query.message.chat.id, callback_query.message.message_id);
+              const deleteChatId = callback_query.message?.chat?.id || callback_query.from.id;
+              const deleteMessageId = callback_query.message?.message_id;
+              if (deleteMessageId) {
+                await deleteMessage(deleteChatId, deleteMessageId);
+              }
               console.log('🗑️ [POLLING] Previous message deleted successfully');
             } catch (error) {
               console.log('🗑️ [POLLING] Could not delete previous message:', error.message);
@@ -1330,7 +1407,8 @@ function startPolling() {
               kargahModule.setSendMessage(sendMessage);
               kargahModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
               kargahModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
-              const success = await kargahModule.handleKargahCommand(callback_query.message.chat.id, callback_query.from.id);
+              const kargahChatId = callback_query.message?.chat?.id || callback_query.from.id;
+              const success = await kargahModule.handleKargahCommand(kargahChatId, callback_query.from.id);
               
               if (!success) {
                 const config = roleConfig[role];
@@ -1366,7 +1444,8 @@ function startPolling() {
             });
             
             if (result && result.keyboard) {
-              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+              const osatdChatId = callback_query.message?.chat?.id || callback_query.from.id;
+              await sendMessageWithInlineKeyboard(osatdChatId, result.text, result.keyboard);
             } else {
               const config = roleConfig[role];
               const reply = '❌ خطا در نمایش منوی استادها';
@@ -1468,7 +1547,8 @@ function startPolling() {
             }
             
             console.log(`🔍 [POLLING] Callback query object:`, JSON.stringify(callback_query, null, 2));
-            console.log(`🔍 [POLLING] User ID: ${callback_query.from.id}, Chat ID: ${callback_query.message.chat.id}`);
+            const settingsChatId = callback_query.message?.chat?.id || callback_query.from.id;
+            console.log(`🔍 [POLLING] User ID: ${callback_query.from.id}, Chat ID: ${settingsChatId}`);
             
             const settingsModule = new SettingsModule();
             console.log('🔍 [POLLING] SettingsModule created, calling handleCallback...');
@@ -1502,10 +1582,12 @@ function startPolling() {
             console.log('📝 [POLLING] Sabt callback detected');
             console.log(`📝 [POLLING] Sabt callback data: ${callback_query.data}`);
             // پردازش callback های ثبت اطلاعات
-            const result = sabtManager.handleAnswer(callback_query.message.chat.id, callback_query.data);
+            const sabtChatId = callback_query.message?.chat?.id || callback_query.from.id;
+            const result = sabtManager.handleAnswer(sabtChatId, callback_query.data);
             
             if (result && result.text) {
-              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard || []);
+              const sabtChatId = callback_query.message?.chat?.id || callback_query.from.id;
+              await sendMessageWithInlineKeyboard(sabtChatId, result.text, result.keyboard || []);
               console.log('✅ [POLLING] Sabt callback handled successfully');
             } else {
               console.error('❌ [POLLING] Error handling sabt callback');
@@ -1519,19 +1601,25 @@ function startPolling() {
             console.log('📝 [POLLING] Sabt inline keyboard callback detected');
             console.log(`📝 [POLLING] Sabt callback data: ${callback_query.data}`);
             // پردازش callback های کیبرد اینلاین ثبت اطلاعات
-            const result = sabtManager.handleCallback(callback_query.message.chat.id, callback_query.data);
+            const sabtCallbackChatId = callback_query.message?.chat?.id || callback_query.from.id;
+            const result = sabtManager.handleCallback(sabtCallbackChatId, callback_query.data);
             
             if (result && result.text) {
               if (result.keyboard) {
                 // اگر کیبرد دارد، پیام جدید ارسال کن
-                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+                const sabtKeyboardChatId = callback_query.message?.chat?.id || callback_query.from.id;
+                await sendMessageWithInlineKeyboard(sabtKeyboardChatId, result.text, result.keyboard);
               } else {
                 // اگر فقط متن دارد، پیام را ویرایش کن
-                await editMessageWithInlineKeyboard(
-                  callback_query.message.chat.id,
-                  callback_query.message.message_id,
-                  result.text
-                );
+                const editChatId = callback_query.message?.chat?.id || callback_query.from.id;
+                const editMessageId = callback_query.message?.message_id;
+                if (editMessageId) {
+                  await editMessageWithInlineKeyboard(
+                    editChatId,
+                    editMessageId,
+                    result.text
+                  );
+                }
               }
               console.log('✅ [POLLING] Sabt inline keyboard callback handled successfully');
             } else {
@@ -1559,30 +1647,39 @@ function startPolling() {
               
               if (result.edit_message) {
                 // اگر edit_message = true، پیام قبلی را ویرایش کن
-                if (result.keyboard) {
-                  await editMessageWithInlineKeyboard(
-                    callback_query.message.chat.id,
-                    callback_query.message.message_id,
-                    result.text,
-                    result.keyboard
-                  );
-                } else {
-                  await editMessageWithInlineKeyboard(
-                    callback_query.message.chat.id,
-                    callback_query.message.message_id,
-                    result.text
-                  );
+                const editChatId = callback_query.message?.chat?.id || callback_query.from.id;
+                const editMessageId = callback_query.message?.message_id;
+                if (editMessageId) {
+                  if (result.keyboard) {
+                    await editMessageWithInlineKeyboard(
+                      editChatId,
+                      editMessageId,
+                      result.text,
+                      result.keyboard
+                    );
+                  } else {
+                    await editMessageWithInlineKeyboard(
+                      editChatId,
+                      editMessageId,
+                      result.text
+                    );
+                  }
                 }
               } else if (result.keyboard) {
                 // اگر کیبرد دارد، پیام جدید ارسال کن
-                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+                const osatdChatId = callback_query.message?.chat?.id || callback_query.from.id;
+              await sendMessageWithInlineKeyboard(osatdChatId, result.text, result.keyboard);
               } else {
                 // اگر فقط متن دارد، پیام را ویرایش کن
-                await editMessageWithInlineKeyboard(
-                  callback_query.message.chat.id,
-                  callback_query.message.message_id,
-                  result.text
-                );
+                const finalEditChatId = callback_query.message?.chat?.id || callback_query.from.id;
+                const finalEditMessageId = callback_query.message?.message_id;
+                if (finalEditMessageId) {
+                  await editMessageWithInlineKeyboard(
+                    finalEditChatId,
+                    finalEditMessageId,
+                    result.text
+                  );
+                }
               }
               console.log('✅ [POLLING] Coaches callback handled successfully');
             } else {
@@ -1915,8 +2012,8 @@ function startPolling() {
 // مدیریت callback های مدیریت گروه‌ها
 async function handleGroupManagementCallback(callback_query) {
   try {
-    const chatId = callback_query.message.chat.id;
-    const messageId = callback_query.message.message_id;
+    const chatId = callback_query.message?.chat?.id || callback_query.from.id;
+    const messageId = callback_query.message?.message_id;
     const userId = callback_query.from.id;
     const data = callback_query.data;
     const callbackQueryId = callback_query.id;
@@ -2364,7 +2461,8 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
     
   } catch (error) {
     console.error(`Error in handleGroupManagementCallback: ${error.message}`);
-    await safeSendMessage(callback_query.message.chat.id, '❌ خطا در پردازش درخواست');
+    const errorChatId = callback_query.message?.chat?.id || callback_query.from.id;
+    await safeSendMessage(errorChatId, '❌ خطا در پردازش درخواست');
   }
 }
 

@@ -257,7 +257,16 @@ const BOT_JOIN_REPORT_CONFIG = {
 const BOT_STATUS_REPORT_CONFIG = {
   enabled: 0,  // 0: غیرفعال، 1: فعال
   interval_seconds: 10,  // هر چند ثانیه چک کند (پیش‌فرض: 10)
-  report_level: "basic"  // basic: فقط admin status, full: همه اطلاعات
+};
+
+// ===== کنترل مدیریت گروه در زمان غیرفعال بودن ربات =====
+const GROUP_MODERATION_CONFIG = {
+  enabled: 1,  // 0: غیرفعال، 1: فعال - آیا گروه‌ها زمانی که ربات غیرفعال است مدیریت شوند؟
+  delete_messages: 1,  // 0: نه، 1: بله - آیا پیام‌های کاربران در زمان غیرفعال حذف شوند؟
+  restrict_users: 1,  // 0: نه، 1: بله - آیا کاربران در زمان غیرفعال محدود شوند؟
+  send_warning: 1,  // 0: نه، 1: بله - آیا پیام هشدار ارسال شود؟
+  warning_message: '⏰ *زمان تمرین هنوز شروع نشده است*\n\n📅 لطفاً در ساعت تعیین شده تمرین حضور پیدا کنید.',
+  group_ids: ["5668045453"],  // لیست ID گروه‌هایی که باید مدیریت شوند
 };
 
 // ===== کنترل جمع‌آوری خودکار اطلاعات کاربران =====
@@ -413,7 +422,7 @@ const USER_NAMES = {
 const USERS_BY_ROLE = {
   SCHOOL_ADMIN: [
   //  1638058362,
-    95519970,
+    95519970,// کاظمی 
     1775811194,
     1114227010
   //574330749
@@ -1400,11 +1409,34 @@ const getPracticeHours = () => {
   }
 };
 
+// دریافت دقیقه شروع تمرین
+const getPracticeStartMinute = () => {
+  try {
+    const settings = loadSettings();
+    return settings.practice_start_minute || 0; // پیش‌فرض: دقیقه 0
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting practice start minute:', error.message);
+    return 0;
+  }
+};
+
+// دریافت دقیقه پایان تمرین
+const getPracticeEndMinute = () => {
+  try {
+    const settings = loadSettings();
+    return settings.practice_end_minute || 59; // پیش‌فرض: دقیقه 59
+  } catch (error) {
+    console.error('❌ [CONFIG] Error getting practice end minute:', error.message);
+    return 59;
+  }
+};
+
 const isPracticeTime = () => {
   try {
     const now = new Date();
     const currentDay = now.getDay(); // 0 = یکشنبه، 1 = دوشنبه، ...
     const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
 
     // تبدیل صحیح به روزهای هفته فارسی
     // JavaScript: 0=یکشنبه, 1=دوشنبه, 2=سه‌شنبه, 3=چهارشنبه, 4=پنج‌شنبه, 5=جمعه, 6=شنبه
@@ -1417,20 +1449,80 @@ const isPracticeTime = () => {
     else if (currentDay === 4) persianDay = 5; // پنج‌شنبه -> 5
     else if (currentDay === 5) persianDay = 6; // جمعه -> 6
     else if (currentDay === 6) persianDay = 0; // شنبه -> 0
-    
+
     const practiceDays = getPracticeDays();
     const practiceHours = getPracticeHours();
-    
+    const startMinute = getPracticeStartMinute();
+    const endMinute = getPracticeEndMinute();
+
     const isActiveDay = practiceDays.includes(persianDay);
     const isActiveHour = practiceHours.includes(currentHour);
-    
-    console.log(`🔍 [CONFIG] Practice time check: Day=${currentDay}(${persianDay}), Hour=${currentHour}, ActiveDay=${isActiveDay}, ActiveHour=${isActiveHour}`);
-    
-    return isActiveDay && isActiveHour;
+
+    // بررسی دقیق دقیقه برای ساعت شروع و پایان
+    let isActiveMinute = false;
+    if (isActiveHour) {
+      if (practiceHours.length === 1) {
+        // اگر فقط یک ساعت تنظیم شده، کل ساعت فعال است
+        isActiveMinute = (currentMinute >= startMinute && currentMinute <= endMinute);
+      } else if (currentHour === practiceHours[0]) {
+        // برای اولین ساعت، از دقیقه شروع به بعد
+        isActiveMinute = (currentMinute >= startMinute);
+      } else if (currentHour === practiceHours[practiceHours.length - 1]) {
+        // برای آخرین ساعت، تا دقیقه پایان
+        isActiveMinute = (currentMinute <= endMinute);
+      } else {
+        // برای ساعت‌های میانی، کل ساعت فعال است
+        isActiveMinute = true;
+      }
+    }
+
+    const isActive = isActiveDay && isActiveHour && isActiveMinute;
+
+    console.log(`🔍 [CONFIG] Practice time check: Day=${currentDay}(${persianDay}), Hour=${currentHour}, Minute=${currentMinute}, Active=${isActive}`);
+    console.log(`🔍 [CONFIG] Details: Day=${isActiveDay}, Hour=${isActiveHour}, Minute=${isActiveMinute}, Range=${startMinute}-${endMinute}`);
+
+    return isActive;
   } catch (error) {
     console.error('❌ [CONFIG] Error in isPracticeTime:', error.message);
     return false;
   }
+};
+
+// ===== توابع مدیریت گروه زمانی که ربات غیرفعال است =====
+
+// بررسی آیا مدیریت گروه فعال است
+const isGroupModerationEnabled = () => {
+  return GROUP_MODERATION_CONFIG.enabled === 1;
+};
+
+// بررسی آیا پیام‌ها باید حذف شوند
+const shouldDeleteMessages = () => {
+  return GROUP_MODERATION_CONFIG.delete_messages === 1;
+};
+
+// بررسی آیا کاربران باید محدود شوند
+const shouldRestrictUsers = () => {
+  return GROUP_MODERATION_CONFIG.restrict_users === 1;
+};
+
+// بررسی آیا پیام هشدار باید ارسال شود
+const shouldSendWarning = () => {
+  return GROUP_MODERATION_CONFIG.send_warning === 1;
+};
+
+// دریافت پیام هشدار
+const getWarningMessage = () => {
+  return GROUP_MODERATION_CONFIG.warning_message;
+};
+
+// دریافت لیست گروه‌های مدیریت شده
+const getModeratedGroupIds = () => {
+  return GROUP_MODERATION_CONFIG.group_ids || [];
+};
+
+// بررسی آیا گروه باید مدیریت شود
+const isGroupModerated = (groupId) => {
+  return getModeratedGroupIds().includes(groupId.toString());
 };
 
 // ===== توابع جدید برای تشخیص تمرین =====
@@ -1832,5 +1924,16 @@ module.exports = {
   getPracticeDays,
   getEvaluationDays,
   isPracticeTime,
-  getPracticeHours
+  getPracticeHours,
+  getPracticeStartMinute,
+  getPracticeEndMinute,
+  // ===== توابع مدیریت گروه زمانی که ربات غیرفعال است =====
+  GROUP_MODERATION_CONFIG,
+  isGroupModerationEnabled,
+  shouldDeleteMessages,
+  shouldRestrictUsers,
+  shouldSendWarning,
+  getWarningMessage,
+  getModeratedGroupIds,
+  isGroupModerated
 };
