@@ -64,6 +64,7 @@ function isGroupAdmin(userId) {
 
 async function handleGroupJoin(chat) {
   console.log('🤖 [GROUP] ===== BOT JOINED GROUP =====');
+  console.log('🤖 [GROUP] Function called at:', new Date().toISOString());
   console.log('🤖 [GROUP] Chat ID:', chat.id);
   console.log('🤖 [GROUP] Chat Title:', chat.title);
   console.log('🤖 [GROUP] Chat Type:', chat.type);
@@ -75,25 +76,107 @@ async function handleGroupJoin(chat) {
   console.log('🤖 [GROUP] Chat Join By Link:', chat.join_by_link || false);
   console.log('🤖 [GROUP] Chat Join Date:', chat.date ? new Date(chat.date * 1000).toLocaleString('fa-IR') : 'نامشخص');
   console.log('🤖 [GROUP] Full Chat Object:', JSON.stringify(chat, null, 2));
+  console.log('🤖 [GROUP] Starting auto-save process...');
   
-  // اضافه کردن گروه به groups_config.json
+  // خواندن تنظیمات از settings.json
+  console.log('📖 [GROUP] Reading settings.json...');
   try {
-    const { setGroupStatus } = require('./3config');
-    // فعال کردن گروه و تنظیم نام آن
-    setGroupStatus(chat.id, true, 'bot_join');
+    const settings = require('./data/settings.json');
+    console.log('✅ [GROUP] Settings loaded successfully');
+    console.log('📋 [GROUP] Auto-save groups config:', JSON.stringify(settings.auto_save_groups, null, 2));
     
-    // به‌روزرسانی نام گروه در groups_config.json
-    const { loadGroupsConfig, saveGroupsConfig } = require('./3config');
-    const groupsConfig = loadGroupsConfig();
-    if (groupsConfig.groups[chat.id]) {
+    if (settings.auto_save_groups && settings.auto_save_groups.enabled) {
+      console.log('✅ [GROUP] Auto-save groups is enabled, saving group info...');
+      
+      // اضافه کردن گروه به groups_config.json با اطلاعات کامل
+      console.log('🔧 [GROUP] Loading required modules...');
+      const { setGroupStatus, loadGroupsConfig, saveGroupsConfig } = require('./3config');
+      console.log('✅ [GROUP] Modules loaded successfully');
+      
+      // فعال کردن گروه و تنظیم نام آن
+      console.log('🔧 [GROUP] Setting group status...');
+      setGroupStatus(chat.id, true, 'bot_join');
+      console.log('✅ [GROUP] Group status set successfully');
+      
+      // به‌روزرسانی اطلاعات کامل گروه در groups_config.json
+      console.log('📂 [GROUP] Loading groups config...');
+      const groupsConfig = loadGroupsConfig();
+      console.log('✅ [GROUP] Groups config loaded, current groups:', Object.keys(groupsConfig.groups));
+      
+      // ایجاد یا به‌روزرسانی اطلاعات گروه
+      console.log('🔧 [GROUP] Preparing group data...');
+      if (!groupsConfig.groups[chat.id]) {
+        groupsConfig.groups[chat.id] = {};
+        console.log('✅ [GROUP] New group entry created');
+      } else {
+        console.log('✅ [GROUP] Existing group entry found, updating...');
+      }
+      
+      // اضافه کردن فیلدهای مورد نیاز
+      console.log('📝 [GROUP] Assigning group data fields...');
       groupsConfig.groups[chat.id].name = chat.title;
-      saveGroupsConfig(groupsConfig);
-      console.log(`✅ [GROUP] Group ${chat.id} name updated to: ${chat.title}`);
+      groupsConfig.groups[chat.id].group_id = chat.id.toString();
+      groupsConfig.groups[chat.id].group_title = chat.title;
+      groupsConfig.groups[chat.id].join_date = new Date().toISOString();
+      groupsConfig.groups[chat.id].member_count = chat.member_count || 0;
+      groupsConfig.groups[chat.id].language = settings.auto_save_groups.default_language || 'فارسی';
+      groupsConfig.groups[chat.id].status = settings.auto_save_groups.default_status || 'فعال';
+      groupsConfig.groups[chat.id].enabled = 1;
+      groupsConfig.groups[chat.id].lastUpdate = new Date().toISOString();
+      groupsConfig.groups[chat.id].updatedBy = 'bot_auto_join';
+      
+      console.log('📝 [GROUP] Group data prepared:', JSON.stringify(groupsConfig.groups[chat.id], null, 2));
+      
+      console.log('💾 [GROUP] Saving groups config...');
+      const saveResult = saveGroupsConfig(groupsConfig);
+      if (saveResult) {
+        console.log('✅ [GROUP] Groups config saved successfully');
+      } else {
+        console.log('❌ [GROUP] Failed to save groups config');
+      }
+      console.log(`✅ [GROUP] Group ${chat.id} (${chat.title}) saved with complete info to groups_config.json`);
+      
+      // نمایش پیام تایید در کنسول
+      console.log(`📝 [GROUP] Saved group info:`);
+      console.log(`   - ID: ${chat.id}`);
+      console.log(`   - Title: ${chat.title}`);
+      console.log(`   - Language: ${groupsConfig.groups[chat.id].language}`);
+      console.log(`   - Status: ${groupsConfig.groups[chat.id].status}`);
+      console.log(`   - Join Date: ${groupsConfig.groups[chat.id].join_date}`);
+      console.log(`   - Member Count: ${groupsConfig.groups[chat.id].member_count}`);
+    } else {
+      console.log('⚠️ [GROUP] Auto-save groups is disabled, using basic save...');
+      
+      // روش قدیمی (فقط نام و وضعیت)
+      console.log('🔧 [GROUP] Loading modules for basic save...');
+      const { setGroupStatus } = require('./3config');
+      setGroupStatus(chat.id, true, 'bot_join');
+      console.log('✅ [GROUP] Basic group status set');
+      
+      console.log('📂 [GROUP] Loading groups config for basic save...');
+      const { loadGroupsConfig, saveGroupsConfig } = require('./3config');
+      const groupsConfig = loadGroupsConfig();
+      console.log('✅ [GROUP] Groups config loaded for basic save');
+      
+      if (groupsConfig.groups[chat.id]) {
+        console.log('📝 [GROUP] Updating existing group name...');
+        groupsConfig.groups[chat.id].name = chat.title;
+        const saveResult = saveGroupsConfig(groupsConfig);
+        if (saveResult) {
+          console.log(`✅ [GROUP] Group ${chat.id} name updated to: ${chat.title}`);
+        } else {
+          console.log(`❌ [GROUP] Failed to update group ${chat.id} name`);
+        }
+      } else {
+        console.log('⚠️ [GROUP] Group not found in config for basic save');
+      }
+      
+      console.log(`✅ [GROUP] Group ${chat.id} (${chat.title}) added to groups_config.json (basic mode)`);
     }
-    
-    console.log(`✅ [GROUP] Group ${chat.id} (${chat.title}) added to groups_config.json`);
   } catch (error) {
     console.error('❌ [GROUP] Error adding group to config:', error.message);
+    console.error('❌ [GROUP] Error stack:', error.stack);
+    console.error('❌ [GROUP] Error occurred at:', new Date().toISOString());
   }
   
   // بررسی وضعیت گزارش از فایل مشترک
@@ -542,6 +625,46 @@ async function createGroupsInlineKeyboard() {
   }
 }
 
+// تابع جدید برای نمایش اطلاعات کامل گروه‌ها از groups_config.json
+async function showGroupsInfo() {
+  console.log('📋 [GROUP] showGroupsInfo called');
+  try {
+    const { loadGroupsConfig } = require('./3config');
+    const groupsConfig = loadGroupsConfig();
+    
+    if (!groupsConfig.groups || Object.keys(groupsConfig.groups).length === 0) {
+      return '📋 هیچ گروهی در سیستم ثبت نشده است.';
+    }
+    
+    let info = '📋 اطلاعات گروه‌های ثبت شده:\n\n';
+    let groupCount = 0;
+    
+    for (const [groupId, groupData] of Object.entries(groupsConfig.groups)) {
+      groupCount++;
+      info += `🤖 گروه ${groupCount}:\n`;
+      info += `📛 عنوان: ${groupData.name || groupData.group_title || 'نامشخص'}\n`;
+      info += `🆔 شناسه: ${groupData.group_id || groupId}\n`;
+      info += `🌐 زبان: ${groupData.language || 'فارسی'}\n`;
+      info += `📊 وضعیت: ${groupData.status || 'فعال'}\n`;
+      info += `👥 تعداد اعضا: ${groupData.member_count || 'نامشخص'}\n`;
+      info += `📅 تاریخ ورود: ${groupData.join_date ? new Date(groupData.join_date).toLocaleString('fa-IR') : 'نامشخص'}\n`;
+      info += `✅ فعال: ${groupData.enabled ? 'بله' : 'خیر'}\n`;
+      info += `🔄 آخرین به‌روزرسانی: ${groupData.lastUpdate ? new Date(groupData.lastUpdate).toLocaleString('fa-IR') : 'نامشخص'}\n`;
+      info += `👤 به‌روزرسانی توسط: ${groupData.updatedBy || 'سیستم'}\n`;
+      info += '─'.repeat(30) + '\n\n';
+    }
+    
+    info += `📊 آمار کلی: ${groupCount} گروه ثبت شده`;
+    console.log(`📋 [GROUP] Generated groups info for ${groupCount} groups`);
+    return info;
+    
+  } catch (error) {
+    console.error('❌ [GROUP] Error showing groups info:', error.message);
+    console.error('❌ [GROUP] Error stack:', error.stack);
+    return '❌ خطا در دریافت اطلاعات گروه‌ها';
+  }
+}
+
 module.exports = { 
   handleGroupJoin, 
   getGroupMembers, 
@@ -557,5 +680,6 @@ module.exports = {
   getGroupsSummary,
   loadMembersData,
   saveMembersData,
-  createGroupsInlineKeyboard
+  createGroupsInlineKeyboard,
+  showGroupsInfo
 };

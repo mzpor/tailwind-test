@@ -63,12 +63,14 @@ const sabtManager = new SabtManager();
 
 // تابع گزارش هوشمند ورود ربات به گروه
 async function reportBotJoinToGroup(chat) {
+  console.log('📝 [REPORT] reportBotJoinToGroup called for chat:', chat.id, chat.title);
   try {
     const { BOT_JOIN_REPORT_CONFIG } = require('./3config');
+    console.log('📝 [REPORT] BOT_JOIN_REPORT_CONFIG:', JSON.stringify(BOT_JOIN_REPORT_CONFIG, null, 2));
     
     // اگر گزارش غیرفعال است، خروج
     if (!BOT_JOIN_REPORT_CONFIG.enabled) {
-      console.log('📝 Bot join reporting is disabled');
+      console.log('📝 [REPORT] Bot join reporting is disabled');
       return;
     }
     
@@ -130,12 +132,13 @@ async function reportBotJoinToGroup(chat) {
     console.log(`📤 Sending report to group ${reportGroupId}`);
     await sendMessage(reportGroupId, reportText);
     
-    console.log(`✅ Bot join report sent to group ${reportGroupId}`);
+    console.log(`✅ [REPORT] Bot join report sent to group ${reportGroupId}`);
     
   } catch (error) {
-    console.error(`❌ Error reporting bot join:`, error.message);
-    console.error(`❌ Error stack:`, error.stack);
+    console.error(`❌ [REPORT] Error reporting bot join:`, error.message);
+    console.error(`❌ [REPORT] Error stack:`, error.stack);
   }
+  console.log('📝 [REPORT] reportBotJoinToGroup completed');
 }
 
 // تابع حذف ربات از گروه
@@ -1677,14 +1680,22 @@ function startPolling() {
           
           // پردازش ورود و خروج اعضا
           if (msg.new_chat_member) {
+            console.log('👥 [POLLING] new_chat_member event detected');
+            console.log('👥 [POLLING] New member info:', JSON.stringify(msg.new_chat_member, null, 2));
+            
             // اگر عضو جدید ربات باشد، گزارش ورود ربات
             if (msg.new_chat_member.is_bot) {
+              console.log('🤖 [POLLING] Bot join detected, calling handleGroupJoin...');
               await handleGroupJoin(msg.chat);
+              console.log('🤖 [POLLING] handleGroupJoin completed, calling reportBotJoinToGroup...');
               // گزارش هوشمند ورود ربات
               await reportBotJoinToGroup(msg.chat);
+              console.log('🤖 [POLLING] reportBotJoinToGroup completed');
             } else {
+              console.log('👤 [POLLING] New user member detected, calling autoCollectNewMember...');
               // اگر کاربر جدید وارد گروه شد
               await autoCollectNewMember(msg);
+              console.log('👤 [POLLING] autoCollectNewMember completed');
             }
             continue;
           }
@@ -1731,6 +1742,13 @@ function startPolling() {
             }
             if (msg.text === '/عضو-جدید') {
               await handleNewMemberCommand(msg);
+              continue;
+            }
+            if (msg.text === '/گروه‌ها') {
+              console.log(`📋 /گروه‌ها command detected from ${msg.from.first_name}`);
+              const { showGroupsInfo } = require('./7group');
+              const groupsInfo = await showGroupsInfo();
+              await sendMessage(msg.chat.id, groupsInfo);
               continue;
             }
           }

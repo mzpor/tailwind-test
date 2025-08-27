@@ -3,18 +3,18 @@
   "lastUpdate": "2025-08-16T17:38:59.838Z",
   "updatedBy": "admin",
   "updatedFrom": "ربات",
-  "robotOnline": true,
-  "lastRobotPing": "2025-08-26T19:18:25.979Z",
+  "robotOnline": false,
+  "lastRobotPing": "2025-08-27T08:57:24.601Z",
   "systemStatus": {
-    "robot": true,
-    "gateway": true,
+    "robot": false,
+    "gateway": false,
     "website": true,
-    "lastUpdate": "2025-08-26T19:18:25.995Z",
+    "lastUpdate": "2025-08-27T08:57:24.604Z",
     "lastChange": {
-      "system": "gateway",
-      "status": true,
-      "timestamp": "2025-08-26T19:18:25.995Z",
-      "action": "آنلاین شد"
+      "system": "robot",
+      "status": false,
+      "timestamp": "2025-08-27T08:57:24.605Z",
+      "action": "آفلاین شد"
     }
   },
   "websiteLog": [
