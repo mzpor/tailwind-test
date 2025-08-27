@@ -247,7 +247,7 @@ async function addMember(chatId, chatTitle, userId, userName) {
             schedule: {
               startTime: '19:00',
               endTime: '22:00',
-              activeDays: [2, 4] // فقط دوشنبه و چهارشنبه
+              activeDays: [0, 2] // فقط شنبه و دوشنبه
             }
           };
           saveGroupCloseData(closeData);

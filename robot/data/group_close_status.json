@@ -6,7 +6,7 @@
       "schedule": {
         "startTime": "19:00",
         "endTime": "22:00",
-        "activeDays": [2, 4]
+        "activeDays": [0, 2]
       }
     }
   },
@@ -16,7 +16,7 @@
     "defaultSchedule": {
       "startTime": "19:00",
       "endTime": "22:00",
-      "activeDays": [2, 4]
+      "activeDays": [0, 2]
     }
   }
 }
