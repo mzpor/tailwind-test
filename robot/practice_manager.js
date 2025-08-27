@@ -191,23 +191,11 @@ class PracticeManager {
 
       listText += `\n\n⏰ ${getTimeStamp()}`;
 
-      // پاک کردن لیست قبلی (اگر وجود داشته باشد)
-      await this.deletePreviousPracticeList(chatId);
-
-      // ارسال لیست جدید
       const result = await sendMessage(chatId, listText);
       
-      if (result && result.result && result.result.message_id) {
-        // ذخیره message_id لیست جدید برای پاک کردن بعدی
-        await this.savePracticeListMessageId(chatId, result.result.message_id);
-        console.log(`✅ [PRACTICE_MANAGER] Practice list sent successfully to ${chatId} (message_id: ${result.result.message_id})`);
+      if (result) {
+        console.log(`✅ [PRACTICE_MANAGER] Practice list sent successfully to ${chatId}`);
         return true;
-      } else if (result && result.result) {
-        console.log(`⚠️ [PRACTICE_MANAGER] Message sent but no message_id in result:`, result.result);
-        return true; // پیام ارسال شد اما message_id نداریم
-      } else if (result) {
-        console.log(`⚠️ [PRACTICE_MANAGER] Message sent but unexpected result structure:`, result);
-        return true; // پیام ارسال شد اما ساختار غیرمنتظره
       } else {
         console.error(`❌ [PRACTICE_MANAGER] Failed to send practice list to ${chatId}`);
         return false;
@@ -222,11 +210,7 @@ class PracticeManager {
   // دریافت تمام اعضای گروه (بدون ادمین‌ها)
   getAllGroupMembers(chatId) {
     try {
-      const membersDataPath = './robot/data/members.json';
-      console.log(`🔍 [PRACTICE_MANAGER] Looking for members file at: ${membersDataPath}`);
-      console.log(`🔍 [PRACTICE_MANAGER] Current working directory: ${process.cwd()}`);
-      console.log(`🔍 [PRACTICE_MANAGER] File exists check: ${fs.existsSync(membersDataPath)}`);
-      
+      const membersDataPath = './members.json';
       if (!fs.existsSync(membersDataPath)) {
         console.log('❌ [PRACTICE_MANAGER] Members file not found');
         return [];
@@ -235,27 +219,14 @@ class PracticeManager {
       const membersData = JSON.parse(fs.readFileSync(membersDataPath, 'utf8'));
       const allGroupMembers = membersData.groups[chatId] || [];
       
-      // واردات config برای بررسی نقش کاربران
-      const { USERS_BY_ROLE } = require('./3config');
-      
       // فیلتر کردن ادمین‌ها (فقط کاربران عادی)
       const regularMembers = allGroupMembers.filter(member => {
-        // بررسی اینکه آیا کاربر در لیست ادمین‌ها قرار دارد
-        const isSchoolAdmin = USERS_BY_ROLE.SCHOOL_ADMIN.some(admin => 
-          (typeof admin === 'object' ? admin.id : admin) === member.id
-        );
-        const isCoach = USERS_BY_ROLE.COACH.some(coach => 
-          (typeof coach === 'object' ? coach.id : coach) === member.id
-        );
-        const isAssistant = USERS_BY_ROLE.ASSISTANT.some(assistant => 
-          (typeof assistant === 'object' ? assistant.id : assistant) === member.id
-        );
-        
-        const isAdmin = isSchoolAdmin || isCoach || isAssistant;
+        // بررسی اینکه آیا کاربر ادمین است یا نه
+        const userRole = member.role || 'STUDENT';
+        const isAdmin = userRole === 'SCHOOL_ADMIN' || userRole === 'GROUP_ADMIN';
         
         if (isAdmin) {
-          const roleType = isSchoolAdmin ? 'SCHOOL_ADMIN' : isCoach ? 'COACH' : 'ASSISTANT';
-          console.log(`🚫 [PRACTICE_MANAGER] Filtering out admin user: ${member.name} (id: ${member.id}, role: ${roleType})`);
+          console.log(`🚫 [PRACTICE_MANAGER] Filtering out admin user: ${member.name} (role: ${userRole})`);
         }
         
         return !isAdmin; // فقط کاربران غیر ادمین
@@ -693,88 +664,6 @@ ${practiceList}
     } catch (error) {
       console.error('❌ [PRACTICE_MANAGER] Error handling practice message:', error);
       return false;
-    }
-  }
-
-  // پاک کردن لیست تمرین قبلی
-  async deletePreviousPracticeList(chatId) {
-    try {
-      const practiceDataPath = './data/practice_data.json';
-      if (!fs.existsSync(practiceDataPath)) {
-        console.log(`📂 [PRACTICE_MANAGER] No practice data file found for deleting previous list`);
-        return;
-      }
-
-      const practiceData = JSON.parse(fs.readFileSync(practiceDataPath, 'utf8'));
-      const today = moment().format('YYYY-MM-DD');
-      
-      console.log(`🗑️ [PRACTICE_MANAGER] Checking for previous practice list on ${today} in chat ${chatId}`);
-      
-      // بررسی اینکه آیا لیست قبلی برای این گروه وجود دارد
-      if (practiceData.daily_practices[today] && 
-          practiceData.daily_practices[today].practice_list_message_id) {
-        
-        const previousMessageId = practiceData.daily_practices[today].practice_list_message_id;
-        console.log(`🗑️ [PRACTICE_MANAGER] Found previous practice list message: ${previousMessageId}`);
-        
-        try {
-          // پاک کردن پیام قبلی
-          const { deleteMessage } = require('./4bale');
-          await deleteMessage(chatId, previousMessageId);
-          console.log(`✅ [PRACTICE_MANAGER] Previous practice list deleted successfully`);
-        } catch (deleteError) {
-          console.log(`⚠️ [PRACTICE_MANAGER] Could not delete previous message (may be too old): ${deleteError.message}`);
-        }
-      } else {
-        console.log(`📝 [PRACTICE_MANAGER] No previous practice list found to delete`);
-      }
-    } catch (error) {
-      console.error('❌ [PRACTICE_MANAGER] Error deleting previous practice list:', error);
-    }
-  }
-
-  // ذخیره message_id لیست تمرین
-  async savePracticeListMessageId(chatId, messageId) {
-    try {
-      if (!messageId) {
-        console.log(`⚠️ [PRACTICE_MANAGER] Cannot save practice list message ID: messageId is ${messageId}`);
-        return;
-      }
-
-      const practiceDataPath = './data/practice_data.json';
-      let practiceData = {
-        daily_practices: {},
-        practice_schedule: { enabled: 1, hours: [], days: [] }
-      };
-
-      // خواندن داده‌های موجود
-      if (fs.existsSync(practiceDataPath)) {
-        practiceData = JSON.parse(fs.readFileSync(practiceDataPath, 'utf8'));
-      }
-
-      const today = moment().format('YYYY-MM-DD');
-      
-      console.log(`💾 [PRACTICE_MANAGER] Saving practice list message ID ${messageId} for ${today} in chat ${chatId}`);
-      
-      // ایجاد ساختار برای روز جاری اگر وجود ندارد
-      if (!practiceData.daily_practices[today]) {
-        practiceData.daily_practices[today] = {
-          date: today,
-          practices: {},
-          practice_list_message_id: null
-        };
-      }
-
-      // ذخیره message_id لیست تمرین
-      const oldMessageId = practiceData.daily_practices[today].practice_list_message_id;
-      practiceData.daily_practices[today].practice_list_message_id = messageId;
-      
-      // ذخیره داده‌ها
-      fs.writeFileSync(practiceDataPath, JSON.stringify(practiceData, null, 2));
-      console.log(`💾 [PRACTICE_MANAGER] Practice list message ID updated: ${oldMessageId} → ${messageId}`);
-      
-    } catch (error) {
-      console.error('❌ [PRACTICE_MANAGER] Error saving practice list message ID:', error);
     }
   }
 

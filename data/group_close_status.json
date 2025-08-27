@@ -52,13 +52,12 @@
     },
     "4594690153": {
       "schedule": {
-        "startTime": "00:30",
+        "startTime": "19:00",
         "endTime": "23:58",
         "activeDays": [
           0,
           2,
-          4,
-          5
+          4
         ]
       }
     }
