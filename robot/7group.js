@@ -81,7 +81,7 @@ async function handleGroupJoin(chat) {
     const { setGroupStatus } = require('./3config');
     // فعال کردن گروه و تنظیم نام آن
     setGroupStatus(chat.id, true, 'bot_join');
-
+    
     // به‌روزرسانی نام گروه در groups_config.json
     const { loadGroupsConfig, saveGroupsConfig } = require('./3config');
     const groupsConfig = loadGroupsConfig();
@@ -90,23 +90,10 @@ async function handleGroupJoin(chat) {
       saveGroupsConfig(groupsConfig);
       console.log(`✅ [GROUP] Group ${chat.id} name updated to: ${chat.title}`);
     }
-
+    
     console.log(`✅ [GROUP] Group ${chat.id} (${chat.title}) added to groups_config.json`);
   } catch (error) {
     console.error('❌ [GROUP] Error adding group to config:', error.message);
-  }
-
-  // ذخیره اطلاعات گروه در settings.json
-  try {
-    const { addBotGroup } = require('./3config');
-    const success = addBotGroup(chat.id, chat.title, null);
-    if (success) {
-      console.log(`✅ [GROUPS] Group ${chat.id} (${chat.title}) saved to settings.json`);
-    } else {
-      console.log(`⚠️ [GROUPS] Failed to save group ${chat.id} to settings.json`);
-    }
-  } catch (error) {
-    console.error('❌ [GROUPS] Error saving group to settings.json:', error.message);
   }
   
   // بررسی وضعیت گزارش از فایل مشترک

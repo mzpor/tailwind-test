@@ -293,13 +293,7 @@ class SettingsModule {
     } else {
       console.log('🎯 [SETTINGS] Practice+Evaluation days button NOT added to keyboard (disabled in config)');
     }
-
-    // اضافه کردن دکمه لیست گروه‌ها
-    const { getBotGroups } = require('./3config');
-    const groupsCount = getBotGroups().length;
-    keyboard.push([{ text: `📋 گروه‌های ربات (${groupsCount} گروه)`, callback_data: 'bot_groups_list' }]);
-    console.log(`📋 [SETTINGS] Bot groups list button added to keyboard (${groupsCount} groups)`);
-
+    
     keyboard.push(
       [{ text: `📝 نظرسنجی: ${satisfactionStatus}`, callback_data: 'toggle_satisfaction_survey' }],
       [{ text: `📋 گروه گزارش: ${reportsStatus}`, callback_data: 'toggle_bot_reports' }],

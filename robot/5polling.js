@@ -15,11 +15,11 @@ const {
   getAvailableRoles,
   getAllUsersWithRoles
 } = require('./6mid');
-const {
-  ROLES,
-  USERS_BY_ROLE,
-  isButtonVisible,
-  setButtonVisible,
+const { 
+  ROLES, 
+  USERS_BY_ROLE, 
+  isButtonVisible, 
+  setButtonVisible, 
   getButtonVisibilityConfig,
   isGroupEnabled,
   setGroupStatus,
@@ -29,14 +29,7 @@ const {
   isOsatdManagementEnabled,
   hasOsatdManagementAccess,
   MAIN_BUTTONS_CONFIG,
-  getRoleDisplayName,
-  // ===== توابع مدیریت گروه‌ها =====
-  loadBotGroups,
-  saveBotGroups,
-  addBotGroup,
-  removeBotGroup,
-  getBotGroups,
-  hasBotGroup
+  getRoleDisplayName
 } = require('./3config');
 const { 
   getCurrentCoachId, 
@@ -189,20 +182,7 @@ async function removeBotFromGroup(groupId) {
     } catch (error) {
       console.error(`❌ Error removing from attendance.json:`, error.message);
     }
-
-    // حذف از settings.json
-    try {
-      const { removeBotGroup } = require('./3config');
-      const success = removeBotGroup(groupId);
-      if (success) {
-        console.log(`✅ Group ${groupId} removed from settings.json`);
-      } else {
-        console.log(`⚠️ Failed to remove group ${groupId} from settings.json`);
-      }
-    } catch (error) {
-      console.error(`❌ Error removing from settings.json:`, error.message);
-    }
-
+    
     console.log(`✅ Bot successfully removed from group ${groupId}`);
     
   } catch (error) {
@@ -1107,22 +1087,10 @@ function startPolling() {
       
       for (const update of updates) {
         lastId = update.update_id;
-                  console.log(`📥 [POLLING] Processing update ${update.update_id}`);
-
         const msg = update.message;
         const callback_query = update.callback_query;
         const pre_checkout_query = update.pre_checkout_query;
         const successful_payment = update.message?.successful_payment;
-
-        if (msg) {
-          console.log(`📨 [POLLING] Message update - Chat: ${msg.chat?.title} (${msg.chat?.id}) Type: ${msg.chat?.type}`);
-
-          // اگر پیام حاوی اطلاعات عضویت/خروج است، آن را نمایش دهیم
-          if (msg.new_chat_members || msg.new_chat_member || msg.left_chat_members || msg.left_chat_member) {
-            console.log(`👥 [POLLING] MEMBERSHIP UPDATE DETECTED!`);
-            console.log(`👥 [POLLING] Message has: text=${!!msg.text}, contact=${!!msg.contact}, new_chat_members=${!!msg.new_chat_members}, left_chat_members=${!!msg.left_chat_members}`);
-          }
-        }
         
         // پردازش callback query (کیبورد شیشه‌ای)
         if (callback_query) {
@@ -1134,9 +1102,9 @@ function startPolling() {
           console.log(`🔄 [POLLING] Callback data starts with 'practice_': ${callback_query.data.startsWith('practice_')}`);
           console.log(`🔄 [POLLING] Callback data starts with 'evaluation_': ${callback_query.data.startsWith('evaluation_')}`);
           console.log(`🔄 [POLLING] Callback data === 'practice_evaluation_days_settings': ${callback_query.data === 'practice_evaluation_days_settings'}`);
-
+          
           // حذف پیام قبلی که کیبورد شیشه‌ای داشت - فقط برای callback های غیر کارگاه و غیر بازگشت
-          if (!callback_query.data.startsWith('kargah_') &&
+                  if (!callback_query.data.startsWith('kargah_') &&
             !callback_query.data.startsWith('student_') &&
             !callback_query.data.startsWith('quran_student_') &&
             !callback_query.data.startsWith('coach_') &&
@@ -1482,55 +1450,6 @@ function startPolling() {
             } else {
               console.log('✅ [POLLING] Practice/Evaluation/Satisfaction callback handled successfully');
             }
-          } else if (callback_query.data === 'bot_groups_list') {
-            // نمایش لیست گروه‌های ربات
-            console.log('📋 [POLLING] Bot groups list callback detected');
-
-            // بررسی دسترسی کاربر
-            if (!hasPermission(callback_query.from.id, 'SCHOOL_ADMIN')) {
-              const config = roleConfig[role];
-              const reply = '⚠️ شما دسترسی لازم برای مشاهده گروه‌ها را ندارید.';
-              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
-              return;
-            }
-
-            try {
-              const groups = getBotGroups();
-              let text = '📋 *لیست گروه‌های ربات*\n\n';
-
-              if (groups.length === 0) {
-                text += '❌ هیچ گروهی یافت نشد.';
-              } else {
-                groups.forEach((group, index) => {
-                  const joinedDate = new Date(group.joined_at).toLocaleDateString('fa-IR');
-                  const lastSeen = new Date(group.last_seen).toLocaleDateString('fa-IR');
-
-                  text += `${index + 1}. *${group.group_name}*\n`;
-                  text += `🆔 ID: ${group.group_id}\n`;
-                  text += `📅 عضو شده: ${joinedDate}\n`;
-                  text += `👁️ آخرین بازدید: ${lastSeen}\n`;
-                  text += `📊 وضعیت: ${group.status === 'active' ? '✅ فعال' : '❌ غیرفعال'}\n`;
-                  if (group.invited_by) {
-                    text += `👤 دعوت شده توسط: ${group.invited_by}\n`;
-                  }
-                  text += '\n';
-                });
-
-                text += `*کل گروه‌ها: ${groups.length}*`;
-              }
-
-              const keyboard = [
-                [{ text: '🔙 بازگشت', callback_data: 'settings_main_menu' }]
-              ];
-
-              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, text, keyboard);
-              console.log('✅ [POLLING] Bot groups list sent successfully');
-            } catch (error) {
-              console.error('❌ [POLLING] Error displaying bot groups list:', error.message);
-              const config = roleConfig[role];
-              const reply = '❌ خطا در نمایش لیست گروه‌ها';
-              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
-            }
           } else if (callback_query.data.startsWith('settings_') ||
                      callback_query.data.startsWith('toggle_') ||
                      callback_query.data.startsWith('select_') ||
@@ -1741,42 +1660,25 @@ function startPolling() {
         }
         
         if (!msg || !msg.chat) continue;
-
-        // اگر پیام text ندارد اما contact دارد یا new_chat_members دارد یا left_chat_member دارد، آن را پردازش کن
-        if (!msg.text && !msg.contact && !msg.new_chat_members && !msg.new_chat_member && !msg.left_chat_member && !msg.left_chat_members) continue;
+        
+        // اگر پیام text ندارد اما contact دارد، آن را پردازش کن
+        if (!msg.text && !msg.contact) continue;
 
         // اگر گروه بود، دستورات گروه را پردازش کن
         if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
-          console.log(`🏢 [POLLING] Group message detected - Chat: ${msg.chat.title} (${msg.chat.id})`);
-
           // بررسی اینکه آیا ربات ادمین است
           const isBotAdmin = await checkBotAdminStatus(msg.chat.id);
-
+          
           // گزارش وضعیت ادمین ربات - غیرفعال شده
           // if (!this.botAdminStatusReported) {
           //   await reportBotAdminStatus(msg.chat.id, msg.chat.title, isBotAdmin);
           //   this.botAdminStatusReported = true;
           // }
-
+          
           // پردازش ورود و خروج اعضا
-          if (msg.new_chat_members) {
-            console.log(`👥 [POLLING] New chat members detected: ${msg.new_chat_members.length}`);
+          if (msg.new_chat_member) {
             // اگر عضو جدید ربات باشد، گزارش ورود ربات
-            for (const member of msg.new_chat_members) {
-              console.log(`👤 [POLLING] Member: ${member.first_name} (@${member.username}) is_bot: ${member.is_bot}`);
-              if (member.is_bot) {
-                console.log(`🤖 [POLLING] Bot joined group! Calling handleGroupJoin...`);
-                await handleGroupJoin(msg.chat);
-                // گزارش هوشمند ورود ربات
-                await reportBotJoinToGroup(msg.chat);
-                break; // فقط یک بار اجرا شود
-              }
-            }
-          } else if (msg.new_chat_member) {
-            console.log(`👤 [POLLING] New chat member (old format): ${msg.new_chat_member.first_name} is_bot: ${msg.new_chat_member.is_bot}`);
-            // پشتیبان برای فیلد قدیمی
             if (msg.new_chat_member.is_bot) {
-              console.log(`🤖 [POLLING] Bot joined group (old format)! Calling handleGroupJoin...`);
               await handleGroupJoin(msg.chat);
               // گزارش هوشمند ورود ربات
               await reportBotJoinToGroup(msg.chat);
@@ -1784,40 +1686,16 @@ function startPolling() {
               // اگر کاربر جدید وارد گروه شد
               await autoCollectNewMember(msg);
             }
+            continue;
           }
           
-          // پردازش خروج اعضا
-          if (msg.left_chat_members) {
-            console.log(`🚪 [POLLING] Left chat members detected: ${msg.left_chat_members.length}`);
-            for (const member of msg.left_chat_members) {
-              console.log(`🚪 [POLLING] Left member: ${member.first_name} (@${member.username}) is_bot: ${member.is_bot}`);
-              console.log(`🚪 [POLLING] Bot ID: ${parseInt(BOT_TOKEN.split(':')[0])}, Member ID: ${member.id}`);
-
-              // اگر ربات از گروه خارج شد
-              if (member.id === parseInt(BOT_TOKEN.split(':')[0])) {
-                console.log(`🤖 [POLLING] Bot left group ${msg.chat.id} (${msg.chat.title}) - Calling removeBotFromGroup...`);
-                await removeBotFromGroup(msg.chat.id);
-                console.log(`✅ [POLLING] removeBotFromGroup completed for group ${msg.chat.id}`);
-                break; // فقط یک بار اجرا شود
-              } else {
-                // اگر کاربر عادی از گروه خارج شد
-                console.log(`👤 [POLLING] User left group: ${member.first_name}`);
-                await removeMember(msg.chat.id, member.id);
-              }
-            }
-            continue;
-          } else if (msg.left_chat_member) {
-            console.log(`🚪 [POLLING] Left chat member detected (old format): ${msg.left_chat_member.first_name} (@${msg.left_chat_member.username}) is_bot: ${msg.left_chat_member.is_bot}`);
-            console.log(`🚪 [POLLING] Bot ID: ${parseInt(BOT_TOKEN.split(':')[0])}, Member ID: ${msg.left_chat_member.id}`);
-
+          if (msg.left_chat_member) {
             // اگر ربات از گروه خارج شد
             if (msg.left_chat_member.id === parseInt(BOT_TOKEN.split(':')[0])) {
-              console.log(`🤖 [POLLING] Bot left group ${msg.chat.id} (${msg.chat.title}) - Calling removeBotFromGroup...`);
+              console.log(`🤖 Bot left group ${msg.chat.id} (${msg.chat.title})`);
               await removeBotFromGroup(msg.chat.id);
-              console.log(`✅ [POLLING] removeBotFromGroup completed for group ${msg.chat.id}`);
             } else {
               // اگر کاربر عادی از گروه خارج شد
-              console.log(`👤 [POLLING] User left group: ${msg.left_chat_member.first_name}`);
               await removeMember(msg.chat.id, msg.left_chat_member.id);
             }
             continue;
