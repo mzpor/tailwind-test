@@ -200,6 +200,23 @@ const GROUP_MANAGEMENT_CONFIG = {
   }
 };
 
+// ===== کانفیگ مدیریت بستن گروه‌ها =====
+const GROUP_CLOSE_MANAGEMENT_CONFIG = {
+  enabled: 1,  // 0 = غیرفعال (دکمه بستن گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
+  visibility: {
+    admin: 1,        // مدیر مدرسه
+    instructor: 0,   // مربی
+    assistant: 0,    // کمک مربی
+    regular: 0       // کاربران عادی
+  },
+  permissions: {
+    closeGroup: ["admin", "group_admin"],
+    openGroup: ["admin", "group_admin"],
+    changeMessage: ["admin", "group_admin"],
+    viewStatus: ["admin", "group_admin"]
+  }
+};
+
 // ===== کانفیگ مدیریت استادها =====
 const OSATD_MANAGEMENT_CONFIG = {
   enabled: 1,  // 0 = غیرفعال (دکمه استادها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
@@ -1214,6 +1231,21 @@ const hasGroupManagementAccess = (userRole) => {
   return true;
 };
 
+// تابع بررسی فعال بودن مدیریت بستن گروه‌ها
+const isGroupCloseManagementEnabled = () => {
+  return GROUP_CLOSE_MANAGEMENT_CONFIG.enabled === 1;
+};
+
+// تابع بررسی دسترسی کاربر به مدیریت بستن گروه‌ها
+const hasGroupCloseManagementAccess = (userRole) => {
+  if (!isGroupCloseManagementEnabled()) {
+    return false;
+  }
+  
+  // فقط مدیران و ادمین‌های گروه دسترسی دارند
+  return userRole === 'SCHOOL_ADMIN' || userRole === 'GROUP_ADMIN';
+};
+
 // تابع بررسی فعال بودن مدیریت استادها
 const isOsatdManagementEnabled = () => {
   return OSATD_MANAGEMENT_CONFIG.enabled === 1;
@@ -1792,6 +1824,10 @@ module.exports = {
   GROUP_MANAGEMENT_CONFIG,
   isGroupManagementEnabled,
   hasGroupManagementAccess,
+  // ===== کانفیگ مدیریت بستن گروه‌ها =====
+  GROUP_CLOSE_MANAGEMENT_CONFIG,
+  isGroupCloseManagementEnabled,
+  hasGroupCloseManagementAccess,
   // ===== کانفیگ مدیریت استادها =====
   OSATD_MANAGEMENT_CONFIG,
   isOsatdManagementEnabled,

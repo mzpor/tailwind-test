@@ -801,6 +801,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
       keyboard = config.keyboard;
     } else {
       // پنل مدیر - بررسی کانفیگ مدیریت گروه‌ها
+      const { hasGroupCloseManagementAccess } = require('./3config');
       const inlineKeyboard = [
         [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
       ];
@@ -808,6 +809,11 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
       // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
       if (hasGroupManagementAccess('SCHOOL_ADMIN')) {
         inlineKeyboard.push([{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]);
+      }
+      
+      // اضافه کردن دکمه بستن گروه‌ها فقط اگر فعال باشد
+      if (hasGroupCloseManagementAccess('SCHOOL_ADMIN')) {
+        inlineKeyboard.push([{ text: '🔒 بستن گروه‌ها', callback_data: 'close_groups' }]);
       }
       
       inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
@@ -820,6 +826,10 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
         : '';
       
+      const groupCloseText = hasGroupCloseManagementAccess('SCHOOL_ADMIN') 
+        ? '• 🔒 بستن گروه‌ها\n' 
+        : '';
+      
       const osatdText = hasOsatdManagementAccess('SCHOOL_ADMIN') 
         ? '• 👨‍🏫 استادها\n' 
         : '';
@@ -829,7 +839,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
-${groupManagementText}• 🏭 کارگاه‌ها
+${groupManagementText}${groupCloseText}• 🏭 کارگاه‌ها
 ${osatdText}
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
@@ -1164,7 +1174,10 @@ function startPolling() {
               callback_query.data === 'coach_groups' ||
               callback_query.data === 'assistant_groups' ||
               callback_query.data === 'back_to_groups' ||
-              callback_query.data === 'back_to_main') {
+              callback_query.data === 'back_to_main' ||
+              callback_query.data.startsWith('close_group_') ||
+              callback_query.data.startsWith('toggle_close_') ||
+              callback_query.data.startsWith('change_message_')) {
             
             // بررسی کانفیگ مدیریت گروه‌ها
             if (!isGroupManagementEnabled()) {
@@ -1184,6 +1197,65 @@ function startPolling() {
             console.log('🔄 [POLLING] Group management callback detected');
             // پردازش مدیریت گروه‌ها با استفاده از ماژول جدید
             await handleGroupManagementCallback(callback_query);
+            
+            } else if (callback_query.data === 'close_groups') {
+            // مدیریت بستن گروه‌ها
+            console.log('🔍 DEBUG: close_groups callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            console.log('🔍 DEBUG: handleGroupCloseManagement imported successfully');
+            
+            const result = await handleGroupCloseManagement(callback_query.from.id, 'groups');
+            console.log('🔍 DEBUG: handleGroupCloseManagement result:', result);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در نمایش مدیریت بستن گروه‌ها');
+            }
+            
+            } else if (callback_query.data.startsWith('close_group_')) {
+            // مدیریت بستن گروه خاص
+            console.log('🔍 DEBUG: close_group_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در نمایش مدیریت بستن گروه');
+            }
+            
+            } else if (callback_query.data.startsWith('toggle_close_')) {
+            // تغییر وضعیت بسته بودن گروه
+            console.log('🔍 DEBUG: toggle_close_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تغییر وضعیت گروه');
+            }
+            
+            } else if (callback_query.data.startsWith('change_message_')) {
+            // تغییر پیام بسته بودن گروه
+            console.log('🔍 DEBUG: change_message_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تغییر پیام گروه');
+            }
             
             } else if (callback_query.data === 'intro_quran_bot') {
             
@@ -2123,6 +2195,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         await sendMessageWithInlineKeyboard(chatId, reply, inlineKeyboard);
       } else {
         // پنل مدیر - بررسی کانفیگ مدیریت گروه‌ها
+        const { hasGroupCloseManagementAccess } = require('./3config');
         const inlineKeyboard = [
           [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
         ];
@@ -2130,6 +2203,11 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         // اضافه کردن دکمه مدیریت گروه‌ها فقط اگر فعال باشد
         if (hasGroupManagementAccess('SCHOOL_ADMIN')) {
           inlineKeyboard.push([{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]);
+        }
+        
+        // اضافه کردن دکمه بستن گروه‌ها فقط اگر فعال باشد
+        if (hasGroupCloseManagementAccess('SCHOOL_ADMIN')) {
+          inlineKeyboard.push([{ text: '🔒 بستن گروه‌ها', callback_data: 'close_groups' }]);
         }
         
         inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
@@ -2142,6 +2220,10 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
           ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
           : '';
         
+        const groupCloseText = hasGroupCloseManagementAccess('SCHOOL_ADMIN') 
+          ? '• 🔒 بستن گروه‌ها\n' 
+          : '';
+        
         const osatdText = hasOsatdManagementAccess('SCHOOL_ADMIN') 
           ? '• 👨‍🏫 استادها\n' 
           : '';
@@ -2150,7 +2232,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
-${groupManagementText}• 🏭 کارگاه‌ها
+${groupManagementText}${groupCloseText}• 🏭 کارگاه‌ها
 ${osatdText}
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
@@ -2333,11 +2415,8 @@ ${members.map((member, index) => `${index + 1}. ${member.name}`).join('\n')}
         const text = `🏫 مدیریت گروه‌ها
 
 📋 گروه‌های موجود:
-${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`).join('\n')}
+${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`).join('\n')}`;
 
-👆 لطفاً گروه مورد نظر را انتخاب کنید:
-⏰ ${getTimeStamp()}`;
-        
         await sendMessageWithInlineKeyboard(chatId, text, keyboard);
       }
     } else if (action === 'settings_back') {
