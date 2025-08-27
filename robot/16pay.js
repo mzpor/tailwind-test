@@ -224,7 +224,7 @@ class PaymentModule {
                 if (workshopId) {
            // خواندن اطلاعات کارگاه از فایل
            try {
-             const workshopsPath = path.join(__dirname, 'data', 'workshops.json');
+             const workshopsPath = path.join(__dirname, '..', 'data', 'workshops.json');
              const workshopsContent = fs.readFileSync(workshopsPath, 'utf8');
              const workshops = JSON.parse(workshopsContent);
              workshopData = workshops.coach[workshopId];
@@ -311,7 +311,7 @@ class PaymentModule {
       
       // خواندن اطلاعات کارگاه
       const { readJson } = require('./server/utils/jsonStore');
-      const workshops = await readJson('data/workshops.json', {});
+      const workshops = await readJson('../data/workshops.json', {});
       const workshopData = workshops.coach[workshopId];
       
       if (!workshopData) {

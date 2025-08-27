@@ -10,7 +10,7 @@ class KargahModule {
     this.workshops = {}; // ذخیره کارگاه‌ها
     this.userStates = {}; // وضعیت کاربران
     this.tempData = {}; // داده‌های موقت برای اضافه/ویرایش
-    this.workshopsFile = './data/workshops.json';
+    this.workshopsFile = '../data/workshops.json';
     this.loadWorkshops();
     console.log('✅ KargahModule initialized successfully');
   }

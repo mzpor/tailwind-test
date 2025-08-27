@@ -7,9 +7,9 @@ const path = require('path');
 
 class PermanentMemberManager {
   constructor() {
-    this.membersFile = 'data/permanent_members.json';
-    this.rolesFile = 'data/member_roles.json';
-    this.coachesFile = 'data/coaches.json';
+    this.membersFile = '../data/permanent_members.json';
+    this.rolesFile = '../data/member_roles.json';
+    this.coachesFile = '../data/coaches.json';
     
     // ایجاد دایرکتوری data اگر وجود ندارد
     this.ensureDataDirectory();
@@ -291,7 +291,7 @@ class PermanentMemberManager {
 
     // همگام‌سازی با coaches.json
     try {
-      const coaches = this.loadData('data/coaches.json');
+      const coaches = this.loadData('../data/coaches.json');
       this.coaches = coaches;
       this.saveData(this.coachesFile, this.coaches);
       console.log('✅ Synced with coaches.json');

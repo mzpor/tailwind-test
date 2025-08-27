@@ -185,7 +185,7 @@ const GROUP_VISIBILITY_CONFIG = {
 
 // ===== کانفیگ مدیریت گروه‌ها =====
 const GROUP_MANAGEMENT_CONFIG = {
-  enabled: 0,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
+  enabled: 1,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
   visibility: {
     admin: 1,        // مدیر مدرسه
     instructor: 1,   // مربی
@@ -212,7 +212,7 @@ const OSATD_MANAGEMENT_CONFIG = {
 };
 
 // ===== کانفیگ سیستم ارزیابی و تمرین =====
-const EVALUATION_CONFIG_FILE = path.join(__dirname, 'data', 'evaluation_config.json');
+const EVALUATION_CONFIG_FILE = path.join(__dirname, '..', 'data', 'evaluation_config.json');
 
 // بارگذاری کانفیگ از فایل
 function loadEvaluationConfig() {
@@ -269,7 +269,7 @@ const AUTO_COLLECT_USER_CONFIG = {
 };
 
 // ===== سیستم کانفیگ گروه‌ها =====
-const GROUPS_CONFIG_FILE = path.join(__dirname, 'data', 'groups_config.json');
+const GROUPS_CONFIG_FILE = path.join(__dirname, '..', 'data', 'groups_config.json');
 
 // تابع بارگذاری کانفیگ گروه‌ها
 const loadGroupsConfig = () => {
@@ -634,7 +634,7 @@ const getUserInfo = (userId) => {
   try {
     const fs = require('fs');
     const path = require('path');
-    const registrationFile = path.join(__dirname, 'registration_data.json');
+    const registrationFile = path.join(__dirname, '..', 'registration_data.json');
     
     if (fs.existsSync(registrationFile)) {
       const registrationData = JSON.parse(fs.readFileSync(registrationFile, 'utf8'));
@@ -896,8 +896,8 @@ const SETTINGS_CONFIG = {
   ENABLE_SATISFACTION_SURVEY: true, // نظرسنجی رضایت
   
   // فایل ذخیره تنظیمات
-  SETTINGS_FILE: 'data/settings.json',
-  REPORTS_CONFIG_FILE: 'data/reports_config.json',
+  SETTINGS_FILE: '../data/settings.json',
+  REPORTS_CONFIG_FILE: '../data/reports_config.json',
   
   // نام‌های روزهای هفته
   DAYS_OF_WEEK: [
@@ -1597,7 +1597,7 @@ const isPhoneCoach = (phoneNumber) => {
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     
     // 🔥 جستجو در workshops.json برای مربی‌ها
-    const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+    const workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
     if (fs.existsSync(workshopsFile)) {
       const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
       
@@ -1630,7 +1630,7 @@ const getCoachByPhone = (phoneNumber) => {
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     
     // 🔥 جستجو در workshops.json برای مربی‌ها
-    const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+    const workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
     if (fs.existsSync(workshopsFile)) {
       const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
       
@@ -1666,7 +1666,7 @@ const getCoachByPhone = (phoneNumber) => {
 const getAllCoachesWithPhones = () => {
   try {
     // 🔥 جستجو در workshops.json برای مربی‌ها
-    const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+    const workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
     if (fs.existsSync(workshopsFile)) {
       const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
       const coachesWithPhones = [];

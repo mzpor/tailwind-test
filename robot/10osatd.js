@@ -6,9 +6,9 @@ const path = require('path');
 const fs = require('fs');
 
 // فایل‌های مورد نیاز
-const WORKSHOPS_FILE = path.join(__dirname, 'data', 'workshops.json');
-const REGISTRATION_FILE = path.join(__dirname, 'data', 'smart_registration.json');
-const ATTENDANCE_FILE = path.join(__dirname, 'data', 'attendance_data.json');
+const WORKSHOPS_FILE = path.join(__dirname, '..', 'data', 'workshops.json');
+const REGISTRATION_FILE = path.join(__dirname, '..', 'data', 'smart_registration.json');
+const ATTENDANCE_FILE = path.join(__dirname, '..', 'data', 'attendance_data.json');
 
 // ===== ساختار داده‌ها =====
 

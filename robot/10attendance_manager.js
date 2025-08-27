@@ -210,7 +210,7 @@ class AttendanceManager {
             groupName = GROUP_NAMES[this.currentGroupId];
           } else {
             // اگر پیدا نشد، از groups_config.json می‌خوانیم
-            const groupsConfig = JSON.parse(fs.readFileSync('./data/groups_config.json', 'utf8'));
+            const groupsConfig = JSON.parse(fs.readFileSync('../data/groups_config.json', 'utf8'));
             if (groupsConfig.groups[this.currentGroupId] && groupsConfig.groups[this.currentGroupId].name) {
               groupName = groupsConfig.groups[this.currentGroupId].name;
             } else {
@@ -220,7 +220,7 @@ class AttendanceManager {
         } catch (error) {
           // اگر خطا رخ داد، از groups_config.json می‌خوانیم
           try {
-            const groupsConfig = JSON.parse(fs.readFileSync('./data/groups_config.json', 'utf8'));
+            const groupsConfig = JSON.parse(fs.readFileSync('../data/groups_config.json', 'utf8'));
             if (groupsConfig.groups[this.currentGroupId] && groupsConfig.groups[this.currentGroupId].name) {
               groupName = groupsConfig.groups[this.currentGroupId].name;
             } else {

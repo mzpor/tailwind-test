@@ -8,7 +8,7 @@ const PaymentModule = require('./16pay');
 
 class RegistrationModule {
     constructor() {
-        this.dataFile = path.join(__dirname, 'data', 'smart_registration.json');
+        this.dataFile = path.join(__dirname, '..', 'data', 'smart_registration.json');
         this.userStates = {};
         this.loadData();
         
@@ -719,7 +719,7 @@ class RegistrationModule {
             console.log(`🔧 [15REG] شماره نرمال‌سازی شده: ${normalizedPhone}`);
             
             // بارگذاری workshops.json
-            const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+            const workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
             if (fs.existsSync(workshopsFile)) {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
                 
@@ -764,7 +764,7 @@ class RegistrationModule {
         console.log(`🔍 [15REG] دریافت نام ورکشاپ برای شماره: ${phoneNumber}`);
         
         try {
-            const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+            const workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
             if (fs.existsSync(workshopsFile)) {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
                 
@@ -820,7 +820,7 @@ class RegistrationModule {
         console.log(`🔍 [15REG] جستجوی شماره واقعی برای مربی`);
         
         try {
-            const workshopsFile = path.join(__dirname, 'data', 'workshops.json');
+            const workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
             if (fs.existsSync(workshopsFile)) {
                 const workshopsData = JSON.parse(fs.readFileSync(workshopsFile, 'utf8'));
                 
@@ -1731,7 +1731,7 @@ class RegistrationModule {
             
             // ساخت کیبورد برای انتخاب کارگاه
             const { readJson } = require('./server/utils/jsonStore');
-            const workshops = await readJson('data/workshops.json', {});
+            const workshops = await readJson('../data/workshops.json', {});
             
             if (!workshops || !workshops.coach || Object.keys(workshops.coach).length === 0) {
                 const noWorkshopsText = text + `\n\n❌ در حال حاضر هیچ کلاسی برای ثبت‌نام موجود نیست.
@@ -2144,7 +2144,7 @@ class RegistrationModule {
             
             // خواندن اطلاعات کارگاه
             const { readJson } = require('./server/utils/jsonStore');
-            const workshops = await readJson('data/workshops.json', {});
+            const workshops = await readJson('../data/workshops.json', {});
             
             if (!workshops || !workshops.coach || !workshops.coach[workshopId]) {
                 throw new Error('کارگاه یافت نشد');
@@ -2198,7 +2198,7 @@ class RegistrationModule {
          try {
              // خواندن اطلاعات کارگاه
              const { readJson } = require('./server/utils/jsonStore');
-             const workshops = await readJson('data/workshops.json', {});
+             const workshops = await readJson('../data/workshops.json', {});
              
              if (!workshops || !workshops.coach || !workshops.coach[workshopId]) {
                  throw new Error('کارگاه یافت نشد');

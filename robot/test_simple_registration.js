@@ -20,9 +20,9 @@ class SimpleRegistrationTester {
     console.log('==============================');
     
     const files = [
-      'data/workshops.json',
+      '../data/workshops.json',
       'registration_data.json',
-      'data/registrations.json'
+      '../data/registrations.json'
     ];
     
     files.forEach(file => {
@@ -53,8 +53,8 @@ class SimpleRegistrationTester {
     
     try {
       // بررسی workshops.json
-      if (fs.existsSync('data/workshops.json')) {
-        const workshops = JSON.parse(fs.readFileSync('data/workshops.json', 'utf8'));
+      if (fs.existsSync('../data/workshops.json')) {
+        const workshops = JSON.parse(fs.readFileSync('../data/workshops.json', 'utf8'));
         const firstWorkshop = Object.values(workshops)[0];
         
         if (firstWorkshop) {
