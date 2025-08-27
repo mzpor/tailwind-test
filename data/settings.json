@@ -1,6 +1,7 @@
 {
   "practice_days": [
-    4
+    4,
+    5
   ],
   "practice_hours": [
     17,
@@ -10,6 +11,6 @@
     1
   ],
   "attendance_days": [],
-  "enable_satisfaction_survey": false,
+  "enable_satisfaction_survey": true,
   "enable_bot_reports": true
 }
