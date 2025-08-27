@@ -185,11 +185,11 @@ const GROUP_VISIBILITY_CONFIG = {
 
 // ===== کانفیگ مدیریت گروه‌ها =====
 const GROUP_MANAGEMENT_CONFIG = {
-  enabled: 0,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
+  enabled: 1,  // 0 = غیرفعال (مدیریت گروه‌ها دیده نمی‌شود)، 1 = فعال (در پنل مدیر، مربی و کمک مربی دیده می‌شود)
   visibility: {
     admin: 1,        // مدیر مدرسه
-    instructor: 1,   // مربی
-    assistant: 1,    // کمک مربی
+    instructor: 0,   // مربی
+    assistant: 0,    // کمک مربی
     regular: 0       // کاربران عادی - همه دسترسی دارند
   },
   permissions: {

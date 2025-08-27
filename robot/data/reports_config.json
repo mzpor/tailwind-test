@@ -1,62 +1,20 @@
 {
-  "enabled": false,
-  "lastUpdate": "2025-08-27T13:23:30.267Z",
+  "enabled": true,
+  "lastUpdate": "2025-08-27T13:33:48.260Z",
   "updatedBy": "admin",
   "updatedFrom": "ربات",
-  "robotOnline": true,
-  "lastRobotPing": "2025-08-27T13:22:56.742Z",
+  "robotOnline": false,
+  "lastRobotPing": "2025-08-27T13:39:48.358Z",
   "systemStatus": {
-    "robot": true,
-    "gateway": true,
-    "website": true,
-    "lastUpdate": "2025-08-27T13:22:56.800Z",
+    "robot": false,
+    "gateway": false,
+    "website": false,
+    "lastUpdate": "2025-08-27T13:39:48.362Z",
     "lastChange": {
-      "system": "gateway",
-      "status": true,
-      "timestamp": "2025-08-27T13:22:56.800Z",
-      "action": "آنلاین شد"
+      "system": "robot",
+      "status": false,
+      "timestamp": "2025-08-27T13:39:48.362Z",
+      "action": "آفلاین شد"
     }
-  },
-  "websiteLog": [
-    {
-      "action": "فعال شدم",
-      "timestamp": "2025-08-14T19:22:11.052Z"
-    },
-    {
-      "action": "غیرفعال شدم",
-      "timestamp": "2025-08-14T19:51:14.369Z"
-    },
-    {
-      "action": "فعال شدم",
-      "timestamp": "2025-08-14T19:51:14.405Z"
-    },
-    {
-      "action": "غیرفعال شدم",
-      "timestamp": "2025-08-14T19:54:39.371Z"
-    },
-    {
-      "action": "فعال شدم",
-      "timestamp": "2025-08-14T19:54:39.496Z"
-    },
-    {
-      "action": "فعال شدم",
-      "timestamp": "2025-08-14T19:55:51.425Z"
-    },
-    {
-      "action": "فعال شدم",
-      "timestamp": "2025-08-14T19:56:28.776Z"
-    },
-    {
-      "action": "فعال شدم",
-      "timestamp": "2025-08-14T19:56:49.572Z"
-    },
-    {
-      "action": "غیرفعال شدم",
-      "timestamp": "2025-08-14T19:57:07.933Z"
-    },
-    {
-      "action": "فعال شدم",
-      "timestamp": "2025-08-14T19:57:08.008Z"
-    }
-  ]
+  }
 }
