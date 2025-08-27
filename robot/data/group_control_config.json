@@ -1,0 +1,90 @@
+{
+  "schedules": {
+    "4535267863": {
+      "id": "schedule_report_group",
+      "groupId": "4535267863",
+      "name": "زمان‌بندی گروه گزارش",
+      "enabled": true,
+      "rules": [
+        {
+          "id": "close_weekdays",
+          "name": "بستن در روزهای کاری",
+          "enabled": true,
+          "action": "close",
+          "days": [0, 1, 2, 3, 4, 5, 6],
+          "startTime": "22:00",
+          "endTime": "06:00",
+          "message": "🚫 گروه گزارش تا صبح بسته است."
+        },
+        {
+          "id": "open_morning",
+          "name": "باز کردن صبح",
+          "enabled": true,
+          "action": "open",
+          "days": [0, 1, 2, 3, 4, 5, 6],
+          "startTime": "06:00",
+          "endTime": "22:00",
+          "message": "✅ گروه گزارش آماده دریافت گزارش‌ها است."
+        }
+      ],
+      "createdAt": "2025-08-27T15:09:08.000Z",
+      "updatedBy": "admin"
+    },
+    "5417069312": {
+      "id": "schedule_robot_group_2",
+      "groupId": "5417069312",
+      "name": "زمان‌بندی گروه ربات ۲",
+      "enabled": true,
+      "rules": [
+        {
+          "id": "class_hours",
+          "name": "ساعات کلاس",
+          "enabled": true,
+          "action": "open",
+          "days": [0, 1, 2, 3, 4],
+          "startTime": "08:00",
+          "endTime": "14:00",
+          "message": "✅ گروه آماده برگزاری کلاس است."
+        },
+        {
+          "id": "close_after_class",
+          "name": "بستن بعد از کلاس",
+          "enabled": true,
+          "action": "close",
+          "days": [0, 1, 2, 3, 4],
+          "startTime": "14:00",
+          "endTime": "08:00",
+          "message": "🚫 کلاس تمام شده است. گروه بسته است."
+        }
+      ],
+      "createdAt": "2025-08-27T15:09:08.000Z",
+      "updatedBy": "admin"
+    },
+    "5719796514": {
+      "id": "schedule_robot_group_1",
+      "groupId": "5719796514",
+      "name": "زمان‌بندی گروه ربات ۱",
+      "enabled": true,
+      "rules": [
+        {
+          "id": "open_all_day",
+          "name": "باز بودن تمام روز",
+          "enabled": true,
+          "action": "open",
+          "days": [0, 1, 2, 3, 4, 5, 6],
+          "startTime": "00:00",
+          "endTime": "23:59",
+          "message": "✅ گروه ربات ۱ آماده فعالیت است."
+        }
+      ],
+      "createdAt": "2025-08-27T15:09:08.000Z",
+      "updatedBy": "admin"
+    }
+  },
+  "config": {
+    "defaultCloseMessage": "🚫 گروه موقتاً بسته است.",
+    "defaultOpenMessage": "✅ گروه باز است و آماده فعالیت!",
+    "lastUpdate": "2025-01-15T15:09:08.000Z",
+    "updatedBy": "admin"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "discountCodes": {
+    "Q25M189A": {
+      "code": "Q25M189A",
+      "type": "fixed",
+      "value": 10000,
+      "description": "تخفیف ثابت",
+      "maxUsage": 1,
+      "usedBy": [],
+      "createdBy": 1114227010,
+      "createdAt": "2025-08-16T19:21:50.142Z",
+      "expiresAt": "2025-08-26T19:21:50.142Z",
+      "isActive": true
+    },
+    "OUG98GRY": {
+      "code": "OUG98GRY",
+      "type": "fixed",
+      "value": 10000,
+      "description": "تخفیف ثابت",
+      "maxUsage": 1,
+      "usedBy": [],
+      "createdBy": 1114227010,
+      "createdAt": "2025-08-16T19:25:09.884Z",
+      "expiresAt": "2025-08-26T19:25:09.884Z",
+      "isActive": true
+    },
+    "GUGQ2RIP": {
+      "code": "GUGQ2RIP",
+      "type": "fixed",
+      "value": 8000,
+      "description": "تخفیف ثابت",
+      "maxUsage": 1,
+      "usedBy": [],
+      "createdBy": 1114227010,
+      "createdAt": "2025-08-16T19:31:48.925Z",
+      "expiresAt": "2025-08-26T19:31:48.925Z",
+      "isActive": true
+    },
+    "JBSQ": {
+      "code": "JBSQ",
+      "type": "fixed",
+      "value": 8000,
+      "description": "تخفیف ثابت",
+      "maxUsage": 1,
+      "usedBy": [],
+      "createdBy": 1114227010,
+      "createdAt": "2025-08-16T19:49:21.429Z",
+      "expiresAt": "2025-08-26T19:49:21.429Z",
+      "isActive": true
+    },
+    "6X8D": {
+      "code": "6X8D",
+      "type": "fixed",
+      "value": 7000,
+      "description": "تخفیف ثابت",
+      "maxUsage": 1,
+      "usedBy": [],
+      "createdBy": 1114227010,
+      "createdAt": "2025-08-16T20:10:06.010Z",
+      "expiresAt": "2025-08-26T20:10:06.010Z",
+      "isActive": true
+    },
+    "EYYL": {
+      "code": "EYYL",
+      "type": "fixed",
+      "value": 8000,
+      "description": "تخفیف ثابت",
+      "maxUsage": 1,
+      "usedBy": [],
+      "createdBy": 1114227010,
+      "createdAt": "2025-08-16T21:12:51.268Z",
+      "expiresAt": "2025-08-26T21:12:51.268Z",
+      "isActive": true
+    },
+    "W0YJJ1BX": {
+      "code": "W0YJJ1BX",
+      "type": "fixed",
+      "value": 1000,
+      "description": "",
+      "maxUsage": 1,
+      "usedBy": [],
+      "createdBy": 1114227010,
+      "createdAt": "2025-08-17T03:02:54.020Z",
+      "expiresAt": "2025-08-27T03:02:54.020Z",
+      "isActive": true
+    }
+  },
+  "lastUpdated": "2025-08-17T03:02:54.020Z"
+}

@@ -612,16 +612,30 @@ function createGroupsKeyboard(groups) {
 async function handleRoleMessage(msg, role) {
   console.log(`🔍 [POLLING] Processing message: "${msg.text}" from role: ${role}`);
   console.log(`🔍 [POLLING] User ID: ${msg.from.id}, Chat ID: ${msg.chat.id}`);
-  
+
+  // 🎤 بررسی ریپلای صوتی به صوتی (اولویت بالاترین)
+  if (msg.voice && msg.reply_to_message) {
+    console.log('🎤 [POLLING] Voice message with reply detected, checking if voice reply to voice...');
+
+    if (practiceManager.isVoiceReplyToVoice(msg)) {
+      console.log('✅ [POLLING] Voice reply to voice confirmed, handling practice...');
+      const handled = await practiceManager.handleVoiceReplyToVoice(msg);
+      if (handled) {
+        console.log('✅ [POLLING] Voice reply practice handled successfully');
+        return; // پایان پردازش، پیام توسط practiceManager مدیریت شد
+      }
+    }
+  }
+
   const config = roleConfig[role];
   if (!config) {
     console.log('❌ [POLLING] No config found for role:', role);
     return;
   }
-  
+
   console.log('✅ [POLLING] Config found for role:', role);
   console.log('✅ [POLLING] Config:', JSON.stringify(config, null, 2));
-  
+
   let reply = '';
   let keyboard = null;
   
