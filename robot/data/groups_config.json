@@ -1,29 +1,5 @@
 {
   "groups": {
-    "123456789": {
-      "name": "گروه تست",
-      "group_id": "123456789",
-      "group_title": "گروه تست",
-      "join_date": "2025-08-27T08:40:02.564Z",
-      "member_count": 25,
-      "language": "فارسی",
-      "status": "فعال",
-      "enabled": 1,
-      "lastUpdate": "2025-08-27T08:40:02.564Z",
-      "updatedBy": "test_script"
-    },
-    "999999999": {
-      "name": "گروه تست",
-      "enabled": 1,
-      "lastUpdate": "2025-08-27T08:56:02.393Z",
-      "updatedBy": "bot_auto_join",
-      "group_id": "999999999",
-      "group_title": "گروه تست",
-      "join_date": "2025-08-27T08:56:02.393Z",
-      "member_count": 5,
-      "language": "فارسی",
-      "status": "فعال"
-    },
     "5668045453": {
       "name": "گروه گزارش",
       "enabled": 0,
@@ -45,7 +21,7 @@
   },
   "config": {
     "defaultEnabled": 1,
-    "lastUpdate": "2025-08-27T08:56:02.392Z",
-    "updatedBy": "bot_join"
+    "lastUpdate": "2025-08-15T01:23:57.497Z",
+    "updatedBy": "test_user"
   }
 }

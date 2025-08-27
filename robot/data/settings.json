@@ -22,23 +22,5 @@
     6
   ],
   "enable_satisfaction_survey": true,
-  "enable_bot_reports": true,
-  "bot_group_join_message": {
-    "enabled": true,
-    "format": "عنوان گروه: {group_title}\nشماره گروه: {group_number}\nزبان: {language}\nساعات کاری: 00:00 تا 23:59"
-  },
-  "auto_save_groups": {
-    "enabled": true,
-    "save_to": "groups_config.json",
-    "include_fields": [
-      "group_id",
-      "group_title", 
-      "join_date",
-      "member_count",
-      "language",
-      "status"
-    ],
-    "default_language": "فارسی",
-    "default_status": "فعال"
-  }
+  "enable_bot_reports": true
 }
