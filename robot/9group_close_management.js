@@ -17,7 +17,7 @@ const userTimeSettingState = new Map();
 // تابع فرمت کردن اطلاعات زمان‌بندی
 function formatScheduleInfo(groupData) {
   if (!groupData || !groupData.schedule) {
-    return '🕐 تنظیم نشده (پیش‌فرض: 09:00-18:00، همه روزها)';
+    return '🕐 تنظیم نشده (پیش‌فرض: 19:00-22:00، دوشنبه و چهارشنبه)';
   }
   
   const schedule = groupData.schedule;
@@ -33,7 +33,7 @@ function formatScheduleInfo(groupData) {
     daysText = days.map(day => dayNames[day]).join('، ');
   }
   
-  return `🕐 ${schedule.startTime || '09:00'} تا ${schedule.endTime || '18:00'}
+  return `🕐 ${schedule.startTime || '19:00'} تا ${schedule.endTime || '22:00'}
 📅 روزها: ${daysText}`;
 }
 
@@ -424,9 +424,9 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
-          activeDays: [0, 1, 2, 3, 4, 5, 6]
+          startTime: '19:00',
+          endTime: '22:00',
+          activeDays: [2, 4] // ??? ?????? ? ????????
         };
       }
       
@@ -467,9 +467,9 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
-          activeDays: [0, 1, 2, 3, 4, 5, 6]
+          startTime: '19:00',
+          endTime: '22:00',
+          activeDays: [2, 4] // ??? ?????? ? ????????
         };
       }
       
@@ -517,9 +517,9 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
-          activeDays: [0, 1, 2, 3, 4, 5, 6]
+          startTime: '19:00',
+          endTime: '22:00',
+          activeDays: [2, 4] // ??? ?????? ? ????????
         };
       }
       
@@ -567,9 +567,9 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
-          activeDays: [0, 1, 2, 3, 4, 5, 6]
+          startTime: '19:00',
+          endTime: '22:00',
+          activeDays: [2, 4] // ??? ?????? ? ????????
         };
       }
       
@@ -640,9 +640,9 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
-          activeDays: [0, 1, 2, 3, 4, 5, 6]
+          startTime: '19:00',
+          endTime: '22:00',
+          activeDays: [2, 4] // ??? ?????? ? ????????
         };
       }
       
@@ -672,8 +672,8 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
+          startTime: '19:00',
+          endTime: '22:00',
           activeDays: []
         };
       }
@@ -696,8 +696,8 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
+          startTime: '19:00',
+          endTime: '22:00',
           activeDays: []
         };
       }
@@ -714,11 +714,23 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       const groupId = action.replace('remove_group_', '');
       const closeData = loadGroupCloseData();
       
-      // حذف کامل گروه از سیستم
+      // حذف کامل گروه از سیستم مدیریت بستن
       if (closeData.groups[groupId]) {
         delete closeData.groups[groupId];
         saveGroupCloseData(closeData);
         console.log(`🔍 DEBUG: Group ${groupId} removed from close management system`);
+      }
+      
+      // حذف گروه از members.json
+      try {
+        const membersData = loadMembersData();
+        if (membersData.groups && membersData.groups[groupId]) {
+          delete membersData.groups[groupId];
+          saveMembersData(membersData);
+          console.log(`🔍 DEBUG: Group ${groupId} removed from members.json`);
+        }
+      } catch (error) {
+        console.error(`Error removing group ${groupId} from members.json:`, error.message);
       }
       
       // بازگشت به لیست گروه‌های مدیریت شده
@@ -798,13 +810,13 @@ ${availableGroups.map((group, index) => `${index + 1}️⃣ ${group.title} (${gr
           closed: false,
           message: '🚫 گروه موقتاً بسته است.',
           schedule: {
-            startTime: '09:00',
+            startTime: '19:00',
             endTime: '22:00',
-            activeDays: [0, 1, 2, 3, 4, 5, 6] // همه روزها
+            activeDays: [2, 4] // فقط دوشنبه و چهارشنبه (0=شنبه، 1=یکشنبه، 2=دوشنبه، 3=سه‌شنبه، 4=چهارشنبه)
           }
         };
         saveGroupCloseData(closeData);
-        console.log(`🔍 DEBUG: Group ${groupId} added to close management system with default settings`);
+        console.log(`🔍 DEBUG: Group ${groupId} added to close management system with default settings (19:00-22:00, Mon/Wed)`);
       }
       
       // بازگشت به مدیریت گروه
@@ -897,9 +909,9 @@ ${availableGroups.map((group, index) => `${index + 1}️⃣ ${group.title} (${gr
       }
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
-          activeDays: [0, 1, 2, 3, 4, 5, 6]
+          startTime: '19:00',
+          endTime: '22:00',
+          activeDays: [2, 4] // ??? ?????? ? ????????
         };
       }
       
@@ -951,9 +963,9 @@ ${availableGroups.map((group, index) => `${index + 1}️⃣ ${group.title} (${gr
       }
       if (!closeData.groups[groupId].schedule) {
         closeData.groups[groupId].schedule = {
-          startTime: '09:00',
-          endTime: '18:00',
-          activeDays: [0, 1, 2, 3, 4, 5, 6]
+          startTime: '19:00',
+          endTime: '22:00',
+          activeDays: [2, 4] // ??? ?????? ? ????????
         };
       }
       

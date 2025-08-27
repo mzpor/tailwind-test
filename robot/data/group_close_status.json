@@ -4,9 +4,9 @@
       "closed": false,
       "message": "🚫 گروه موقتاً بسته است.",
       "schedule": {
-        "startTime": "09:00",
+        "startTime": "19:00",
         "endTime": "22:00",
-        "activeDays": [0, 1, 2, 3, 4, 5, 6]
+        "activeDays": [2, 4]
       }
     }
   },
@@ -14,9 +14,9 @@
     "defaultCloseMessage": "🚫 گروه موقتاً بسته است.",
     "defaultOpenMessage": "✅ گروه باز است.",
     "defaultSchedule": {
-      "startTime": "09:00",
-      "endTime": "18:00",
-      "activeDays": [0, 1, 2, 3, 4, 5, 6]
+      "startTime": "19:00",
+      "endTime": "22:00",
+      "activeDays": [2, 4]
     }
   }
 }
