@@ -1,30 +1,27 @@
 {
   "groups": {
-    "4535267863": {
-      "name": "گروه قرآنی اعلام ها",
-      "enabled": 1,
-      "lastUpdate": "2025-01-15T15:09:08.000Z",
-      "updatedBy": "admin",
-      "invite_link": "ble.ir/join/Cx1ssbmHsW"
+    "5668045453": {
+      "name": "گروه گزارش",
+      "enabled": 0,
+      "lastUpdate": "2025-08-15T01:23:57.496Z",
+      "updatedBy": "test_user"
     },
     "5417069312": {
       "name": "گروه ربات ۲",
       "enabled": 1,
-      "lastUpdate": "2025-01-15T15:09:08.000Z",
-      "updatedBy": "admin",
-      "invite_link": "ble.ir/join/7mDE7bY4pV"
+      "lastUpdate": "2025-08-15T01:23:57.497Z",
+      "updatedBy": "test_user"
     },
-    "5719796514": {
-      "name": "مربی",
+    "4594690153": {
+      "name": "گروه ربات ۱",
       "enabled": 1,
-      "lastUpdate": "2025-01-15T15:09:08.000Z",
-      "updatedBy": "admin",
-      "invite_link": "ble.ir/join/ArM9SXSQDW"
+      "lastUpdate": "2025-08-15T01:23:57.497Z",
+      "updatedBy": "test_user"
     }
   },
   "config": {
     "defaultEnabled": 1,
-    "lastUpdate": "2025-01-15T15:09:08.000Z",
-    "updatedBy": "admin"
+    "lastUpdate": "2025-08-15T01:23:57.497Z",
+    "updatedBy": "test_user"
   }
 }

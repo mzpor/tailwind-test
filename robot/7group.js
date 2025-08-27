@@ -7,7 +7,7 @@ const fs = require('fs');
 const SettingsModule = require('./11settings');
 
 // فایل ذخیره اعضا
-const MEMBERS_FILE = '../data/members.json';
+const MEMBERS_FILE = './members.json';
 
 // خواندن داده‌های ذخیره شده
 function loadMembersData() {

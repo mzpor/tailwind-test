@@ -17,7 +17,7 @@ app.use(express.static('public'));
 const bot = new Telegraf(BOT_TOKEN);
 
 // فایل تنظیمات
-const SETTINGS_FILE = '../data/settings.json';
+const SETTINGS_FILE = './data/settings.json';
 
 // لود کردن تنظیمات
 async function loadSettings() {

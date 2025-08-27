@@ -37,7 +37,7 @@ console.log('✅ تمام تنظیمات دکمه‌ها:', JSON.stringify(allCo
 console.log('\n📋 تست ۶: بررسی هماهنگی با سایت');
 try {
   const { readJson } = require('./server/utils/jsonStore');
-  const siteStatus = readJson('../data/site-status.json', {
+  const siteStatus = readJson('data/site-status.json', {
     registration: { enabled: currentStatus }
   });
   console.log(`✅ وضعیت سایت: ${siteStatus.registration.enabled ? 'فعال' : 'غیرفعال'}`);

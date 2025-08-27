@@ -6,9 +6,9 @@ const path = require('path');
 
 class UnifiedRegistrationManager {
   constructor() {
-    this.registrationsFile = '../data/registrations.json';
-    this.registrationDataFile = '../registration_data.json';
-    this.workshopsFile = '../data/workshops.json';
+    this.registrationsFile = 'data/registrations.json';
+    this.registrationDataFile = 'registration_data.json';
+    this.workshopsFile = 'data/workshops.json';
     
     this.registrations = this.loadData(this.registrationsFile);
     this.registrationData = this.loadData(this.registrationDataFile);

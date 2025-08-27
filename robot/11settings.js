@@ -1144,7 +1144,7 @@ class SettingsModule {
       
       // تغییر وضعیت در site-status.json برای همگام‌سازی
       const { readJson, writeJson } = require('./server/utils/jsonStore');
-      const siteStatus = await readJson('../data/site-status.json', {
+      const siteStatus = await readJson('data/site-status.json', {
         registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' },
         survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' }
       });
@@ -1153,7 +1153,7 @@ class SettingsModule {
       siteStatus.survey.lastUpdate = Date.now();
       siteStatus.survey.updatedFrom = 'ربات';
       
-      await writeJson('../data/site-status.json', siteStatus);
+      await writeJson('data/site-status.json', siteStatus);
       
       const status = this.settings.enable_satisfaction_survey ? 'فعال' : 'غیرفعال';
       
@@ -1206,7 +1206,7 @@ class SettingsModule {
       // هماهنگ‌سازی با سایت
       try {
         const { readJson, writeJson } = require('./server/utils/jsonStore');
-        const siteStatus = await readJson('../data/site-status.json', {
+        const siteStatus = await readJson('data/site-status.json', {
           registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' },
           survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'ربات' }
         });
@@ -1217,7 +1217,7 @@ class SettingsModule {
         siteStatus.registration.updatedFrom = 'ربات';
         
         // ذخیره تغییرات سایت
-        await writeJson('../data/site-status.json', siteStatus);
+        await writeJson('data/site-status.json', siteStatus);
         console.log(`✅ [SETTINGS] Site registration status synchronized: ${newStatus ? 'فعال' : 'غیرفعال'}`);
       } catch (error) {
         console.log('⚠️ [SETTINGS] Could not sync with site, but config updated successfully');

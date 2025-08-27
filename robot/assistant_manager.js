@@ -9,7 +9,7 @@ class AssistantManagerModule {
         this.assistants = {}; // ذخیره کمک مربی‌ها
         this.userStates = {}; // وضعیت کاربران
         this.tempData = {}; // داده‌های موقت برای اضافه/ویرایش
-        this.workshopsFile = path.join(__dirname, '..', 'data', 'workshops.json');
+        this.workshopsFile = path.join(__dirname, 'data', 'workshops.json');
         this.loadAssistants();
         console.log('✅ AssistantManagerModule initialized successfully');
     }
@@ -377,7 +377,7 @@ class AssistantManagerModule {
         try {
             const fs = require('fs');
             const path = require('path');
-            const registrationFile = path.join(__dirname, '..', 'data', 'smart_registration.json');
+            const registrationFile = path.join(__dirname, 'data', 'smart_registration.json');
             
             // بارگذاری فایل موجود
             let registrationData = {};

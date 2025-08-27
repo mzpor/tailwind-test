@@ -17,9 +17,6 @@ console.log('✅ [INDEX] 8logs module loaded');
 const { updateRobotHeartbeat, updateSystemStatus } = require('./3config');
 console.log('✅ [INDEX] 3config module loaded');
 
-const { getGroupControlManager } = require('./group_control_manager');
-console.log('✅ [INDEX] group_control_manager module loaded');
-
 // گزارش فعال شدن بات
 console.log('🚀 [INDEX] Calling logStartup...');
 logStartup().then(() => {
@@ -29,11 +26,6 @@ logStartup().then(() => {
   updateRobotHeartbeat();
   updateSystemStatus('robot', true);
   console.log('🟢 [INDEX] Robot status: ONLINE');
-
-  // راه‌اندازی سیستم کنترل گروه‌ها
-  console.log('🚀 [INDEX] Initializing group control system...');
-  getGroupControlManager(); // این کار باعث راه‌اندازی زمان‌بندی‌ها می‌شود
-  console.log('✅ [INDEX] Group control system initialized');
   
   // ارسال داشبورد ترکیبی (اگر Gateway در دسترس باشد)
   try {

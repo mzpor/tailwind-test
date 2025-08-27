@@ -7,7 +7,7 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // فایل تنظیمات
-const SETTINGS_FILE = '../data/settings.json';
+const SETTINGS_FILE = './data/settings.json';
 
 // لود کردن تنظیمات
 async function loadSettings() {

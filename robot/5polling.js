@@ -47,7 +47,6 @@ const PaymentModule = require('./16pay');
 const { practiceManager } = require('./practice_manager');
 const { ArzyabiModule } = require('./17arzyabi');
 const SabtManager = require('./18sabt');
-const { createGroupControlPanel, handleGroupControlCallback, controlGroup } = require('./group_control_manager');
 // const { roleManager } = require('./role_manager'); // مدیریت نقش‌ها غیرفعال شده
 
 // ایجاد یک instance واحد از SmartRegistrationModule
@@ -291,7 +290,7 @@ const roleConfig = {
     emoji: '🛡️',
     panelText: 'مدیر',
     get keyboard() { return generateDynamicKeyboard(ROLES.SCHOOL_ADMIN); },
-    commands: ['/شروع', '/خروج', '/ربات', '/مدیر', '/تنظیمات', '/کارگاه', '/عضو']
+    commands: ['/شروع', '/خروج', '/ربات', '/مدیر', '/تنظیمات', '/کارگاه']
     // دستور /نقش‌ها غیرفعال شده
   },
 
@@ -796,21 +795,16 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
       if (hasGroupManagementAccess('SCHOOL_ADMIN')) {
         inlineKeyboard.push([{ text: '🏫 مدیریت گروه‌ها', callback_data: 'groups' }]);
       }
-
-      // اضافه کردن دکمه کنترل گروه‌ها
-      inlineKeyboard.push([{ text: '🚪 کنترل گروه‌ها', callback_data: 'group_control_panel' }]);
-
+      
       inlineKeyboard.push([{ text: '🏭 کارگاه‌ها', callback_data: 'kargah_management' }]);
       // اضافه کردن دکمه استادها فقط اگر فعال باشد
       if (hasOsatdManagementAccess('SCHOOL_ADMIN')) {
         inlineKeyboard.push([{ text: '👨‍🏫 استادها', callback_data: 'osatd_management' }]);
       }
       
-      const groupManagementText = hasGroupManagementAccess('SCHOOL_ADMIN')
-        ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n'
+      const groupManagementText = hasGroupManagementAccess('SCHOOL_ADMIN') 
+        ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
         : '';
-
-      const groupControlText = '• 🚪 کنترل گروه‌ها (باز/بسته کردن)\n';
       
       const osatdText = hasOsatdManagementAccess('SCHOOL_ADMIN') 
         ? '• 👨‍🏫 استادها\n' 
@@ -821,7 +815,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
 
 📋 گزینه‌های موجود:
 • 🤖 معرفی ربات
-${groupManagementText}${groupControlText}• 🏭 کارگاه‌ها
+${groupManagementText}• 🏭 کارگاه‌ها
 ${osatdText}
 
 👆 لطفاً گزینه مورد نظر را انتخاب کنید:
@@ -998,38 +992,6 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
       } else {
         reply = '❌ خطا در نمایش کارگاه‌ها';
         keyboard = config.keyboard;
-      }
-    }
-  } else if (msg.text === '/عضو') {
-    // دستور عضویت در گروه‌ها - فقط برای مدیر مدرسه
-    if (!isAdmin(msg.from.id)) {
-      reply = '⚠️ فقط مدیر مدرسه می‌تواند از این دستور استفاده کند.';
-      keyboard = config.keyboard;
-    } else {
-      console.log('🔍 [POLLING] Member command detected for admin');
-      // نمایش لیست گروه‌ها برای عضویت
-      const groups = await getGroupsList(msg.from.id);
-      console.log('🔍 [POLLING] Groups retrieved:', groups);
-
-      if (groups.length === 0) {
-        reply = '📝 هیچ گروهی یافت نشد.\n\nلطفاً ابتدا گروه‌ها را در سیستم مدیریت گروه‌ها ثبت کنید.';
-        keyboard = [[{ text: '🔙 بازگشت به منوی اصلی', callback_data: 'back_to_main' }]];
-      } else {
-        reply = `👥 عضویت در گروه‌ها
-
-📋 گروه‌های موجود برای عضویت:
-
-${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`).join('\n')}
-
-👆 برای عضویت در گروه مورد نظر روی آن کلیک کنید:
-⏰ ${getTimeStamp()}`;
-
-        keyboard = groups.map(group => [{
-          text: `${group.title} (${group.memberCount} عضو)`,
-          callback_data: `join_group_${group.id}`
-        }]);
-
-        keyboard.push([{ text: '🔙 بازگشت به منوی اصلی', callback_data: 'back_to_main' }]);
       }
     }
   } else {
@@ -1317,7 +1279,7 @@ function startPolling() {
             // بررسی وضعیت ثبت‌نام قبل از شروع
             try {
               const { readJson } = require('./server/utils/jsonStore');
-              const siteStatus = await readJson('../data/site-status.json', {
+              const siteStatus = await readJson('data/site-status.json', {
                 registration: { enabled: true }
               });
               
@@ -1375,121 +1337,6 @@ function startPolling() {
                 const reply = '❌ خطا در نمایش منوی کارگاه‌ها';
                 await safeSendMessage(callback_query.from.id, reply, config.keyboard);
               }
-            }
-          } else if (callback_query.data === 'group_control_panel' || callback_query.data.startsWith('group_control_')) {
-
-            console.log('🔄 [POLLING] Group control callback detected');
-            // بررسی دسترسی کاربر - فقط ادمین‌ها می‌توانند گروه‌ها را مدیریت کنند
-            if (!isAdmin(callback_query.from.id) && !isGroupAdmin(callback_query.from.id)) {
-              await answerCallbackQuery(callback_query.id, '⚠️ شما دسترسی لازم برای مدیریت گروه‌ها را ندارید.');
-              return;
-            }
-
-            // پردازش callback های مدیریت گروه‌ها
-            const result = await handleGroupControlCallback(callback_query.data, callback_query.from.id, callback_query.message.chat.id);
-
-            if (result && result.keyboard) {
-              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
-              await answerCallbackQuery(callback_query.id);
-            } else {
-              await answerCallbackQuery(callback_query.id, '❌ خطا در پردازش درخواست مدیریت گروه‌ها');
-            }
-          } else if (callback_query.data.startsWith('join_group_')) {
-            console.log('🔄 [POLLING] Join group callback detected');
-
-            // بررسی دسترسی کاربر - فقط ادمین‌ها می‌توانند عضویت در گروه‌ها را مدیریت کنند
-            if (!isAdmin(callback_query.from.id)) {
-              await answerCallbackQuery(callback_query.id, '⚠️ شما دسترسی لازم برای مدیریت عضویت گروه‌ها را ندارید.');
-              return;
-            }
-
-            const groupId = callback_query.data.replace('join_group_', '');
-            console.log(`🔍 [POLLING] Processing join request for group: ${groupId}`);
-
-            try {
-              // دریافت اطلاعات گروه
-              const groups = await getGroupsList(callback_query.from.id);
-              const group = groups.find(g => g.id === groupId);
-
-              if (!group) {
-                await answerCallbackQuery(callback_query.id, '❌ گروه یافت نشد.');
-                return;
-              }
-
-              // دریافت لینک دعوت گروه
-              const groupConfig = getAllGroupsStatus()[groupId];
-              let inviteLink = 'لینک دعوت موجود نیست';
-
-              if (groupConfig && groupConfig.invite_link) {
-                inviteLink = groupConfig.invite_link;
-              }
-
-              const text = `👥 عضویت در گروه: ${group.title}
-
-🆔 شناسه گروه: \`${groupId}\`
-👤 تعداد اعضا: ${group.memberCount}
-🔗 لینک دعوت: ${inviteLink}
-
-برای عضویت در این گروه، روی لینک بالا کلیک کنید یا آن را با دیگران به اشتراک بگذارید.
-
-⏰ ${getTimeStamp()}`;
-
-              const keyboard = [
-                [
-                  { text: '🔙 بازگشت به لیست گروه‌ها', callback_data: 'member_groups_list' },
-                  { text: '🏠 بازگشت به منوی اصلی', callback_data: 'back_to_main' }
-                ]
-              ];
-
-              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, text, keyboard);
-              await answerCallbackQuery(callback_query.id);
-
-            } catch (error) {
-              console.error('❌ [POLLING] Error processing join group callback:', error);
-              await answerCallbackQuery(callback_query.id, '❌ خطا در پردازش درخواست عضویت');
-            }
-          } else if (callback_query.data === 'member_groups_list') {
-            console.log('🔄 [POLLING] Member groups list callback detected');
-
-            // بررسی دسترسی کاربر - فقط ادمین‌ها می‌توانند لیست گروه‌ها را ببینند
-            if (!isAdmin(callback_query.from.id)) {
-              await answerCallbackQuery(callback_query.id, '⚠️ شما دسترسی لازم برای مشاهده لیست گروه‌ها را ندارید.');
-              return;
-            }
-
-            try {
-              // نمایش لیست گروه‌ها برای عضویت
-              const groups = await getGroupsList(callback_query.from.id);
-              console.log('🔍 [POLLING] Groups retrieved:', groups);
-
-              if (groups.length === 0) {
-                const text = '📝 هیچ گروهی یافت نشد.\n\nلطفاً ابتدا گروه‌ها را در سیستم مدیریت گروه‌ها ثبت کنید.';
-                const keyboard = [[{ text: '🔙 بازگشت به منوی اصلی', callback_data: 'back_to_main' }]];
-                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, text, keyboard);
-              } else {
-                const text = `👥 عضویت در گروه‌ها
-
-📋 گروه‌های موجود برای عضویت:
-
-${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.memberCount} عضو)`).join('\n')}
-
-👆 برای عضویت در گروه مورد نظر روی آن کلیک کنید:
-⏰ ${getTimeStamp()}`;
-
-                const keyboard = groups.map(group => [{
-                  text: `${group.title} (${group.memberCount} عضو)`,
-                  callback_data: `join_group_${group.id}`
-                }]);
-
-                keyboard.push([{ text: '🔙 بازگشت به منوی اصلی', callback_data: 'back_to_main' }]);
-                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, text, keyboard);
-              }
-
-              await answerCallbackQuery(callback_query.id);
-
-            } catch (error) {
-              console.error('❌ [POLLING] Error processing member groups list callback:', error);
-              await answerCallbackQuery(callback_query.id, '❌ خطا در نمایش لیست گروه‌ها');
             }
           } else if (callback_query.data === 'osatd_management') {
             
@@ -2030,20 +1877,6 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
         } else {
           // پردازش پیام‌های بر اساس نقش - به‌روزرسانی شده در 1404/05/13 ساعت 10:00
           const userRole = getUserRole(msg.from.id); // تصحیح: از from.id بگیر نه chat.id
-
-          // کنترل گروه‌های بسته
-          if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
-            const groupEnabled = isGroupEnabled(msg.chat.id);
-            if (!groupEnabled) {
-              // اگر گروه بسته است، فقط برای ادمین‌ها اجازه ارسال پیام بده
-              if (!isAdmin(msg.from.id) && !isGroupAdmin(msg.from.id) && !isCoach(msg.from.id) && !isAssistant(msg.from.id)) {
-                console.log(`🚫 [GROUP_CONTROL] Message blocked in closed group ${msg.chat.id} from user ${msg.from.id}`);
-                // پیام را بدون پاسخ رها کن
-                continue;
-              }
-            }
-          }
-
           await handleRoleMessage(msg, userRole);
         }
       }

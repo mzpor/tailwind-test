@@ -128,10 +128,10 @@ app.use((req, res, next) => {
 const { readJson, writeJson } = require('./server/utils/jsonStore');
 
 // فایل تنظیمات
-const SETTINGS_FILE = '../data/settings.json';
-const WS_FILE = '../data/workshops.json';
-const RG_FILE = '../data/registrations.json';
-const VERIFICATION_FILE = '../data/verification_codes.json';
+const SETTINGS_FILE = './data/settings.json';
+const WS_FILE = './data/workshops.json';
+const RG_FILE = './data/registrations.json';
+const VERIFICATION_FILE = './data/verification_codes.json';
 
 // لود کردن تنظیمات
 async function loadSettings() {
@@ -399,7 +399,7 @@ app.get('/api/reports/combined', async (req, res) => {
     let surveyUpdatedFrom = 'سیستم';
     
     try {
-      const siteStatus = await readJson('../data/site-status.json', {});
+      const siteStatus = await readJson('data/site-status.json', {});
       if (siteStatus.registration) {
         registrationEnabled = siteStatus.registration.enabled;
         registrationUpdatedFrom = siteStatus.registration.updatedFrom || 'سیستم';
@@ -434,7 +434,7 @@ app.get('/api/reports/combined', async (req, res) => {
     
     // بررسی زمان تغییر نظرسنجی و ثبت‌نام
     try {
-      const siteStatus = await readJson('../data/site-status.json', {});
+      const siteStatus = await readJson('data/site-status.json', {});
       
       // بررسی نظرسنجی
       if (siteStatus.survey?.lastUpdate) {
@@ -1005,7 +1005,7 @@ async function sendCombinedDashboard() {
     let surveyUpdatedFrom = 'سیستم';
     
     try {
-      const siteStatus = await readJson('../data/site-status.json', {});
+      const siteStatus = await readJson('data/site-status.json', {});
       if (siteStatus.registration) {
         registrationEnabled = siteStatus.registration.enabled;
         registrationUpdatedFrom = siteStatus.registration.updatedFrom || 'سیستم';
@@ -1040,7 +1040,7 @@ async function sendCombinedDashboard() {
     
     // بررسی زمان تغییر نظرسنجی و ثبت‌نام
     try {
-      const siteStatus = await readJson('../data/site-status.json', {});
+      const siteStatus = await readJson('data/site-status.json', {});
       
       // بررسی نظرسنجی
       if (siteStatus.survey?.lastUpdate) {
@@ -1345,7 +1345,7 @@ async function sendSettingsDashboard() {
     let surveyUpdatedFrom = 'سیستم';
     
     try {
-      const siteStatus = await readJson('../data/site-status.json', {});
+      const siteStatus = await readJson('data/site-status.json', {});
       if (siteStatus.registration) {
         registrationEnabled = siteStatus.registration.enabled;
         registrationUpdatedFrom = siteStatus.registration.updatedFrom || 'سیستم';
@@ -1383,7 +1383,7 @@ async function sendSettingsDashboard() {
     
     // بررسی زمان تغییر نظرسنجی و ثبت‌نام
     try {
-      const siteStatus = await readJson('../data/site-status.json', {});
+      const siteStatus = await readJson('data/site-status.json', {});
       
       // بررسی نظرسنجی
       if (siteStatus.survey?.lastUpdate) {
@@ -1535,7 +1535,7 @@ function gracefulShutdown() {
 // API برای دریافت وضعیت ثبت‌نام
 app.get('/api/registration-status', async (req, res) => {
   try {
-            const siteStatus = await readJson('../data/site-status.json', {
+    const siteStatus = await readJson('data/site-status.json', {
       registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' }
     });
     res.json(siteStatus.registration);
@@ -1549,7 +1549,7 @@ app.get('/api/registration-status', async (req, res) => {
 app.post('/api/toggle-registration', async (req, res) => {
   try {
     const { enabled } = req.body;
-            const siteStatus = await readJson('../data/site-status.json', {
+    const siteStatus = await readJson('data/site-status.json', {
       registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' },
       survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' }
     });
@@ -1558,7 +1558,7 @@ app.post('/api/toggle-registration', async (req, res) => {
     siteStatus.registration.lastUpdate = Date.now();
     siteStatus.registration.updatedFrom = 'سایت';
     
-    await writeJson('../data/site-status.json', siteStatus);
+    await writeJson('data/site-status.json', siteStatus);
     
     // ارسال رویداد SSE
     reportEvents.emit('registration-change', siteStatus.registration);
@@ -1577,7 +1577,7 @@ app.post('/api/toggle-registration', async (req, res) => {
 // API برای دریافت وضعیت نظرسنجی
 app.get('/api/survey-status', async (req, res) => {
   try {
-            const siteStatus = await readJson('../data/site-status.json', {
+    const siteStatus = await readJson('data/site-status.json', {
       survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' }
     });
     res.json(siteStatus.survey);
@@ -1591,7 +1591,7 @@ app.get('/api/survey-status', async (req, res) => {
 app.post('/api/toggle-survey', async (req, res) => {
   try {
     const { enabled } = req.body;
-            const siteStatus = await readJson('../data/site-status.json', {
+    const siteStatus = await readJson('data/site-status.json', {
       registration: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' },
       survey: { enabled: true, lastUpdate: Date.now(), updatedFrom: 'سیستم' }
     });
@@ -1600,7 +1600,7 @@ app.post('/api/toggle-survey', async (req, res) => {
     siteStatus.survey.lastUpdate = Date.now();
     siteStatus.survey.updatedFrom = 'سایت';
     
-    await writeJson('../data/site-status.json', siteStatus);
+    await writeJson('data/site-status.json', siteStatus);
     
     // ارسال رویداد SSE
     reportEvents.emit('survey-change', siteStatus.survey);
@@ -1684,7 +1684,7 @@ app.get('/api/reports/stream', (req, res) => {
       let surveyEnabled = true;
       
       try {
-        const siteStatus = await readJson('../data/site-status.json', {});
+        const siteStatus = await readJson('data/site-status.json', {});
         if (siteStatus.registration) {
           registrationEnabled = siteStatus.registration.enabled;
         }
