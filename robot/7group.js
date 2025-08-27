@@ -5,6 +5,7 @@ const { sendMessage, getChatAdministrators, getChatMember, getChat } = require('
 const { REPORT_GROUP_ID, hasPermission } = require('./6mid');
 const fs = require('fs');
 const SettingsModule = require('./11settings');
+const moment = require('moment-jalaali');
 
 // فایل ذخیره اعضا
 const MEMBERS_FILE = './members.json';
@@ -213,45 +214,61 @@ async function thankMember(chatId, userName) {
   }
 }
 
-// اضافه کردن عضو جدید - به‌روزرسانی شده در 1404/05/15 ساعت 23:30
+// اضافه کردن عضو جدید - به‌روزرسانی شده در 1404/06/05 برای پشتیبانی از عنوان گروه و تاریخ شمسی
 async function addMember(chatId, chatTitle, userId, userName) {
   try {
     const membersData = loadMembersData();
-    
+    const { getGroupName } = require('./3config');
+
+    // دریافت عنوان گروه
+    const groupTitle = await getGroupName(chatId);
+
+    // اطمینان از وجود ساختار صحیح برای گروه
     if (!membersData.groups[chatId]) {
-      membersData.groups[chatId] = [];
+      membersData.groups[chatId] = {
+        title: groupTitle,
+        members: []
+      };
+    } else if (!membersData.groups[chatId].title) {
+      // اگر ساختار قدیمی بود، به ساختار جدید تبدیل کنیم
+      membersData.groups[chatId] = {
+        title: groupTitle,
+        members: Array.isArray(membersData.groups[chatId]) ? membersData.groups[chatId] : []
+      };
     }
-    
+
     // بررسی اینکه آیا عضو قبلاً وجود دارد
-    const existingMember = membersData.groups[chatId].find(member => member.id === userId);
-    
+    const existingMember = membersData.groups[chatId].members.find(member => member.id === userId);
+
     if (!existingMember) {
-      // عضو جدید
-      membersData.groups[chatId].push({
+      // عضو جدید - اضافه کردن با تاریخ شمسی
+      const jalaaliDate = moment().format('jYYYY-jMM-jDDTHH:mm:ss.SSSZ');
+
+      membersData.groups[chatId].members.push({
         id: userId,
         name: userName,
-        joinedAt: new Date().toISOString()
+        joinedAt: jalaaliDate
       });
-      
+
       saveMembersData(membersData);
-      
+
       // پیام عضویت جدید
       const thankText = `✅ قرآن آموز ${userName} عضو شد`;
       await sendMessage(chatId, thankText);
-      
+
       // گزارش لیست به‌روزرسانی شده (شامل ادمین‌ها و کاربران)
       try {
         await reportGroupMembers(chatId, chatTitle);
       } catch (error) {
         console.error('Error reporting group members:', error.message);
       }
-      
+
     } else {
       // عضو قدیمی - پیام مجدد
       console.log(`👤 ${userName} is already a member, thanking them`);
       const thankText = `✅ قرآن آموز ${userName} مجدد عوض شد`;
       await sendMessage(chatId, thankText);
-      
+
       // گزارش لیست به‌روزرسانی شده (شامل ادمین‌ها و کاربران)
       try {
         await reportGroupMembers(chatId, chatTitle);
