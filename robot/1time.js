@@ -9,7 +9,7 @@ function getTimeStamp() {
   const now = moment();
   const t = now.format('HH:mm:ss');
   const d = now.format('dddd jD jMMMM jYYYY');
-  const timestamp = `⏰ ${t} 🗓️ ${d}`;
+  const timestamp = `${t} 🗓️ ${d}`;
   console.log('⏰ [TIME] Generated timestamp:', timestamp);
   return timestamp;
 }
