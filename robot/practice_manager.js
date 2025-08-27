@@ -179,10 +179,34 @@ class PracticeManager {
         listText += '\n';
       }
 
-      // کاربرانی که هنوز تمرین نفرستاده‌اند
-      if (pendingUsers.length > 0) {
+      // کاربرانی که هنوز تمرین نفرستاده‌اند (بدون ادمین‌ها)
+      const regularPendingUsers = pendingUsers.filter(member => {
+        // بررسی اینکه آیا کاربر در لیست ادمین‌ها قرار دارد
+        const { USERS_BY_ROLE } = require('./3config');
+        
+        const isSchoolAdmin = USERS_BY_ROLE.SCHOOL_ADMIN.some(admin => 
+          (typeof admin === 'object' ? admin.id : admin) === member.id
+        );
+        const isCoach = USERS_BY_ROLE.COACH.some(coach => 
+          (typeof coach === 'object' ? coach.id : coach) === member.id
+        );
+        const isAssistant = USERS_BY_ROLE.ASSISTANT.some(assistant => 
+          (typeof assistant === 'object' ? assistant.id : assistant) === member.id
+        );
+        
+        const isAdmin = isSchoolAdmin || isCoach || isAssistant;
+        
+        if (isAdmin) {
+          const roleType = isSchoolAdmin ? 'SCHOOL_ADMIN' : isCoach ? 'COACH' : 'ASSISTANT';
+          console.log(`🚫 [PRACTICE_MANAGER] Filtering out admin from pending list: ${member.name} (id: ${member.id}, role: ${roleType})`);
+        }
+        
+        return !isAdmin; // فقط کاربران غیر ادمین
+      });
+      
+      if (regularPendingUsers.length > 0) {
         listText += `⏳ در انتظار ارسال تلاوت:\n`;
-        pendingUsers.forEach((member, index) => {
+        regularPendingUsers.forEach((member, index) => {
           listText += `${index + 1} ${member.name} در انتظار ارسال تلاوت\n`;
         });
       } else {
