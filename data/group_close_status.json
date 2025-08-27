@@ -1,0 +1,40 @@
+{
+  "groups": {
+    "5719796514": {
+      "schedule": {
+        "startTime": "09:00",
+        "endTime": "22:00",
+        "activeDays": [
+          0,
+          2
+        ]
+      }
+    },
+    "5417069312": {
+      "schedule": {
+        "startTime": "09:00",
+        "endTime": "18:00",
+        "activeDays": [
+          0,
+          2
+        ]
+      }
+    },
+    "5668045453": {
+      "closed": false,
+      "message": "🚫 گروه موقتاً بسته است.",
+      "schedule": {
+        "startTime": "09:00",
+        "endTime": "18:00",
+        "activeDays": [
+          0,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      }
+    }
+  }
+}

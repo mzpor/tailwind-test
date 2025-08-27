@@ -9,7 +9,30 @@ const { getTimeStamp } = require('./1time');
 const fs = require('fs');
 
 // فایل ذخیره وضعیت بسته بودن گروه‌ها
-const GROUP_CLOSE_FILE = './group_close_status.json';
+const GROUP_CLOSE_FILE = './data/group_close_status.json';
+
+// تابع فرمت کردن اطلاعات زمان‌بندی
+function formatScheduleInfo(groupData) {
+  if (!groupData || !groupData.schedule) {
+    return '🕐 تنظیم نشده (پیش‌فرض: 09:00-18:00، همه روزها)';
+  }
+  
+  const schedule = groupData.schedule;
+  const days = schedule.activeDays || [];
+  const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+  
+  let daysText = '';
+  if (days.length === 7) {
+    daysText = 'همه روزها';
+  } else if (days.length === 0) {
+    daysText = 'هیچ روزی';
+  } else {
+    daysText = days.map(day => dayNames[day]).join('، ');
+  }
+  
+  return `🕐 ${schedule.startTime || '09:00'} تا ${schedule.endTime || '18:00'}
+📅 روزها: ${daysText}`;
+}
 
 // خواندن داده‌های وضعیت بسته بودن گروه‌ها
 function loadGroupCloseData() {
@@ -131,6 +154,21 @@ function createGroupCloseKeyboard(groupId, groupTitle) {
     }]
   ];
   
+  // دکمه‌های زمان‌بندی
+  keyboard.push([
+    {
+      text: '⏰ تنظیم ساعت باز/بسته',
+      callback_data: `set_schedule_${groupId}`
+    }
+  ]);
+  
+  keyboard.push([
+    {
+      text: '📅 تنظیم روزهای هفته',
+      callback_data: `set_days_${groupId}`
+    }
+  ]);
+  
   if (isClosed) {
     keyboard.push([{
       text: '📝 تغییر پیام بسته بودن',
@@ -241,6 +279,9 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
 🔒 وضعیت: ${isClosed ? 'بسته' : 'باز'}
 📝 پیام: ${closeMessage}
 
+⏰ تنظیمات زمان‌بندی:
+${formatScheduleInfo(closeData.groups[groupId])}
+
 👆 لطفاً عملیات مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
       
@@ -326,6 +367,215 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
       
       return { text, keyboard };
       
+    } else if (action.startsWith('set_schedule_')) {
+      // تنظیم ساعت باز/بسته شدن گروه
+      const groupId = action.replace('set_schedule_', '');
+      const closeData = loadGroupCloseData();
+      
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: [0, 1, 2, 3, 4, 5, 6]
+        };
+      }
+      
+      const keyboard = [
+        [{
+          text: '🕐 تغییر ساعت شروع',
+          callback_data: `set_start_time_${groupId}`
+        }],
+        [{
+          text: '🕐 تغییر ساعت پایان',
+          callback_data: `set_end_time_${groupId}`
+        }],
+        [{
+          text: '🔙 بازگشت',
+          callback_data: `close_group_${groupId}`
+        }]
+      ];
+      
+      const text = `⏰ تنظیم ساعت باز/بسته شدن گروه
+
+📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
+🕐 ساعت شروع: ${closeData.groups[groupId].schedule.startTime}
+🕐 ساعت پایان: ${closeData.groups[groupId].schedule.endTime}
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
+      
+    } else if (action.startsWith('set_start_time_')) {
+      // تنظیم ساعت شروع
+      const groupId = action.replace('set_start_time_', '');
+      const closeData = loadGroupCloseData();
+      
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: [0, 1, 2, 3, 4, 5, 6]
+        };
+      }
+      
+      // فعلاً ساعت پیش‌فرض تنظیم می‌شود
+      // در نسخه‌های بعدی می‌توان قابلیت ورود ساعت را اضافه کرد
+      const newStartTime = '19:20';
+      closeData.groups[groupId].schedule.startTime = newStartTime;
+      saveGroupCloseData(closeData);
+      
+      const keyboard = [
+        [{
+          text: '🕐 تغییر ساعت پایان',
+          callback_data: `set_end_time_${groupId}`
+        }],
+        [{
+          text: '🔙 بازگشت',
+          callback_data: `set_schedule_${groupId}`
+        }]
+      ];
+      
+      const text = `🕐 ساعت شروع تغییر کرد
+
+📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
+🕐 ساعت شروع جدید: ${newStartTime}
+🕐 ساعت پایان: ${closeData.groups[groupId].schedule.endTime}
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
+      
+    } else if (action.startsWith('set_end_time_')) {
+      // تنظیم ساعت پایان
+      const groupId = action.replace('set_end_time_', '');
+      const closeData = loadGroupCloseData();
+      
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: [0, 1, 2, 3, 4, 5, 6]
+        };
+      }
+      
+      // فعلاً ساعت پیش‌فرض تنظیم می‌شود
+      const newEndTime = '19:40';
+      closeData.groups[groupId].schedule.endTime = newEndTime;
+      saveGroupCloseData(closeData);
+      
+      const keyboard = [
+        [{
+          text: '🔙 بازگشت',
+          callback_data: `set_schedule_${groupId}`
+        }]
+      ];
+      
+      const text = `🕐 ساعت پایان تغییر کرد
+
+📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
+🕐 ساعت شروع: ${closeData.groups[groupId].schedule.startTime}
+🕐 ساعت پایان جدید: ${newEndTime}
+
+✅ تنظیمات زمان‌بندی تکمیل شد!
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
+      
+    } else if (action.startsWith('set_days_')) {
+      // تنظیم روزهای هفته
+      const groupId = action.replace('set_days_', '');
+      const closeData = loadGroupCloseData();
+      
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: [0, 1, 2, 3, 4, 5, 6]
+        };
+      }
+      
+      const currentDays = closeData.groups[groupId].schedule.activeDays || [0, 1, 2, 3, 4, 5, 6];
+      const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+      
+      const keyboard = [];
+      for (let i = 0; i < 7; i++) {
+        const isActive = currentDays.includes(i);
+        keyboard.push([{
+          text: `${isActive ? '✅' : '❌'} ${dayNames[i]}`,
+          callback_data: `toggle_day_${groupId}_${i}`
+        }]);
+      }
+      
+      keyboard.push([{
+        text: '🔙 بازگشت',
+        callback_data: `close_group_${groupId}`
+      }]);
+      
+      const text = `📅 تنظیم روزهای هفته
+
+📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
+📅 روزهای فعال: ${currentDays.map(day => dayNames[day]).join('، ')}
+
+👆 لطفاً روزهای مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
+      
+    } else if (action.startsWith('toggle_day_')) {
+      // تغییر وضعیت روز
+      const parts = action.replace('toggle_day_', '').split('_');
+      const groupId = parts[0];
+      const dayIndex = parseInt(parts[1]);
+      
+      const closeData = loadGroupCloseData();
+      
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: [0, 1, 2, 3, 4, 5, 6]
+        };
+      }
+      
+      const currentDays = closeData.groups[groupId].schedule.activeDays || [0, 1, 2, 3, 4, 5, 6];
+      
+      if (currentDays.includes(dayIndex)) {
+        // حذف روز
+        closeData.groups[groupId].schedule.activeDays = currentDays.filter(day => day !== dayIndex);
+      } else {
+        // اضافه کردن روز
+        closeData.groups[groupId].schedule.activeDays = [...currentDays, dayIndex].sort();
+      }
+      
+      saveGroupCloseData(closeData);
+      
+      // بازگشت به تنظیم روزها
+      return await handleGroupCloseManagement(userId, `set_days_${groupId}`);
+      
     } else if (action === 'back_to_groups') {
       // بازگشت به لیست گروه‌ها
       return await handleGroupCloseManagement(userId, 'groups');
@@ -389,16 +639,76 @@ async function showGroupCloseManagementPanel(userId) {
   }
 }
 
-// بررسی وضعیت بسته بودن گروه
+// بررسی وضعیت بسته بودن گروه با در نظر گرفتن زمان‌بندی
 function isGroupClosed(groupId) {
   const closeData = loadGroupCloseData();
-  return closeData.groups[groupId]?.closed || false;
+  const groupData = closeData.groups[groupId];
+  
+  // اگر گروه به صورت دستی بسته شده باشد
+  if (groupData?.closed) {
+    return true;
+  }
+  
+  // اگر زمان‌بندی تنظیم نشده باشد، گروه باز است
+  if (!groupData?.schedule) {
+    return false;
+  }
+  
+  const schedule = groupData.schedule;
+  const now = new Date();
+  const currentDay = now.getDay(); // 0 = یکشنبه، 1 = دوشنبه، ...
+  const currentTime = now.toTimeString().slice(0, 5); // HH:MM
+  
+  // بررسی روز هفته
+  if (!schedule.activeDays.includes(currentDay)) {
+    return true; // گروه در این روز بسته است
+  }
+  
+  // بررسی ساعت
+  if (currentTime < schedule.startTime || currentTime > schedule.endTime) {
+    return true; // گروه در این ساعت بسته است
+  }
+  
+  return false; // گروه باز است
 }
 
 // دریافت پیام بسته بودن گروه
 function getGroupCloseMessage(groupId) {
   const closeData = loadGroupCloseData();
-  return closeData.groups[groupId]?.message || '🚫 گروه موقتاً بسته است.';
+  const groupData = closeData.groups[groupId];
+  
+  // اگر پیام سفارشی تنظیم شده باشد
+  if (groupData?.message) {
+    return groupData.message;
+  }
+  
+  // اگر زمان‌بندی تنظیم شده باشد، پیام مناسب را برگردان
+  if (groupData?.schedule) {
+    const schedule = groupData.schedule;
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentTime = now.toTimeString().slice(0, 5);
+    
+    if (!schedule.activeDays.includes(currentDay)) {
+      return `🚫 گروه در روز ${getDayName(currentDay)} بسته است.`;
+    }
+    
+    if (currentTime < schedule.startTime) {
+      return `🚫 گروه از ساعت ${schedule.startTime} باز می‌شود.`;
+    }
+    
+    if (currentTime > schedule.endTime) {
+      return `🚫 گروه تا ساعت ${schedule.endTime} باز بود.`;
+    }
+  }
+  
+  return '🚫 گروه موقتاً بسته است.';
+}
+
+// تابع کمکی برای نام روز
+function getDayName(dayIndex) {
+  const dayNames = ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه'];
+  return dayNames[dayIndex];
 }
 
 module.exports = {
