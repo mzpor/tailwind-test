@@ -1324,6 +1324,62 @@ function startPolling() {
               await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تنظیم ساعت پایان');
             }
             
+            } else if (callback_query.data.startsWith('time_hour_')) {
+            // تنظیم ساعت
+            console.log('🔍 DEBUG: time_hour_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تنظیم ساعت');
+            }
+            
+            } else if (callback_query.data.startsWith('time_minute_')) {
+            // تنظیم دقیقه
+            console.log('🔍 DEBUG: time_minute_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تنظیم دقیقه');
+            }
+            
+            } else if (callback_query.data.startsWith('set_hour_')) {
+            // تنظیم ساعت انتخاب شده
+            console.log('🔍 DEBUG: set_hour_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تنظیم ساعت انتخاب شده');
+            }
+            
+            } else if (callback_query.data.startsWith('set_minute_')) {
+            // تنظیم دقیقه انتخاب شده
+            console.log('🔍 DEBUG: set_minute_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تنظیم دقیقه انتخاب شده');
+            }
+            
             } else if (callback_query.data === 'intro_quran_bot') {
             
             console.log('🔄 [POLLING] Quran bot intro callback detected');

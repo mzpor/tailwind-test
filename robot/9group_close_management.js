@@ -11,6 +11,9 @@ const fs = require('fs');
 // فایل ذخیره وضعیت بسته بودن گروه‌ها
 const GROUP_CLOSE_FILE = './data/group_close_status.json';
 
+// نگهداری وضعیت کاربران در حال تنظیم زمان
+const userTimeSettingState = new Map();
+
 // تابع فرمت کردن اطلاعات زمان‌بندی
 function formatScheduleInfo(groupData) {
   if (!groupData || !groupData.schedule) {
@@ -427,16 +430,21 @@ ${formatScheduleInfo(closeData.groups[groupId])}
         };
       }
       
-      // فعلاً ساعت پیش‌فرض تنظیم می‌شود
-      // در نسخه‌های بعدی می‌توان قابلیت ورود ساعت را اضافه کرد
-      const newStartTime = '19:20';
-      closeData.groups[groupId].schedule.startTime = newStartTime;
-      saveGroupCloseData(closeData);
+      // ذخیره وضعیت کاربر برای تنظیم ساعت
+      userTimeSettingState.set(userId, {
+        action: 'setting_start_time',
+        groupId: groupId,
+        step: 'hour'
+      });
       
       const keyboard = [
         [{
-          text: '🕐 تغییر ساعت پایان',
-          callback_data: `set_end_time_${groupId}`
+          text: '🕐 ساعت',
+          callback_data: `time_hour_${groupId}_start`
+        }],
+        [{
+          text: '🕐 دقیقه',
+          callback_data: `time_minute_${groupId}_start`
         }],
         [{
           text: '🔙 بازگشت',
@@ -444,13 +452,13 @@ ${formatScheduleInfo(closeData.groups[groupId])}
         }]
       ];
       
-      const text = `🕐 ساعت شروع تغییر کرد
+      const text = `🕐 تنظیم ساعت شروع گروه
 
 📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
-🕐 ساعت شروع جدید: ${newStartTime}
+🕐 ساعت شروع فعلی: ${closeData.groups[groupId].schedule.startTime}
 🕐 ساعت پایان: ${closeData.groups[groupId].schedule.endTime}
 
-👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+👆 لطفاً نوع تنظیم را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
       
       return { text, keyboard };
@@ -472,27 +480,35 @@ ${formatScheduleInfo(closeData.groups[groupId])}
         };
       }
       
-      // فعلاً ساعت پیش‌فرض تنظیم می‌شود
-      const newEndTime = '19:40';
-      closeData.groups[groupId].schedule.endTime = newEndTime;
-      saveGroupCloseData(closeData);
+      // ذخیره وضعیت کاربر برای تنظیم ساعت
+      userTimeSettingState.set(userId, {
+        action: 'setting_end_time',
+        groupId: groupId,
+        step: 'hour'
+      });
       
       const keyboard = [
+        [{
+          text: '🕐 ساعت',
+          callback_data: `time_hour_${groupId}_end`
+        }],
+        [{
+          text: '🕐 دقیقه',
+          callback_data: `time_minute_${groupId}_end`
+        }],
         [{
           text: '🔙 بازگشت',
           callback_data: `set_schedule_${groupId}`
         }]
       ];
       
-      const text = `🕐 ساعت پایان تغییر کرد
+      const text = `🕐 تنظیم ساعت پایان گروه
 
 📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
 🕐 ساعت شروع: ${closeData.groups[groupId].schedule.startTime}
-🕐 ساعت پایان جدید: ${newEndTime}
+🕐 ساعت پایان فعلی: ${closeData.groups[groupId].schedule.endTime}
 
-✅ تنظیمات زمان‌بندی تکمیل شد!
-
-👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+👆 لطفاً نوع تنظیم را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
       
       return { text, keyboard };
@@ -579,6 +595,181 @@ ${formatScheduleInfo(closeData.groups[groupId])}
     } else if (action === 'back_to_groups') {
       // بازگشت به لیست گروه‌ها
       return await handleGroupCloseManagement(userId, 'groups');
+    }
+    
+    // تنظیم ساعت
+    else if (action.startsWith('time_hour_')) {
+      const parts = action.replace('time_hour_', '').split('_');
+      const groupId = parts[0];
+      const timeType = parts[1]; // start یا end
+      
+      const keyboard = [];
+      // ایجاد دکمه‌های ساعت (0-23)
+      for (let hour = 0; hour < 24; hour += 3) {
+        const row = [];
+        for (let h = hour; h < hour + 3 && h < 24; h++) {
+          row.push({
+            text: `${h.toString().padStart(2, '0')}`,
+            callback_data: `set_hour_${groupId}_${timeType}_${h}`
+          });
+        }
+        keyboard.push(row);
+      }
+      
+      keyboard.push([{
+        text: '🔙 بازگشت',
+        callback_data: `set_${timeType}_time_${groupId}`
+      }]);
+      
+      const text = `🕐 انتخاب ساعت ${timeType === 'start' ? 'شروع' : 'پایان'}
+
+📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
+
+👆 لطفاً ساعت مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
+    }
+    
+    // تنظیم دقیقه
+    else if (action.startsWith('time_minute_')) {
+      const parts = action.replace('time_minute_', '').split('_');
+      const groupId = parts[0];
+      const timeType = parts[1]; // start یا end
+      
+      const keyboard = [];
+      // ایجاد دکمه‌های دقیقه (0-59)
+      for (let minute = 0; minute < 60; minute += 15) {
+        const row = [];
+        for (let m = minute; m < minute + 15 && m < 60; m++) {
+          row.push({
+            text: `${m.toString().padStart(2, '0')}`,
+            callback_data: `set_minute_${groupId}_${timeType}_${m}`
+          });
+        }
+        keyboard.push(row);
+      }
+      
+      keyboard.push([{
+        text: '🔙 بازگشت',
+        callback_data: `set_${timeType}_time_${groupId}`
+      }]);
+      
+      const text = `🕐 انتخاب دقیقه ${timeType === 'start' ? 'شروع' : 'پایان'}
+
+📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
+
+👆 لطفاً دقیقه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
+    }
+    
+    // تنظیم ساعت انتخاب شده
+    else if (action.startsWith('set_hour_')) {
+      const parts = action.replace('set_hour_', '').split('_');
+      const groupId = parts[0];
+      const timeType = parts[1]; // start یا end
+      const hour = parseInt(parts[2]);
+      
+      const closeData = loadGroupCloseData();
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: [0, 1, 2, 3, 4, 5, 6]
+        };
+      }
+      
+      // ذخیره ساعت انتخاب شده
+      if (timeType === 'start') {
+        const currentTime = closeData.groups[groupId].schedule.startTime;
+        const [_, currentMinute] = currentTime.split(':');
+        closeData.groups[groupId].schedule.startTime = `${hour.toString().padStart(2, '0')}:${currentMinute}`;
+      } else {
+        const currentTime = closeData.groups[groupId].schedule.endTime;
+        const [_, currentMinute] = currentTime.split(':');
+        closeData.groups[groupId].schedule.endTime = `${hour.toString().padStart(2, '0')}:${currentMinute}`;
+      }
+      
+      saveGroupCloseData(closeData);
+      
+      const keyboard = [
+        [{
+          text: '🕐 تنظیم دقیقه',
+          callback_data: `time_minute_${groupId}_${timeType}`
+        }],
+        [{
+          text: '🔙 بازگشت',
+          callback_data: `set_schedule_${groupId}`
+        }]
+      ];
+      
+      const text = `🕐 ساعت ${timeType === 'start' ? 'شروع' : 'پایان'} تنظیم شد
+
+📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
+🕐 ساعت ${timeType === 'start' ? 'شروع' : 'پایان'} جدید: ${hour.toString().padStart(2, '0')}:XX
+
+👆 حالا دقیقه را تنظیم کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
+    }
+    
+    // تنظیم دقیقه انتخاب شده
+    else if (action.startsWith('set_minute_')) {
+      const parts = action.replace('set_minute_', '').split('_');
+      const groupId = parts[0];
+      const timeType = parts[1]; // start یا end
+      const minute = parseInt(parts[2]);
+      
+      const closeData = loadGroupCloseData();
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: [0, 1, 2, 3, 4, 5, 6]
+        };
+      }
+      
+      // ذخیره دقیقه انتخاب شده
+      if (timeType === 'start') {
+        const currentTime = closeData.groups[groupId].schedule.startTime;
+        const [currentHour] = currentTime.split(':');
+        closeData.groups[groupId].schedule.startTime = `${currentHour}:${minute.toString().padStart(2, '0')}`;
+      } else {
+        const currentTime = closeData.groups[groupId].schedule.endTime;
+        const [currentHour] = currentTime.split(':');
+        closeData.groups[groupId].schedule.endTime = `${currentHour}:${minute.toString().padStart(2, '0')}`;
+      }
+      
+      saveGroupCloseData(closeData);
+      
+      const keyboard = [
+        [{
+          text: '🔙 بازگشت به تنظیمات زمان‌بندی',
+          callback_data: `set_schedule_${groupId}`
+        }]
+      ];
+      
+      const text = `✅ تنظیمات زمان‌بندی تکمیل شد!
+
+📛 گروه: ${(await getGroupsList()).find(g => g.id === groupId)?.title || 'نامشخص'}
+🕐 ساعت شروع: ${closeData.groups[groupId].schedule.startTime}
+🕐 ساعت پایان: ${closeData.groups[groupId].schedule.endTime}
+
+🎉 حالا گروه بر اساس این زمان‌بندی باز و بسته می‌شود!
+
+👆 لطفاً گزینه مورد نظر را انتخاب کنید:
+⏰ ${getTimeStamp()}`;
+      
+      return { text, keyboard };
     }
     
     return {
