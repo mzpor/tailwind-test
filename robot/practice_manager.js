@@ -1,5 +1,6 @@
-// 🎯 مدیریت تمرین‌ها - نسخه 1.1.0
+// 🎯 مدیریت تمرین‌ها - نسخه 1.2.0
 // تشکر از ارسال تمرین صوتی و مدیریت ریپلای به صوتی
+// اضافه شده: مدیریت "تلاوتم" و لیست تمرین‌ها
 
 const { sendMessage } = require('./4bale');
 const { getTimeStamp } = require('./1time');
@@ -12,11 +13,193 @@ class PracticeManager {
     console.log('✅ [PRACTICE_MANAGER] Practice Manager initialized successfully');
   }
 
+  // بررسی اینکه آیا پیام "تلاوتم" است (ریپلای به صوت خود کاربر)
+  isTalawatMessage(message) {
+    try {
+      // بررسی اینکه آیا پیام متنی است
+      if (!message.text) {
+        return false;
+      }
+
+      // بررسی اینکه آیا شامل "تلاوتم" است
+      const text = message.text.trim();
+      if (text !== 'تلاوتم') {
+        return false;
+      }
+
+      // بررسی اینکه آیا ریپلای به پیام دیگری است
+      if (!message.reply_to_message) {
+        return false;
+      }
+
+      // بررسی اینکه آیا پیام اصلی صوتی است
+      if (!message.reply_to_message.voice) {
+        return false;
+      }
+
+      // بررسی اینکه آیا پیام اصلی متعلق به همان کاربر است
+      if (message.reply_to_message.from.id !== message.from.id) {
+        return false;
+      }
+
+      console.log('✅ [PRACTICE_MANAGER] Talawat message detected (user replying to their own voice)');
+      return true;
+
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error checking talawat message:', error);
+      return false;
+    }
+  }
+
+  // مدیریت پیام "تلاوتم"
+  async handleTalawatMessage(message) {
+    try {
+      const chatId = message.chat.id;
+      const userId = message.from.id;
+      const userName = message.from.first_name + (message.from.last_name ? ' ' + message.from.last_name : '');
+
+      console.log(`🎤 [PRACTICE_MANAGER] Handling talawat message from ${userName} in chat ${chatId}`);
+
+      // بررسی زمان تمرین
+      if (!this.isPracticeTime()) {
+        console.log('⏰ [PRACTICE_MANAGER] Not practice time, sending guidance message');
+        await this.sendNotPracticeTimeMessage(chatId);
+        return true;
+      }
+
+      // بررسی اینکه آیا گروه باز است
+      const { isGroupClosed } = require('./9group_close_management');
+      if (isGroupClosed(chatId)) {
+        console.log('🚫 [PRACTICE_MANAGER] Group is closed, cannot accept practice');
+        const { getGroupCloseMessage } = require('./9group_close_management');
+        const closeMessage = getGroupCloseMessage(chatId);
+        await sendMessage(chatId, closeMessage);
+        return true;
+      }
+
+      // ثبت تمرین
+      const registered = await this.registerPractice(message);
+      if (!registered) {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to register practice for ${userName}`);
+        return false;
+      }
+
+      // ارسال لیست تمرین‌های امروز
+      const listSent = await this.sendTodayPracticeList(chatId);
+      if (!listSent) {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send practice list for ${userName}`);
+        return false;
+      }
+
+      console.log(`✅ [PRACTICE_MANAGER] Talawat message handled successfully for ${userName}`);
+      return true;
+
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error handling talawat message:', error);
+      return false;
+    }
+  }
+
+  // ارسال لیست تمرین‌های امروز
+  async sendTodayPracticeList(chatId) {
+    try {
+      const todayPractices = this.getTodayPractices();
+      const allGroupMembers = this.getAllGroupMembers(chatId);
+      
+      if (!allGroupMembers || allGroupMembers.length === 0) {
+        console.log('❌ [PRACTICE_MANAGER] No group members found');
+        return false;
+      }
+
+      // جداسازی کاربرانی که تمرین فرستاده‌اند و آنهایی که نکرده‌اند
+      const submittedUsers = todayPractices.filter(practice => 
+        practice.chat_id === chatId
+      );
+      const submittedUserIds = submittedUsers.map(practice => practice.user_id);
+      
+      const pendingUsers = allGroupMembers.filter(member => 
+        !submittedUserIds.includes(member.id)
+      );
+
+      // ایجاد متن لیست
+      const today = moment().format('jYYYY/jMM/jDD');
+      const dayName = this.getPersianDayName(moment().day());
+      
+      let listText = `📋 لیست ارسال تمرین ${dayName} ${today}\n\n`;
+      
+      // کاربرانی که تمرین فرستاده‌اند
+      if (submittedUsers.length > 0) {
+        listText += `✅ تمرین‌های ارسال شده:\n`;
+        submittedUsers.forEach((practice, index) => {
+          const submissionTime = moment(practice.submission_time).format('HH:mm');
+          listText += `${index + 1}- ${practice.user_name} ارسال شد (${submissionTime})\n`;
+        });
+        listText += '\n';
+      }
+
+      // کاربرانی که هنوز تمرین نفرستاده‌اند
+      if (pendingUsers.length > 0) {
+        listText += `⏳ در انتظار ارسال تلاوت:\n`;
+        pendingUsers.forEach((member, index) => {
+          listText += `${index + 1} ${member.name} در انتظار ارسال تلاوت\n`;
+        });
+      } else {
+        listText += `🎉 همه اعضا تمرین خود را ارسال کرده‌اند!`;
+      }
+
+      listText += `\n\n⏰ ${getTimeStamp()}`;
+
+      const result = await sendMessage(chatId, listText);
+      
+      if (result) {
+        console.log(`✅ [PRACTICE_MANAGER] Practice list sent successfully to ${chatId}`);
+        return true;
+      } else {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send practice list to ${chatId}`);
+        return false;
+      }
+
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error sending practice list:', error);
+      return false;
+    }
+  }
+
+  // دریافت تمام اعضای گروه
+  getAllGroupMembers(chatId) {
+    try {
+      const membersDataPath = './members.json';
+      if (!fs.existsSync(membersDataPath)) {
+        console.log('❌ [PRACTICE_MANAGER] Members file not found');
+        return [];
+      }
+
+      const membersData = JSON.parse(fs.readFileSync(membersDataPath, 'utf8'));
+      const groupMembers = membersData.groups[chatId] || [];
+      
+      console.log(`📊 [PRACTICE_MANAGER] Found ${groupMembers.length} members in group ${chatId}`);
+      return groupMembers;
+
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error getting group members:', error);
+      return [];
+    }
+  }
+
+  // دریافت نام فارسی روز هفته
+  getPersianDayName(dayIndex) {
+    // تبدیل JavaScript getDay() (0=یکشنبه) به فرمت کاربر (0=شنبه)
+    const userDayIndex = (dayIndex + 1) % 7;
+    const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+    return dayNames[userDayIndex] || 'نامشخص';
+  }
+
   // بررسی اینکه آیا زمان فعلی زمان تمرین است
   isPracticeTime() {
     try {
       const now = moment();
-      const currentDay = now.day(); // 0 = یکشنبه, 1 = دوشنبه, ..., 6 = شنبه
+      // تبدیل JavaScript getDay() (0=یکشنبه) به فرمت کاربر (0=شنبه)
+      const currentDay = (now.day() + 1) % 7; // 0=شنبه، 1=یکشنبه، 2=دوشنبه، ...
       const currentHour = now.hour();
 
       // خواندن تنظیمات تمرین
@@ -30,12 +213,15 @@ class PracticeManager {
       const practiceDays = settings.practice_days || [];
       const practiceHours = settings.practice_hours || [];
 
-      console.log(`⏰ [PRACTICE_MANAGER] Checking practice time - Day: ${currentDay}, Hour: ${currentHour}`);
-      console.log(`📅 [PRACTICE_MANAGER] Practice days: ${practiceDays.join(', ')}`);
+      console.log(`⏰ [PRACTICE_MANAGER] Checking practice time - Day: ${currentDay} (user format), Hour: ${currentHour}`);
+      console.log(`📅 [PRACTICE_MANAGER] Practice days: ${practiceDays.join(', ')} (user format)`);
       console.log(`🕐 [PRACTICE_MANAGER] Practice hours: ${practiceHours.join(', ')}`);
 
       const isValidDay = practiceDays.includes(currentDay);
       const isValidHour = practiceHours.includes(currentHour);
+
+      console.log(`🔍 [PRACTICE_MANAGER] Day check: ${currentDay} in ${practiceDays.join(', ')} = ${isValidDay}`);
+      console.log(`🔍 [PRACTICE_MANAGER] Hour check: ${currentHour} in ${practiceHours.join(', ')} = ${isValidHour}`);
 
       const result = isValidDay && isValidHour;
       console.log(`✅ [PRACTICE_MANAGER] Practice time check result: ${result}`);
@@ -56,14 +242,17 @@ class PracticeManager {
       const practiceDays = settings.practice_days || [];
       const practiceHours = settings.practice_hours || [];
 
-      const dayNames = ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه'];
+      // تبدیل فرمت کاربر (0=شنبه) به JavaScript getDay() (0=یکشنبه)
+      const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
 
       let nextPracticeTime = null;
       let minDiff = Infinity;
 
       for (const day of practiceDays) {
         for (const hour of practiceHours) {
-          const practiceTime = moment().day(day).hour(hour).minute(0).second(0);
+          // تبدیل فرمت کاربر (0=شنبه) به JavaScript getDay() (0=یکشنبه)
+          const jsDay = (day + 1) % 7;
+          const practiceTime = moment().day(jsDay).hour(hour).minute(0).second(0);
 
           // اگر زمان گذشته بود، به هفته بعد برو
           if (practiceTime.isBefore(now)) {
@@ -392,4 +581,7 @@ ${practiceList}
 // ایجاد نمونه سراسری
 const practiceManager = new PracticeManager();
 
-module.exports = { practiceManager };
+module.exports = { 
+  practiceManager,
+  PracticeManager 
+};

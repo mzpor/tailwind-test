@@ -627,6 +627,20 @@ async function handleRoleMessage(msg, role) {
     }
   }
 
+  // 📝 بررسی پیام "تلاوتم" (ریپلای به صوت خود کاربر)
+  if (msg.text && msg.reply_to_message && msg.reply_to_message.voice) {
+    console.log('📝 [POLLING] Text message with reply to voice detected, checking if talawat message...');
+    
+    if (practiceManager.isTalawatMessage(msg)) {
+      console.log('✅ [POLLING] Talawat message confirmed, handling practice...');
+      const handled = await practiceManager.handleTalawatMessage(msg);
+      if (handled) {
+        console.log('✅ [POLLING] Talawat message handled successfully');
+        return; // پایان پردازش، پیام توسط practiceManager مدیریت شد
+      }
+    }
+  }
+
   const config = roleConfig[role];
   if (!config) {
     console.log('❌ [POLLING] No config found for role:', role);
