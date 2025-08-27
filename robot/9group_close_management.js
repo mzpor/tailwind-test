@@ -536,12 +536,38 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
       
       const keyboard = [];
-      for (let i = 0; i < 7; i++) {
-        const isActive = currentDays.includes(i);
-        keyboard.push([{
-          text: `${isActive ? '✅' : '❌'} ${dayNames[i]}`,
+      
+      // دکمه‌های انتخاب سریع
+      keyboard.push([
+        {
+          text: '✅ انتخاب همه روزها',
+          callback_data: `select_all_days_${groupId}`
+        },
+        {
+          text: '❌ انتخاب هیچ روزی',
+          callback_data: `select_no_days_${groupId}`
+        }
+      ]);
+      
+      // روزهای هفته در دو ستون
+      for (let i = 0; i < 7; i += 2) {
+        const row = [];
+        const isActive1 = currentDays.includes(i);
+        row.push({
+          text: `${isActive1 ? '✅' : '❌'} ${dayNames[i]}`,
           callback_data: `toggle_day_${groupId}_${i}`
-        }]);
+        });
+        
+        // اگر روز دوم وجود دارد، آن را اضافه کن
+        if (i + 1 < 7) {
+          const isActive2 = currentDays.includes(i + 1);
+          row.push({
+            text: `${isActive2 ? '✅' : '❌'} ${dayNames[i + 1]}`,
+            callback_data: `toggle_day_${groupId}_${i + 1}`
+          });
+        }
+        
+        keyboard.push(row);
       }
       
       keyboard.push([{
@@ -589,6 +615,54 @@ ${formatScheduleInfo(closeData.groups[groupId])}
         closeData.groups[groupId].schedule.activeDays = [...currentDays, dayIndex].sort();
       }
       
+      saveGroupCloseData(closeData);
+      
+      // بازگشت به تنظیم روزها
+      return await handleGroupCloseManagement(userId, `set_days_${groupId}`);
+      
+    } else if (action.startsWith('select_all_days_')) {
+      // انتخاب همه روزها
+      const groupId = action.replace('select_all_days_', '');
+      const closeData = loadGroupCloseData();
+      
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: []
+        };
+      }
+      
+      // انتخاب همه روزها
+      closeData.groups[groupId].schedule.activeDays = [0, 1, 2, 3, 4, 5, 6];
+      saveGroupCloseData(closeData);
+      
+      // بازگشت به تنظیم روزها
+      return await handleGroupCloseManagement(userId, `set_days_${groupId}`);
+      
+    } else if (action.startsWith('select_no_days_')) {
+      // انتخاب هیچ روزی
+      const groupId = action.replace('select_no_days_', '');
+      const closeData = loadGroupCloseData();
+      
+      if (!closeData.groups[groupId]) {
+        closeData.groups[groupId] = {};
+      }
+      
+      if (!closeData.groups[groupId].schedule) {
+        closeData.groups[groupId].schedule = {
+          startTime: '09:00',
+          endTime: '18:00',
+          activeDays: []
+        };
+      }
+      
+      // انتخاب هیچ روزی
+      closeData.groups[groupId].schedule.activeDays = [];
       saveGroupCloseData(closeData);
       
       // بازگشت به تنظیم روزها

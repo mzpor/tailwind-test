@@ -1295,6 +1295,34 @@ function startPolling() {
               await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تغییر وضعیت روز');
             }
             
+            } else if (callback_query.data.startsWith('select_all_days_')) {
+            // انتخاب همه روزها
+            console.log('🔍 DEBUG: select_all_days_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در انتخاب همه روزها');
+            }
+            
+            } else if (callback_query.data.startsWith('select_no_days_')) {
+            // انتخاب هیچ روزی
+            console.log('🔍 DEBUG: select_no_days_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در انتخاب هیچ روزی');
+            }
+            
             } else if (callback_query.data.startsWith('set_start_time_')) {
             // تنظیم ساعت شروع
             console.log('🔍 DEBUG: set_start_time_ callback triggered for user:', callback_query.from.id);
