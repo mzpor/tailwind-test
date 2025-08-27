@@ -118,8 +118,11 @@ function createGroupsKeyboard(groups) {
 
 // ایجاد کیبورد شیشه‌ای برای مدیریت بستن گروه
 function createGroupCloseKeyboard(groupId, groupTitle) {
+  console.log('🔍 DEBUG: createGroupCloseKeyboard called with groupId:', groupId, 'groupTitle:', groupTitle);
   const closeData = loadGroupCloseData();
+  console.log('🔍 DEBUG: Close data in createGroupCloseKeyboard:', closeData);
   const isClosed = closeData.groups[groupId]?.closed || false;
+  console.log('🔍 DEBUG: Group isClosed status:', isClosed);
   
   const keyboard = [
     [{
@@ -141,6 +144,7 @@ function createGroupCloseKeyboard(groupId, groupTitle) {
     callback_data: 'back_to_groups'
   }]);
   
+  console.log('🔍 DEBUG: Final keyboard created in createGroupCloseKeyboard:', keyboard);
   return keyboard;
 }
 
@@ -198,11 +202,19 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
       
     } else if (action.startsWith('close_group_')) {
       // نمایش مدیریت بستن گروه خاص
+      console.log('🔍 DEBUG: Processing close_group_ action:', action);
       const groupId = action.replace('close_group_', '');
+      console.log('🔍 DEBUG: Extracted groupId:', groupId);
+      
+      console.log('🔍 DEBUG: Getting groups list for close_group_');
       const groups = await getGroupsList();
+      console.log('🔍 DEBUG: Groups list for close_group_:', groups);
+      
       const group = groups.find(g => g.id === groupId);
+      console.log('🔍 DEBUG: Found group:', group);
       
       if (!group) {
+        console.log('🔍 DEBUG: Group not found, returning error');
         return {
           text: '❌ گروه مورد نظر یافت نشد.',
           keyboard: [[{
@@ -212,10 +224,15 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
         };
       }
       
+      console.log('🔍 DEBUG: Creating group close keyboard for groupId:', groupId, 'title:', group.title);
       const keyboard = createGroupCloseKeyboard(groupId, group.title);
+      console.log('🔍 DEBUG: Group close keyboard created:', keyboard);
+      
       const closeData = loadGroupCloseData();
+      console.log('🔍 DEBUG: Close data loaded:', closeData);
       const isClosed = closeData.groups[groupId]?.closed || false;
       const closeMessage = closeData.groups[groupId]?.message || '🚫 گروه موقتاً بسته است.';
+      console.log('🔍 DEBUG: Group status - isClosed:', isClosed, 'closeMessage:', closeMessage);
       
       const text = `🚫 مدیریت بستن گروه
 
@@ -226,6 +243,9 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
 
 👆 لطفاً عملیات مورد نظر را انتخاب کنید:
 ⏰ ${getTimeStamp()}`;
+      
+      console.log('🔍 DEBUG: Generated text for close_group_:', text);
+      console.log('🔍 DEBUG: Returning result for close_group_ with text length:', text.length, 'and keyboard:', keyboard);
       
       return { text, keyboard };
       

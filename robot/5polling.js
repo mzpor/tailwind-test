@@ -801,7 +801,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
       keyboard = config.keyboard;
     } else {
       // پنل مدیر - بررسی کانفیگ مدیریت گروه‌ها
-      const { hasGroupCloseManagementAccess } = require('./3config');
+              const { hasGroupCloseManagementAccess } = require('./3config');
       const inlineKeyboard = [
         [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
       ];
@@ -812,7 +812,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
       }
       
       // اضافه کردن دکمه بستن گروه‌ها فقط اگر فعال باشد
-      if (hasGroupCloseManagementAccess('SCHOOL_ADMIN')) {
+              if (hasGroupCloseManagementAccess('SCHOOL_ADMIN')) {
         inlineKeyboard.push([{ text: '🔒 بستن گروه‌ها', callback_data: 'close_groups' }]);
       }
       
@@ -826,7 +826,7 @@ ${groupManagementText}👆 لطفاً گزینه مورد نظر را انتخا
         ? '• 🏫 مدیریت گروه‌ها (حضور و غیاب)\n' 
         : '';
       
-      const groupCloseText = hasGroupCloseManagementAccess('SCHOOL_ADMIN') 
+              const groupCloseText = hasGroupCloseManagementAccess('SCHOOL_ADMIN')  
         ? '• 🔒 بستن گروه‌ها\n' 
         : '';
       
@@ -1174,10 +1174,7 @@ function startPolling() {
               callback_query.data === 'coach_groups' ||
               callback_query.data === 'assistant_groups' ||
               callback_query.data === 'back_to_groups' ||
-              callback_query.data === 'back_to_main' ||
-              callback_query.data.startsWith('close_group_') ||
-              callback_query.data.startsWith('toggle_close_') ||
-              callback_query.data.startsWith('change_message_')) {
+              callback_query.data === 'back_to_main') {
             
             // بررسی کانفیگ مدیریت گروه‌ها
             if (!isGroupManagementEnabled()) {
@@ -1702,6 +1699,493 @@ function startPolling() {
             } else {
               console.log('✅ [POLLING] Registration callback handled successfully');
             }
+          } else if (callback_query.data.startsWith('change_message_')) {
+            // تغییر پیام بسته بودن گروه
+            console.log('🔍 DEBUG: change_message_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تغییر پیام گروه');
+            }
+            
+            } else if (callback_query.data === 'back_to_groups') {
+            // بازگشت به لیست گروه‌ها در مدیریت بستن گروه‌ها
+            console.log('🔍 DEBUG: back_to_groups callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, 'groups');
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard for back_to_groups');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid for back_to_groups, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در بازگشت به لیست گروه‌ها');
+            }
+            
+            } else if (callback_query.data === 'intro_quran_bot') {
+            
+            console.log('🔄 [POLLING] Quran bot intro callback detected');
+            const config = roleConfig[role];
+            const reply = `📖 ربات قرآنی هوشمند
+
+🤖 این ربات برای آموزش قرآن کریم طراحی شده است
+📚 قابلیت‌های اصلی:
+• آموزش تلاوت قرآن
+• حفظ آیات کریمه
+• تفسیر آیات
+• آزمون‌های قرآنی
+• گزارش پیشرفت
+
+⏰ ${getTimeStamp()}`;
+            
+            await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+          } else if (callback_query.data.startsWith('toggle_robot_button_')) {
+            // تغییر وضعیت نمایش دکمه ربات
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
+              return;
+            }
+            
+            const newValue = parseInt(callback_query.data.split('_')[3]);
+            const success = setButtonVisibility('ROBOT_BUTTON', newValue === 1);
+            
+            if (success) {
+              const statusText = newValue === 1 ? 'نمایش داده می‌شود' : 'نمایش داده نمی‌شود';
+              const reply = `✅ دکمه ربات با موفقیت تغییر کرد
+
+📊 وضعیت جدید:
+• دکمه ربات: ${statusText}
+
+🔄 تغییرات در پنل بعدی اعمال خواهد شد.
+
+⏰ ${getTimeStamp()}`;
+              
+              await safeSendMessage(callback_query.from.id, reply);
+            } else {
+              await answerCallbackQuery(callback_query.id, '❌ خطا در تغییر وضعیت دکمه ربات', true);
+            }
+          } else if (callback_query.data === 'robot_button_status') {
+            // نمایش وضعیت فعلی دکمه ربات
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند این کار را انجام دهد.', true);
+              return;
+            }
+            
+            const currentStatus = isButtonVisible('ROBOT_BUTTON');
+            const statusText = currentStatus ? 'نمایش داده می‌شود' : 'نمایش داده نمی‌شود';
+            const config = getButtonVisibilityConfig();
+            
+            const reply = `📊 وضعیت دکمه ربات
+
+🔍 اطلاعات فعلی:
+• دکمه ربات: ${statusText}
+• مقدار کانفیگ: ${config.ROBOT_BUTTON}
+
+⚙️ برای تغییر وضعیت، از منوی ربات استفاده کنید.
+
+⏰ ${getTimeStamp()}`;
+            
+            await safeSendMessage(callback_query.from.id, reply);
+          } else if (callback_query.data === 'back_to_main') {
+            // بازگشت به منوی اصلی
+            const role = getUserRole(callback_query.from.id);
+            const config = roleConfig[role];
+            
+            if (config) {
+              const reply = `${config.emoji} پنل ${config.name} فعال شد\n⏰ ${getTimeStamp()}`;
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+            } else {
+              const reply = '❌ خطا در بارگذاری پنل. لطفاً دوباره تلاش کنید.';
+              await safeSendMessage(callback_query.from.id, reply);
+            }
+          } else if (callback_query.data === 'school_intro') {
+            
+            console.log('🔄 [POLLING] School intro callback detected');
+            const reply = `🏫 *معرفی مدرسه تلاوت*
+
+🌟 مدرسه‌ای معتبر با ۱۰+ سال سابقه در آموزش قرآن کریم
+
+⏰ ${getTimeStamp()}`;
+            
+            const inlineKeyboard = [
+              [{ text: '📝 ثبت‌نام', callback_data: 'start_registration' }],
+              [{ text: '🤖 معرفی ربات', callback_data: 'intro_quran_bot' }]
+            ];
+            
+            await sendMessageWithInlineKeyboard(callback_query.from.id, reply, inlineKeyboard);
+          } else if (callback_query.data === 'start_registration') {
+            
+            console.log('🔄 [POLLING] Start registration callback detected');
+            // پردازش شروع ثبت‌نام با استفاده از ماژول ثبت‌نام هوشمند
+            const success = await registrationModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
+            
+            if (!success) {
+              const reply = '❌ خطا در شروع فرآیند ثبت‌نام. لطفاً دوباره تلاش کنید.';
+              await safeSendMessage(callback_query.from.id, reply);
+            }
+          } else if (callback_query.data === 'student_registration') {
+            
+            console.log('🔄 [POLLING] Student registration callback detected');
+            
+            // بررسی وضعیت ثبت‌نام قبل از شروع
+            try {
+              const { readJson } = require('./server/utils/jsonStore');
+              const siteStatus = await readJson('data/site-status.json', {
+                registration: { enabled: true }
+              });
+              
+              if (!siteStatus.registration.enabled) {
+                const reply = '⚠️ ثبت‌نام در حال حاضر غیرفعال است.\n\nلطفاً بعداً تلاش کنید یا با مدیر تماس بگیرید.';
+                await safeSendMessage(callback_query.from.id, reply);
+                return;
+              }
+            } catch (error) {
+              console.log('⚠️ [POLLING] Could not read registration status, proceeding with registration');
+            }
+            
+            // پردازش ثبت‌نام قرآن آموز با استفاده از ماژول ثبت‌نام هوشمند
+            const success = await registrationModule.handleRegistrationStart(callback_query.from.id, callback_query.from.id.toString());
+            
+            if (!success) {
+              const reply = '❌ خطا در شروع فرآیند ثبت‌نام. لطفاً دوباره تلاش کنید.';
+              await safeSendMessage(callback_query.from.id, reply);
+            }
+          } else if (callback_query.data.startsWith('role_')) {
+            
+            console.log('🔄 [POLLING] Role management callback detected');
+            // بررسی دسترسی کاربر - فقط ادمین‌ها می‌توانند نقش‌ها را مدیریت کنند
+            if (!isAdmin(callback_query.from.id)) {
+              await answerCallbackQuery(callback_query.id, '⚠️ فقط مدیر مدرسه می‌تواند نقش‌ها را مدیریت کند.');
+            } else {
+              // پردازش callback های مدیریت نقش‌ها
+              const roleManager = require('./role_manager');
+              const success = await roleManager.handleCallback(callback_query);
+              
+              if (!success) {
+                console.error('❌ [POLLING] Error handling role management callback');
+                await answerCallbackQuery(callback_query.id, '❌ خطا در پردازش درخواست نقش‌ها');
+              }
+            }
+          } else if (callback_query.data === 'kargah_management') {
+            
+            console.log('🔄 [POLLING] Kargah management callback detected');
+            // بررسی دسترسی کاربر - فقط ادمین‌ها می‌توانند کارگاه‌ها را مدیریت کنند
+            if (!isAdmin(callback_query.from.id)) {
+              const config = roleConfig[role];
+              const reply = '⚠️ فقط مدیر مدرسه می‌تواند کارگاه‌ها را مدیریت کند.';
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+            } else {
+              // نمایش منوی کارگاه‌ها با استفاده از ماژول کارگاه‌ها
+              const kargahModule = require('./12kargah');
+              // متصل کردن متدهای ارسال پیام
+              kargahModule.setSendMessage(sendMessage);
+              kargahModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+              kargahModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
+              const success = await kargahModule.handleKargahCommand(callback_query.message.chat.id, callback_query.from.id);
+              
+              if (!success) {
+                const config = roleConfig[role];
+                const reply = '❌ خطا در نمایش منوی کارگاه‌ها';
+                await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+              }
+            }
+          } else if (callback_query.data === 'osatd_management') {
+            
+            console.log('🔄 [POLLING] Osatd management callback detected');
+            
+            // بررسی کانفیگ - آیا مدیریت استادها فعال است؟
+            if (!isOsatdManagementEnabled()) {
+              const config = roleConfig[role];
+              const reply = '⚠️ مدیریت استادها در حال حاضر غیرفعال است.';
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+              return;
+            }
+            
+            // بررسی دسترسی کاربر
+            if (!hasOsatdManagementAccess('SCHOOL_ADMIN')) {
+              const config = roleConfig[role];
+              const reply = '⚠️ شما دسترسی لازم برای مدیریت استادها را ندارید.';
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+              return;
+            }
+            
+            // نمایش منوی استادها با استفاده از ماژول استادها
+            const osatdModule = require('./10osatd');
+            const result = await osatdModule.handleCoachesCallback({
+              ...callback_query,
+              data: 'coaches_list' // تغییر callback data به coaches_list برای سازگاری
+            });
+            
+            if (result && result.keyboard) {
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              const config = roleConfig[role];
+              const reply = '❌ خطا در نمایش منوی استادها';
+              await safeSendMessage(callback_query.from.id, reply, config.keyboard);
+            }
+          } else if ((callback_query.data.startsWith('practice_') && !callback_query.data.includes('_days_settings') && !callback_query.data.includes('_hours_settings')) || 
+                     (callback_query.data.startsWith('evaluation_') && !callback_query.data.includes('_days_settings')) || 
+                     callback_query.data.startsWith('satisfaction_')) {
+            // پردازش callback های تمرین، ارزیابی و نظرسنجی (به جز تنظیمات روزها)
+            console.log(`🎯 [POLLING] Practice/Evaluation/Satisfaction callback detected: ${callback_query.data}`);
+            
+            // بررسی نقش کاربر برای callback های ارزیابی
+            if (callback_query.data.startsWith('evaluate_')) {
+              const userRole = getUserRole(callback_query.from.id);
+              console.log(`🔍 [POLLING] Evaluation callback by user ${callback_query.from.id} with role: ${userRole}`);
+              
+              // فقط مربیان و کمک مربیان می‌توانند ارزیابی کنند
+              if (!['COACH', 'ASSISTANT', 'teacher', 'assistant_teacher'].includes(userRole)) {
+                console.log(`❌ [POLLING] User ${callback_query.from.id} (${userRole}) attempted to evaluate but is not authorized`);
+                await answerCallbackQuery(callback_query.id, '⚠️ فقط مربیان و کمک مربیان می‌توانند ارزیابی کنند', true);
+                
+                // ارسال گزارش به گروه ادمین
+                try {
+                  const { REPORT_GROUP_ID } = require('./6mid');
+                  const reportText = `🚨 **هشدار امنیتی!**\n\n` +
+                    `👤 کاربر: ${callback_query.from.first_name} ${callback_query.from.last_name || ''}\n` +
+                    `🆔 شناسه: ${callback_query.from.id}\n` +
+                    `📊 نقش: ${userRole}\n` +
+                    `⚠️ اقدام: تلاش برای ارزیابی تمرین\n` +
+                    `📅 تاریخ: ${new Date().toLocaleString('fa-IR')}\n\n` +
+                    `🔒 این کاربر مجاز به ارزیابی نیست!`;
+                  
+                  await sendMessage(REPORT_GROUP_ID, reportText);
+                  console.log('📤 گزارش امنیتی به گروه ادمین ارسال شد');
+                } catch (error) {
+                  console.error('❌ [POLLING] Error sending security report:', error.message);
+                }
+                
+                continue;
+              }
+              
+              console.log(`✅ [POLLING] User ${callback_query.from.id} (${userRole}) is authorized to evaluate`);
+            }
+            
+            // متصل کردن متدهای ارسال پیام به ماژول ارزیابی
+            arzyabiModule.setSendMessage(sendMessage);
+            arzyabiModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+            arzyabiModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
+            
+            let success = false;
+            
+            // تشخیص نوع callback
+            if (callback_query.data.startsWith('satisfaction_')) {
+              // نظرسنجی
+              success = await arzyabiModule.handleSatisfactionCallback(
+                callback_query.data, 
+                callback_query.from.id, 
+                callback_query.from.first_name + (callback_query.from.last_name ? ' ' + callback_query.from.last_name : '')
+              );
+            } else if (callback_query.data.startsWith('evaluate_')) {
+              // ارزیابی - با بررسی نقش
+              const userRole = getUserRole(callback_query.from.id);
+              success = await arzyabiModule.processEvaluationCallback(
+                callback_query.data, 
+                callback_query.from.id, 
+                callback_query.from.first_name + (callback_query.from.last_name ? ' ' + callback_query.from.last_name : ''),
+                userRole
+              );
+            } else {
+              // تمرین
+              success = await arzyabiModule.handleEvaluationCallback(
+                callback_query.data, 
+                callback_query.from.id, 
+                callback_query.from.first_name + (callback_query.from.last_name ? ' ' + callback_query.from.last_name : '')
+              );
+            }
+            
+            if (!success) {
+              console.error('❌ [POLLING] Error handling practice/evaluation/satisfaction callback');
+              console.error(`❌ [POLLING] Callback failed for data: ${callback_query.data}`);
+            } else {
+              console.log('✅ [POLLING] Practice/Evaluation/Satisfaction callback handled successfully');
+            }
+          } else if (callback_query.data.startsWith('settings_') ||
+                     callback_query.data.startsWith('toggle_') ||
+                     callback_query.data.startsWith('select_') ||
+                     callback_query.data === 'practice_evaluation_days_settings' ||
+                     callback_query.data === 'practice_days_settings' ||
+                     callback_query.data === 'practice_hours_settings' ||
+                     callback_query.data === 'evaluation_days_settings' ||
+                     callback_query.data === 'attendance_days_settings') {
+            // پردازش callback های تنظیمات
+            console.log(`🔍 [POLLING] Settings callback detected: ${callback_query.data}`);
+            
+            // لوگ مخصوص برای دکمه روزهای تمرین و ارزیابی
+            if (callback_query.data === 'practice_evaluation_days_settings') {
+              console.log('🎯 [POLLING] PRACTICE+EVALUATION DAYS BUTTON CLICKED!');
+              console.log('🎯 [POLLING] About to route to settings module...');
+            }
+            
+            console.log(`🔍 [POLLING] Callback query object:`, JSON.stringify(callback_query, null, 2));
+            console.log(`🔍 [POLLING] User ID: ${callback_query.from.id}, Chat ID: ${callback_query.message.chat.id}`);
+            
+            const settingsModule = new SettingsModule();
+            console.log('🔍 [POLLING] SettingsModule created, calling handleCallback...');
+            const success = await settingsModule.handleCallback(callback_query);
+            
+            if (!success) {
+              console.error('❌ [POLLING] Error handling settings callback');
+              console.error('❌ [POLLING] Settings callback failed for data:', callback_query.data);
+            } else {
+              console.log('✅ [POLLING] Settings callback handled successfully');
+              console.log('✅ [POLLING] Settings callback completed for data:', callback_query.data);
+            }
+          } else if (callback_query.data.startsWith('kargah_')) {
+            console.log('🔄 [POLLING] Kargah callback detected');
+            console.log(`🔄 [POLLING] Kargah callback data: ${callback_query.data}`);
+            // پردازش callback های کارگاه‌ها
+            const kargahModule = require('./12kargah');
+            // متصل کردن متدهای ارسال پیام
+            kargahModule.setSendMessage(sendMessage);
+            kargahModule.setSendMessageWithInlineKeyboard(sendMessageWithInlineKeyboard);
+            kargahModule.setEditMessageWithInlineKeyboard(require('./4bale').editMessageWithInlineKeyboard);
+            const success = await kargahModule.handleCallback(callback_query);
+            
+            if (!success) {
+              console.error('❌ [POLLING] Error handling kargah callback');
+              console.error(`❌ [POLLING] Kargah callback failed for data: ${callback_query.data}`);
+            } else {
+              console.log('✅ [POLLING] Kargah callback handled successfully');
+            }
+          } else if (callback_query.data.startsWith('sabt_')) {
+            console.log('📝 [POLLING] Sabt callback detected');
+            console.log(`📝 [POLLING] Sabt callback data: ${callback_query.data}`);
+            // پردازش callback های ثبت اطلاعات
+            const result = sabtManager.handleAnswer(callback_query.message.chat.id, callback_query.data);
+            
+            if (result && result.text) {
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard || []);
+              console.log('✅ [POLLING] Sabt callback handled successfully');
+            } else {
+              console.error('❌ [POLLING] Error handling sabt callback');
+              console.error(`❌ [POLLING] Sabt callback failed for data: ${callback_query.data}`);
+            }
+          } else if (callback_query.data === 'cancel_report' || 
+                     callback_query.data === 'edit_report' ||
+                     callback_query.data.startsWith('answer_') ||
+                     callback_query.data.startsWith('satisfaction_') ||
+                     callback_query.data === 'confirm_report') {
+            console.log('📝 [POLLING] Sabt inline keyboard callback detected');
+            console.log(`📝 [POLLING] Sabt callback data: ${callback_query.data}`);
+            // پردازش callback های کیبرد اینلاین ثبت اطلاعات
+            const result = sabtManager.handleCallback(callback_query.message.chat.id, callback_query.data);
+            
+            if (result && result.text) {
+              if (result.keyboard) {
+                // اگر کیبرد دارد، پیام جدید ارسال کن
+                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+              } else {
+                // اگر فقط متن دارد، پیام را ویرایش کن
+                await editMessageWithInlineKeyboard(
+                  callback_query.message.chat.id,
+                  callback_query.message.message_id,
+                  result.text
+                );
+              }
+              console.log('✅ [POLLING] Sabt inline keyboard callback handled successfully');
+            } else {
+              console.error('❌ [POLLING] Error handling sabt inline keyboard callback');
+              console.error(`❌ [POLLING] Sabt callback failed for data: ${callback_query.data}`);
+            }
+          } else if (callback_query.data.startsWith('coach_') || 
+                     callback_query.data.startsWith('attendance_') || 
+                     callback_query.data.startsWith('attendance_all_') ||
+                     callback_query.data.startsWith('report_') || 
+                     callback_query.data.startsWith('student_') ||
+                     callback_query.data === 'coaches_list' ||
+                     callback_query.data === 'back_to_coaches' ||
+                     callback_query.data === 'back_to_workshops' ||
+                     callback_query.data.startsWith('back_to_students_')) {
+            console.log('🔄 [POLLING] Coaches callback detected');
+            console.log(`🔄 [POLLING] Coaches callback data: ${callback_query.data}`);
+            // پردازش callback های استادها و حضور و غیاب
+            const osatdModule = require('./10osatd');
+            const result = await osatdModule.handleCoachesCallback(callback_query);
+            
+            if (result) {
+              // پاسخ به callback query برای حذف spinner
+              await answerCallbackQuery(callback_query.id);
+              
+              if (result.edit_message) {
+                // اگر edit_message = true، پیام قبلی را ویرایش کن
+                if (result.keyboard) {
+                  await editMessageWithInlineKeyboard(
+                    callback_query.message.chat.id,
+                    callback_query.message.message_id,
+                    result.text,
+                    result.keyboard
+                  );
+                } else {
+                  await editMessageWithInlineKeyboard(
+                    callback_query.message.chat.id,
+                    callback_query.message.message_id,
+                    result.text
+                  );
+                }
+              } else if (result.keyboard) {
+                // اگر کیبرد دارد، پیام جدید ارسال کن
+                await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+              } else {
+                // اگر فقط متن دارد، پیام را ویرایش کن
+                await editMessageWithInlineKeyboard(
+                  callback_query.message.chat.id,
+                  callback_query.message.message_id,
+                  result.text
+                );
+              }
+              console.log('✅ [POLLING] Coaches callback handled successfully');
+            } else {
+              console.error('❌ [POLLING] Error handling coaches callback');
+              console.error(`❌ [POLLING] Coaches callback failed for data: ${callback_query.data}`);
+            }
+          } else if (callback_query.data.startsWith('start_registration') || 
+                     callback_query.data.startsWith('edit_') || 
+                     callback_query.data.startsWith('final_confirm') || 
+                     callback_query.data.startsWith('quran_student_panel') || 
+                     callback_query.data.startsWith('complete_registration') ||
+                     callback_query.data.startsWith('quran_student_') ||
+                     callback_query.data.startsWith('payment_confirm_') ||
+                     callback_query.data.startsWith('pay_workshop_') ||
+                     callback_query.data === 'school_intro' ||
+                     callback_query.data === 'intro_quran_bot' ||
+                     callback_query.data === 'next_month_registration' ||
+                     callback_query.data === 'start_next_month_registration' ||
+                     callback_query.data === 'back_to_main' ||
+                     callback_query.data === 'manage_assistant' ||
+                     callback_query.data === 'coach_groups' ||
+                     callback_query.data.startsWith('assistant_')) {
+            console.log('🔄 [POLLING] Registration callback detected');
+            console.log(`🔄 [POLLING] Registration callback data: ${callback_query.data}`);
+            // پردازش callback های ثبت‌نام و مدیریت کمک مربی
+            const success = await registrationModule.handleCallback(callback_query);
+            
+            if (!success) {
+              console.error('❌ [POLLING] Error handling registration callback');
+              console.error(`❌ [POLLING] Registration callback failed for data: ${callback_query.data}`);
+            } else {
+              console.log('✅ [POLLING] Registration callback handled successfully');
+            }
+          } else if (callback_query.data.startsWith('change_message_')) {
+            // تغییر پیام بسته بودن گروه
+            console.log('🔍 DEBUG: change_message_ callback triggered for user:', callback_query.from.id);
+            const { handleGroupCloseManagement } = require('./9group_close_management');
+            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
+            
+            if (result && result.text && result.keyboard) {
+              console.log('🔍 DEBUG: Sending message with inline keyboard');
+              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
+            } else {
+              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
+              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در تغییر پیام گروه');
+            }
+            
           } else {
             console.log(`⚠️ [POLLING] Unknown callback data: ${callback_query.data}`);
             console.log(`⚠️ [POLLING] Callback data type: ${typeof callback_query.data}`);
