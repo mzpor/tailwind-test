@@ -196,16 +196,46 @@ paymentModule.setBotToken(BOT_TOKEN);
 
 let lastId = 0;
 
+// دریافت Bot ID از BOT_TOKEN
+function getBotId() {
+  try {
+    const botId = BOT_TOKEN.split(':')[0];
+    console.log(`🤖 [BOT_STATUS] Bot ID extracted: ${botId}`);
+    return botId;
+  } catch (error) {
+    console.error('❌ [BOT_STATUS] Error extracting bot ID from token:', error.message);
+    return null;
+  }
+}
+
 // بررسی وضعیت ادمین ربات
 async function checkBotAdminStatus(chatId) {
   try {
     const { getChatMember } = require('./4bale');
+    
+    // استخراج Bot ID از BOT_TOKEN (فرمت: BOT_ID:BOT_TOKEN)
+    const botId = getBotId();
+    if (!botId) {
+      console.error('❌ [BOT_STATUS] Could not extract bot ID from token');
+      return false;
+    }
+    
+    console.log(`🤖 [BOT_STATUS] Checking admin status for bot ID: ${botId} in chat: ${chatId}`);
+    
     // بررسی وضعیت ادمین ربات
-    const botInfo = await getChatMember(chatId);
+    const botInfo = await getChatMember(chatId, botId);
     const isBotAdmin = botInfo && botInfo.status === 'administrator';
+    
+    console.log(`🤖 [BOT_STATUS] Bot admin status in chat ${chatId}: ${isBotAdmin ? '✅ بله' : '❌ خیر'}`);
+    if (botInfo) {
+      console.log(`🤖 [BOT_STATUS] Bot info: ${JSON.stringify(botInfo, null, 2)}`);
+    }
     return isBotAdmin;
   } catch (error) {
-    console.error('Error checking bot admin status:', error.message);
+    console.error(`❌ [BOT_STATUS] Error checking bot admin status in chat ${chatId}:`, error.message);
+    if (error.response) {
+      console.error(`❌ [BOT_STATUS] Error response:`, error.response.data);
+    }
     return false;
   }
 }

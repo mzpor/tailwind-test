@@ -68,13 +68,18 @@ class PracticeManager {
       }
 
       // بررسی اینکه آیا گروه باز است
-      const { isGroupClosed } = require('./9group_close_management');
-      if (isGroupClosed(chatId)) {
-        console.log('🚫 [PRACTICE_MANAGER] Group is closed, cannot accept practice');
-        const { getGroupCloseMessage } = require('./9group_close_management');
-        const closeMessage = getGroupCloseMessage(chatId);
-        await sendMessage(chatId, closeMessage);
-        return true;
+      try {
+        const { isGroupClosed } = require('./9group_close_management');
+        if (isGroupClosed(chatId)) {
+          console.log('🚫 [PRACTICE_MANAGER] Group is closed, cannot accept practice');
+          const { getGroupCloseMessage } = require('./9group_close_management');
+          const closeMessage = getGroupCloseMessage(chatId);
+          await sendMessage(chatId, closeMessage);
+          return true;
+        }
+      } catch (error) {
+        console.error('❌ [PRACTICE_MANAGER] Error checking group status:', error.message);
+        // ادامه پردازش حتی اگر بررسی وضعیت گروه با خطا مواجه شود
       }
 
       // ثبت تمرین
