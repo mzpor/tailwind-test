@@ -1,0 +1,8 @@
+{
+  "analyses": {},
+  "settings": {
+    "enabled": true,
+    "auto_notify_student": true,
+    "auto_notify_coach": true
+  }
+}

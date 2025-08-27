@@ -689,6 +689,35 @@ async function handleRoleMessage(msg, role) {
     console.log('📝 [POLLING] ===== TALAWAT CHECK END =====');
   }
 
+  // 🎤 بررسی پیام تحلیل تمرین از مربی/کمک مربی
+  if (msg.voice && msg.reply_to_message && msg.reply_to_message.voice) {
+    console.log('🎤 [POLLING] ===== PRACTICE ANALYSIS CHECK START =====');
+    console.log(`🎤 [POLLING] Voice reply to voice from user: ${msg.from.id}`);
+    
+    console.log('🎤 [POLLING] Calling practiceManager.isPracticeAnalysisMessage...');
+    const isAnalysis = practiceManager.isPracticeAnalysisMessage(msg);
+    console.log(`🎤 [POLLING] isPracticeAnalysisMessage result: ${isAnalysis ? '✅ YES' : '❌ NO'}`);
+    
+    if (isAnalysis) {
+      console.log('✅ [POLLING] Practice analysis message confirmed, calling handlePracticeAnalysis...');
+      try {
+        const handled = await practiceManager.handlePracticeAnalysis(msg);
+        console.log(`✅ [POLLING] handlePracticeAnalysis result: ${handled ? '✅ SUCCESS' : '❌ FAILED'}`);
+        if (handled) {
+          console.log('✅ [POLLING] Practice analysis handled successfully, returning...');
+          return; // پایان پردازش، پیام توسط practiceManager مدیریت شد
+        } else {
+          console.log('❌ [POLLING] handlePracticeAnalysis failed, continuing...');
+        }
+      } catch (error) {
+        console.error('❌ [POLLING] Error in handlePracticeAnalysis:', error);
+      }
+    } else {
+      console.log('❌ [POLLING] Not a practice analysis message, continuing...');
+    }
+    console.log('🎤 [POLLING] ===== PRACTICE ANALYSIS CHECK END =====');
+  }
+
   const config = roleConfig[role];
   if (!config) {
     console.log('❌ [POLLING] No config found for role:', role);
