@@ -1407,34 +1407,6 @@ function startPolling() {
               await safeSendMessage(callback_query.message.chat.id, '❌ خطا در حذف گروه');
             }
             
-            } else if (callback_query.data === 'add_new_close_group') {
-            // افزودن گروه جدید
-            console.log('🔍 DEBUG: add_new_close_group callback triggered for user:', callback_query.from.id);
-            const { handleGroupCloseManagement } = require('./9group_close_management');
-            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
-            
-            if (result && result.text && result.keyboard) {
-              console.log('🔍 DEBUG: Sending message with inline keyboard');
-              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
-            } else {
-              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
-              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در نمایش گروه‌های قابل افزودن');
-            }
-            
-            } else if (callback_query.data.startsWith('add_group_')) {
-            // افزودن گروه انتخاب شده
-            console.log('🔍 DEBUG: add_group_ callback triggered for user:', callback_query.from.id);
-            const { handleGroupCloseManagement } = require('./9group_close_management');
-            const result = await handleGroupCloseManagement(callback_query.from.id, callback_query.data);
-            
-            if (result && result.text && result.keyboard) {
-              console.log('🔍 DEBUG: Sending message with inline keyboard');
-              await sendMessageWithInlineKeyboard(callback_query.message.chat.id, result.text, result.keyboard);
-            } else {
-              console.log('🔍 DEBUG: Result invalid, sending error message. Result:', result);
-              await safeSendMessage(callback_query.message.chat.id, '❌ خطا در افزودن گروه');
-            }
-            
             } else if (callback_query.data.startsWith('set_minute_')) {
             // تنظیم دقیقه انتخاب شده
             console.log('🔍 DEBUG: set_minute_ callback triggered for user:', callback_query.from.id);

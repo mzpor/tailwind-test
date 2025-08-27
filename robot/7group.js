@@ -235,6 +235,28 @@ async function addMember(chatId, chatTitle, userId, userName) {
       
       saveMembersData(membersData);
       
+      // اضافه کردن خودکار گروه به سیستم مدیریت بستن
+      try {
+        const { loadGroupCloseData, saveGroupCloseData } = require('./9group_close_management');
+        const closeData = loadGroupCloseData();
+        
+        if (!closeData.groups[chatId]) {
+          closeData.groups[chatId] = {
+            closed: false,
+            message: '🚫 گروه موقتاً بسته است.',
+            schedule: {
+              startTime: '19:00',
+              endTime: '22:00',
+              activeDays: [2, 4] // فقط دوشنبه و چهارشنبه
+            }
+          };
+          saveGroupCloseData(closeData);
+          console.log(`🔍 [GROUP] Group ${chatId} automatically added to close management system`);
+        }
+      } catch (error) {
+        console.error('Error adding group to close management:', error.message);
+      }
+      
       // پیام عضویت جدید
       const thankText = `✅ قرآن آموز ${userName} عضو شد`;
       await sendMessage(chatId, thankText);
