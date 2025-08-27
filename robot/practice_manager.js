@@ -22,7 +22,7 @@ class PracticeManager {
       }
 
       // خواندن کلمات کلیدی از کانفیگ
-      const settingsPath = '../data/settings.json';
+      const settingsPath = './data/settings.json';
       let practiceKeywords = ['تلاوتم']; // مقدار پیش‌فرض
       
       if (fs.existsSync(settingsPath)) {
@@ -242,7 +242,7 @@ class PracticeManager {
       const currentHour = now.hour();
 
       // خواندن تنظیمات تمرین
-      const settingsPath = '../data/settings.json';
+      const settingsPath = './data/settings.json';
       if (!fs.existsSync(settingsPath)) {
         console.error('❌ [PRACTICE_MANAGER] Settings file not found');
         return false;
@@ -282,7 +282,7 @@ class PracticeManager {
   getNextPracticeTime() {
     try {
       const now = moment();
-      const settings = JSON.parse(fs.readFileSync('../data/settings.json', 'utf8'));
+      const settings = JSON.parse(fs.readFileSync('./data/settings.json', 'utf8'));
       const practiceDays = settings.practice_days || [];
       const practiceHours = settings.practice_hours || [];
 
@@ -337,7 +337,7 @@ class PracticeManager {
       }
 
       // خواندن کلمات کلیدی از کانفیگ
-      const settingsPath = '../data/settings.json';
+      const settingsPath = './data/settings.json';
       let practiceKeywords = ['تمرین', 'tamrin', 'practice', 'تمرینات', 'tamrinat']; // مقدار پیش‌فرض
       
       if (fs.existsSync(settingsPath)) {
@@ -542,13 +542,33 @@ ${practiceList}
 📅 ${nextPractice.day} ساعت ${nextPractice.hour}:00`;
       }
 
+      // خواندن تنظیمات برای نمایش زمان‌های دقیق
+      let practiceDaysInfo = '';
+      let practiceHoursInfo = '';
+      
+      try {
+        const settings = JSON.parse(fs.readFileSync('./data/settings.json', 'utf8'));
+        const practiceDays = settings.practice_days || [];
+        const practiceHours = settings.practice_hours || [];
+        
+        const dayNames = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+        const activeDays = practiceDays.map(day => dayNames[day]).join('، ');
+        
+        practiceDaysInfo = activeDays;
+        practiceHoursInfo = practiceHours.map(hour => `${hour}:00`).join('، ');
+      } catch (error) {
+        console.error('❌ [PRACTICE_MANAGER] Error reading settings for message:', error);
+        practiceDaysInfo = 'تنظیم نشده';
+        practiceHoursInfo = 'تنظیم نشده';
+      }
+
       const message = `⚠️ زمان تمرین هنوز فرا نرسیده!
 
 📝 برای ثبت تمرین باید در زمان تعیین شده اقدام کنید.
 
-🎯 زمان‌های تمرین از تنظیمات:
-• روزهای تمرین: بررسی تنظیمات ربات
-• ساعت‌های تمرین: بررسی تنظیمات ربات${nextTimeMessage}
+🎯 زمان‌های تمرین فعال:
+📅 روزهای تمرین: ${practiceDaysInfo}
+🕐 ساعت‌های تمرین: ${practiceHoursInfo}${nextTimeMessage}
 
 💡 لطفاً در زمان مناسب تمرین خود را ارسال کنید.`;
 
