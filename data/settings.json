@@ -1,5 +1,8 @@
 {
-  "practice_days": [],
+  "practice_days": [
+    0,
+    4
+  ],
   "practice_hours": [
     19,
     20,

@@ -260,12 +260,143 @@ const BOT_STATUS_REPORT_CONFIG = {
   report_level: "basic"  // basic: فقط admin status, full: همه اطلاعات
 };
 
+// ===== سیستم گروه‌ها در settings.json =====
+// اطلاعات گروه‌ها اکنون در settings.json ذخیره می‌شود
+
 // ===== کنترل جمع‌آوری خودکار اطلاعات کاربران =====
 const AUTO_COLLECT_USER_CONFIG = {
   enabled: 1,  // 0: غیرفعال، 1: فعال
   collect_from_all_messages: 1,  // 0: فقط پیام‌های متنی، 1: همه پیام‌ها
   update_existing_users: 1,  // 0: فقط کاربران جدید، 1: به‌روزرسانی همه کاربران
   report_to_admin: 1  // 0: عدم ارسال گزارش، 1: ارسال گزارش به گروه گزارش
+};
+
+// ===== توابع مدیریت گروه‌ها =====
+
+// بارگذاری اطلاعات گروه‌ها از settings.json
+const loadBotGroups = () => {
+  try {
+    const settings = loadSettings();
+    if (settings.bot_groups) {
+      return settings.bot_groups;
+    } else {
+      // ساختار پیش‌فرض
+      return {
+        groups: [],
+        last_update: new Date().toISOString(),
+        total_groups: 0
+      };
+    }
+  } catch (error) {
+    console.error('❌ [GROUPS] Error loading groups data:', error.message);
+    return {
+      groups: [],
+      last_update: new Date().toISOString(),
+      total_groups: 0
+    };
+  }
+};
+
+// ذخیره اطلاعات گروه‌ها در settings.json
+const saveBotGroups = (groupsData) => {
+  try {
+    const settings = loadSettings();
+
+    // به‌روزرسانی اطلاعات
+    groupsData.last_update = new Date().toISOString();
+    groupsData.total_groups = groupsData.groups.length;
+
+    // ذخیره در settings.json
+    settings.bot_groups = groupsData;
+
+    // ذخیره settings
+    const fs = require('fs');
+    const path = require('path');
+    const settingsFile = path.join(__dirname, 'data', 'settings.json');
+    fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2), 'utf8');
+
+    console.log(`✅ [GROUPS] Groups data saved successfully (${groupsData.total_groups} groups)`);
+    return true;
+  } catch (error) {
+    console.error('❌ [GROUPS] Error saving groups data:', error.message);
+    return false;
+  }
+};
+
+// اضافه کردن گروه جدید
+const addBotGroup = (groupId, groupName, invitedBy = null) => {
+  try {
+    const groupsData = loadBotGroups();
+    const groupIdStr = groupId.toString();
+
+    // بررسی وجود گروه
+    const existingGroupIndex = groupsData.groups.findIndex(g => g.group_id.toString() === groupIdStr);
+
+    if (existingGroupIndex >= 0) {
+      // به‌روزرسانی اطلاعات گروه موجود
+      groupsData.groups[existingGroupIndex].group_name = groupName;
+      groupsData.groups[existingGroupIndex].last_seen = new Date().toISOString();
+      groupsData.groups[existingGroupIndex].status = 'active';
+    } else {
+      // اضافه کردن گروه جدید
+      const newGroup = {
+        group_id: parseInt(groupIdStr),
+        group_name: groupName,
+        joined_at: new Date().toISOString(),
+        last_seen: new Date().toISOString(),
+        status: 'active',
+        invited_by: invitedBy,
+        member_count: null,
+        settings: {
+          notifications: true,
+          auto_moderation: false
+        }
+      };
+      groupsData.groups.push(newGroup);
+    }
+
+    return saveBotGroups(groupsData);
+  } catch (error) {
+    console.error('❌ [GROUPS] Error adding group:', error.message);
+    return false;
+  }
+};
+
+// حذف گروه
+const removeBotGroup = (groupId) => {
+  try {
+    const groupsData = loadBotGroups();
+    const groupIdStr = groupId.toString();
+
+    groupsData.groups = groupsData.groups.filter(g => g.group_id.toString() !== groupIdStr);
+    return saveBotGroups(groupsData);
+  } catch (error) {
+    console.error('❌ [GROUPS] Error removing group:', error.message);
+    return false;
+  }
+};
+
+// دریافت لیست گروه‌ها
+const getBotGroups = () => {
+  try {
+    const groupsData = loadBotGroups();
+    return groupsData.groups;
+  } catch (error) {
+    console.error('❌ [GROUPS] Error getting groups:', error.message);
+    return [];
+  }
+};
+
+// بررسی وجود گروه
+const hasBotGroup = (groupId) => {
+  try {
+    const groupsData = loadBotGroups();
+    const groupIdStr = groupId.toString();
+    return groupsData.groups.some(g => g.group_id.toString() === groupIdStr);
+  } catch (error) {
+    console.error('❌ [GROUPS] Error checking group existence:', error.message);
+    return false;
+  }
 };
 
 // ===== سیستم کانفیگ گروه‌ها =====
@@ -1832,5 +1963,12 @@ module.exports = {
   getPracticeDays,
   getEvaluationDays,
   isPracticeTime,
-  getPracticeHours
+  getPracticeHours,
+  // ===== توابع مدیریت گروه‌ها =====
+  loadBotGroups,
+  saveBotGroups,
+  addBotGroup,
+  removeBotGroup,
+  getBotGroups,
+  hasBotGroup
 };

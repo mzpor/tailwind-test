@@ -22,5 +22,24 @@
     6
   ],
   "enable_satisfaction_survey": true,
-  "enable_bot_reports": true
+  "enable_bot_reports": true,
+  "bot_groups": {
+    "groups": [
+      {
+        "group_id": 4535267863,
+        "group_name": "گروه قرآنی اعلام ها",
+        "joined_at": "2025-08-27T07:47:43.063Z",
+        "last_seen": "2025-08-27T07:47:43.063Z",
+        "status": "active",
+        "invited_by": null,
+        "member_count": null,
+        "settings": {
+          "notifications": true,
+          "auto_moderation": false
+        }
+      }
+    ],
+    "last_update": "2025-08-27T07:47:43.063Z",
+    "total_groups": 1
+  }
 }
