@@ -211,7 +211,7 @@ async function handleGroupCloseManagement(userId, action) {
     
     if (action === 'groups') {
       // نمایش لیست گروه‌ها
-      console.log('🔍 DEBUG: Getting groups list');
+      console.log('🔍 DEBUG: getGroupsList called');
       const groups = await getGroupsList();
       console.log('🔍 DEBUG: Groups list:', groups);
       
@@ -239,6 +239,8 @@ ${groups.map((group, index) => `${index + 1}️⃣ ${group.title} (${group.membe
 ⏰ ${getTimeStamp()}`;
       
       console.log('🔍 DEBUG: Returning result with text and keyboard');
+      console.log('🔍 DEBUG: Text length:', text.length);
+      console.log('🔍 DEBUG: Keyboard rows:', keyboard.length);
       return { text, keyboard };
       
     } else if (action.startsWith('close_group_')) {
@@ -594,6 +596,7 @@ ${formatScheduleInfo(closeData.groups[groupId])}
       
     } else if (action === 'back_to_groups') {
       // بازگشت به لیست گروه‌ها
+      console.log('🔍 DEBUG: back_to_groups action triggered, returning to groups list');
       return await handleGroupCloseManagement(userId, 'groups');
     }
     

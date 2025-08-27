@@ -1173,7 +1173,6 @@ function startPolling() {
               callback_query.data === 'groups' ||
               callback_query.data === 'coach_groups' ||
               callback_query.data === 'assistant_groups' ||
-              callback_query.data === 'back_to_groups' ||
               callback_query.data === 'back_to_main') {
             
             // بررسی کانفیگ مدیریت گروه‌ها

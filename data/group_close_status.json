@@ -13,14 +13,15 @@
     },
     "5417069312": {
       "schedule": {
-        "startTime": "09:00",
-        "endTime": "18:00",
+        "startTime": "17:00",
+        "endTime": "20:19",
         "activeDays": [
           0,
-          2
+          2,
+          4
         ]
       },
-      "closed": true,
+      "closed": false,
       "message": "🚫 گروه موقتاً بسته است."
     },
     "5668045453": {
