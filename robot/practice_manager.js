@@ -695,14 +695,33 @@ ${practiceList}
   // بررسی اینکه آیا پیام تحلیل تمرین است
   isPracticeAnalysisMessage(message) {
     try {
-      // بررسی اینکه آیا پیام صوتی است
-      if (!message.voice) {
+      // خواندن کلمات کلیدی تحلیل از کانفیگ
+      const settingsPath = './data/settings.json';
+      let analysisKeywords = ['تحلیل']; // مقدار پیش‌فرض
+      
+      if (fs.existsSync(settingsPath)) {
+        try {
+          const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+          analysisKeywords = settings.analysis_keywords || ['تحلیل'];
+        } catch (error) {
+          console.error('❌ [PRACTICE_MANAGER] Error reading analysis keywords from config:', error);
+        }
+      }
+      
+      // بررسی اینکه آیا پیام متنی با کلمات کلیدی تحلیل است یا پیام صوتی
+      const isTextAnalysis = message.text && analysisKeywords.includes(message.text.trim());
+      const isVoiceAnalysis = message.voice;
+      
+      if (!isTextAnalysis && !isVoiceAnalysis) {
+        console.log(`❌ [PRACTICE_MANAGER] Text "${message.text}" not in analysis keywords: [${analysisKeywords.join(', ')}]`);
         return false;
       }
+      
       // بررسی اینکه آیا ریپلای به پیام دیگری است
       if (!message.reply_to_message) {
         return false;
       }
+      
       // بررسی اینکه آیا کاربر ادمین است (مربی/کمک مربی)
       const userId = message.from.id;
       const { USERS_BY_ROLE } = require('./3config');
@@ -710,15 +729,21 @@ ${practiceList}
       const isCoach = USERS_BY_ROLE.COACH.some(coach => (typeof coach === 'object' ? coach.id : coach) === userId);
       const isAssistant = USERS_BY_ROLE.ASSISTANT.some(assistant => (typeof assistant === 'object' ? assistant.id : assistant) === userId);
       const isAdmin = isSchoolAdmin || isCoach || isAssistant;
+      
       if (!isAdmin) {
+        console.log(`❌ [PRACTICE_MANAGER] User ${userId} is not admin/coach/assistant`);
         return false;
       }
+      
       // بررسی اینکه آیا پیام اصلی تمرین است (صوتی)
       const originalMessage = message.reply_to_message;
       if (!originalMessage.voice) {
+        console.log(`❌ [PRACTICE_MANAGER] Original message is not voice`);
         return false;
       }
-      console.log('✅ [PRACTICE_MANAGER] Practice analysis message detected from coach/assistant');
+      
+      const analysisType = isTextAnalysis ? "text_analysis" : "voice_analysis";
+      console.log(`✅ [PRACTICE_MANAGER] Practice analysis message detected from coach/assistant (type: ${analysisType})`);
       return true;
     } catch (error) {
       console.error('❌ [PRACTICE_MANAGER] Error checking practice analysis message:', error);
@@ -782,6 +807,24 @@ ${practiceList}
       }
       
       const analysisId = `${coachId}_${studentId}_${Date.now()}`;
+      
+      // تعیین نوع تحلیل بر اساس کانفیگ
+      let analysisType = "voice_analysis";
+      if (message.text) {
+        const settingsPath = './data/settings.json';
+        if (fs.existsSync(settingsPath)) {
+          try {
+            const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            const analysisKeywords = settings.analysis_keywords || ['تحلیل'];
+            if (analysisKeywords.includes(message.text.trim())) {
+              analysisType = "text_analysis";
+            }
+          } catch (error) {
+            console.error('❌ [PRACTICE_MANAGER] Error reading analysis keywords for type determination:', error);
+          }
+        }
+      }
+      
       analysisData.analyses[today][analysisId] = {
         coach_id: coachId,
         coach_name: coachName,
@@ -791,7 +834,7 @@ ${practiceList}
         analysis_message_id: message.message_id,
         original_practice_message_id: originalMessage.message_id,
         analysis_time: new Date().toISOString(),
-        type: "voice_analysis"
+        type: analysisType
       };
       
       fs.writeFileSync(analysisDataPath, JSON.stringify(analysisData, null, 2));
