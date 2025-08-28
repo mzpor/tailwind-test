@@ -658,9 +658,12 @@ async function handleRoleMessage(msg, role) {
   }
 
   // 🎤 بررسی پیام تحلیل تمرین از مربی/کمک مربی
-  if (msg.voice && msg.reply_to_message && msg.reply_to_message.voice) {
+  if ((msg.voice || msg.text) && msg.reply_to_message && msg.reply_to_message.voice) {
     console.log('🎤 [POLLING] ===== PRACTICE ANALYSIS CHECK START =====');
-    console.log(`🎤 [POLLING] Voice reply to voice from user: ${msg.from.id}`);
+    console.log(`🎤 [POLLING] ${msg.voice ? 'Voice' : 'Text'} reply to voice from user: ${msg.from.id}`);
+    if (msg.text) {
+      console.log(`🎤 [POLLING] Text content: "${msg.text}"`);
+    }
     
     console.log('🎤 [POLLING] Calling practiceManager.isPracticeAnalysisMessage...');
     const isAnalysis = practiceManager.isPracticeAnalysisMessage(msg);

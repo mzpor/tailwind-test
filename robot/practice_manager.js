@@ -864,10 +864,25 @@ ${practiceList}
       
       let listText = `📋 لیست تحلیل تمرین ${dayName} ${today}\n\n`;
       
-      // تحلیل‌های انجام شده
-      chatAnalyses.forEach((analysis, index) => {
-        const analysisTime = moment(analysis.analysis_time).format('HH:mm');
-        listText += `${index + 1}- ${analysis.student_name} (${analysisTime})\n`;
+      // گروه‌بندی تحلیل‌ها بر اساس مربی/کمک مربی
+      const analysesByCoach = {};
+      chatAnalyses.forEach(analysis => {
+        if (!analysesByCoach[analysis.coach_name]) {
+          analysesByCoach[analysis.coach_name] = [];
+        }
+        analysesByCoach[analysis.coach_name].push(analysis);
+      });
+      
+      // نمایش تحلیل‌ها گروه‌بندی شده
+      Object.keys(analysesByCoach).forEach((coachName, coachIndex) => {
+        listText += `تحلیل با: ${coachName}\n`;
+        analysesByCoach[coachName].forEach((analysis, index) => {
+          const analysisTime = moment(analysis.analysis_time).format('HH:mm');
+          listText += `${index + 1}- ${analysis.student_name} (${analysisTime})\n`;
+        });
+        if (coachIndex < Object.keys(analysesByCoach).length - 1) {
+          listText += '\n';
+        }
       });
       
       listText += `\n⏰ ${getTimeStamp()}`;
