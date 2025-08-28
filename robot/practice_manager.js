@@ -806,11 +806,17 @@ ${practiceList}
         console.error(`❌ [PRACTICE_MANAGER] Failed to send feedback keyboard to group`);
       }
       
-      // ارسال لیست تحلیل‌های امروز به گروه گزارش
-      const listSent = await this.sendTodayAnalysisListToReportGroup(chatId);
+      // ارسال لیست تحلیل‌های امروز در همان گروه
+      const listSent = await this.sendTodayAnalysisList(chatId);
       if (!listSent) {
-        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to report group`);
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to group`);
         return false;
+      }
+      
+      // ارسال لیست تحلیل‌های امروز به گروه گزارش (برای مدیر)
+      const reportSent = await this.sendTodayAnalysisListToReportGroup(chatId);
+      if (!reportSent) {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to report group`);
       }
       
       console.log(`✅ [PRACTICE_MANAGER] Practice analysis handled successfully`);
@@ -1015,6 +1021,123 @@ ${practiceList}
     } catch (error) {
       console.error('❌ [PRACTICE_MANAGER] Error getting today analyses:', error);
       return [];
+    }
+  }
+
+  // ارسال کیبورد نظرسنجی به گروه
+  async sendFeedbackKeyboardToStudent(studentId, chatId, studentName, coachName) {
+    try {
+      const { sendMessageWithInlineKeyboard } = require('./4bale');
+      
+      const message = `🎯 تحلیل تمرین ${studentName} دریافت شد!
+
+👤 تحلیل‌کننده: ${coachName}
+📝 ${studentName} عزیز، لطفاً نظر خود را برای این تحلیل بیان کنید:`;
+
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: "1 ⭐", callback_data: `feedback_1_${chatId}_${studentId}` },
+            { text: "2 ⭐⭐", callback_data: `feedback_2_${chatId}_${studentId}` },
+            { text: "3 ⭐⭐⭐", callback_data: `feedback_3_${chatId}_${studentId}` },
+            { text: "4 ⭐⭐⭐⭐", callback_data: `feedback_4_${chatId}_${studentId}` },
+            { text: "5 ⭐⭐⭐⭐⭐", callback_data: `feedback_5_${chatId}_${studentId}` }
+          ],
+          [
+            { text: "📝 توضیح", callback_data: `feedback_explanation_${chatId}_${studentId}` }
+          ]
+        ]
+      };
+
+      // ارسال کیبورد به گروه
+      const result = await sendMessageWithInlineKeyboard(chatId, message, keyboard);
+      
+      if (result) {
+        console.log(`✅ [PRACTICE_MANAGER] Feedback keyboard sent to group ${chatId} for student ${studentName} (${studentId})`);
+        return true;
+      } else {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send feedback keyboard to group ${chatId} for student ${studentName}`);
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error sending feedback keyboard to group:', error);
+      return false;
+    }
+  }
+
+  // ارسال لیست تحلیل‌های امروز به گروه گزارش
+  async sendTodayAnalysisListToReportGroup(chatId) {
+    try {
+      const reportGroupId = 5668045453; // گروه گزارش
+      const todayAnalyses = this.getTodayAnalyses();
+      const chatAnalyses = todayAnalyses.filter(analysis => analysis.chat_id === chatId);
+      
+      if (chatAnalyses.length === 0) {
+        console.log('❌ [PRACTICE_MANAGER] No analyses found for today in this chat');
+        return false;
+      }
+      
+      // ایجاد متن لیست
+      const today = moment().format('jYYYY/jMM/jDD');
+      const dayName = this.getPersianDayName(moment().day());
+      
+      let listText = `📋 لیست تحلیل تمرین ${dayName} ${today}\n\n`;
+      
+      // گروه‌بندی تحلیل‌ها بر اساس مربی/کمک مربی
+      const analysesByCoach = {};
+      chatAnalyses.forEach(analysis => {
+        if (!analysesByCoach[analysis.coach_name]) {
+          analysesByCoach[analysis.coach_name] = [];
+        }
+        analysesByCoach[analysis.coach_name].push(analysis);
+      });
+      
+      // نمایش تحلیل‌ها گروه‌بندی شده
+      Object.keys(analysesByCoach).forEach((coachName, coachIndex) => {
+        // دریافت نقش کاربر از داده‌های تحلیل
+        let userRole = 'ادمین'; // مقدار پیش‌فرض
+        
+        // پیدا کردن نقش کاربر از اولین تحلیل این مربی
+        const firstAnalysis = analysesByCoach[coachName][0];
+        if (firstAnalysis && firstAnalysis.coach_role) {
+          // تبدیل نام نقش به فارسی
+          const roleDisplayNames = {
+            'SCHOOL_ADMIN': 'مدیر',
+            'GROUP_ADMIN': 'ادمین گروه',
+            'GROUP_CREATOR': 'مالک گروه',
+            'COACH': 'مربی',
+            'ASSISTANT': 'کمک مربی'
+          };
+          userRole = roleDisplayNames[firstAnalysis.coach_role] || firstAnalysis.coach_role;
+        }
+        
+        listText += `تحلیل با: (${userRole}) ${coachName}\n`;
+        analysesByCoach[coachName].forEach((analysis, index) => {
+          const analysisTime = moment(analysis.analysis_time).format('HH:mm');
+          listText += `${index + 1}- ${analysis.student_name} (${analysisTime})\n`;
+        });
+        if (coachIndex < Object.keys(analysesByCoach).length - 1) {
+          listText += '\n';
+        }
+      });
+      
+      listText += `\n⏰ ${getTimeStamp()}`;
+      
+      const { sendMessage } = require('./4bale');
+      const result = await sendMessage(reportGroupId, listText);
+      
+      if (result) {
+        console.log(`✅ [PRACTICE_MANAGER] Analysis list sent successfully to report group ${reportGroupId}`);
+        return true;
+      } else {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to report group ${reportGroupId}`);
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error sending analysis list to report group:', error);
+      return false;
     }
   }
 

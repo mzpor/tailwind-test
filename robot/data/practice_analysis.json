@@ -72,6 +72,66 @@
         "original_practice_message_id": 2182,
         "analysis_time": "2025-08-28T08:02:47.807Z",
         "type": "text_analysis"
+      },
+      "1114227010_1790308237_1756368516566": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2450,
+        "original_practice_message_id": 2182,
+        "analysis_time": "2025-08-28T08:08:36.566Z",
+        "type": "text_analysis"
+      },
+      "1114227010_1790308237_1756368737396": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2471,
+        "original_practice_message_id": 2182,
+        "analysis_time": "2025-08-28T08:12:17.396Z",
+        "type": "text_analysis"
+      },
+      "574330749_1790308237_1756368778119": {
+        "coach_id": 574330749,
+        "coach_name": "محمد همراه ۲",
+        "coach_role": "GROUP_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2472,
+        "original_practice_message_id": 2182,
+        "analysis_time": "2025-08-28T08:12:58.119Z",
+        "type": "text_analysis"
+      },
+      "574330749_298484005_1756368792220": {
+        "coach_id": 574330749,
+        "coach_name": "محمد همراه ۲",
+        "coach_role": "GROUP_ADMIN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2473,
+        "original_practice_message_id": 2403,
+        "analysis_time": "2025-08-28T08:13:12.220Z",
+        "type": "text_analysis"
+      },
+      "1114227010_1790308237_1756369987007": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2476,
+        "original_practice_message_id": 2182,
+        "analysis_time": "2025-08-28T08:33:07.008Z",
+        "type": "text_analysis"
       }
     }
   },
