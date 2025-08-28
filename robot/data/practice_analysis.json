@@ -12,6 +12,30 @@
         "original_practice_message_id": 2415,
         "analysis_time": "2025-08-28T06:33:20.007Z",
         "type": "text_analysis"
+      },
+      "1114227010_298484005_1756365454296": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2432,
+        "original_practice_message_id": 2403,
+        "analysis_time": "2025-08-28T07:17:34.296Z",
+        "type": "text_analysis"
+      },
+      "574330749_298484005_1756365472438": {
+        "coach_id": 574330749,
+        "coach_name": "محمد همراه ۲",
+        "coach_role": "GROUP_ADMIN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2434,
+        "original_practice_message_id": 2403,
+        "analysis_time": "2025-08-28T07:17:52.439Z",
+        "type": "text_analysis"
       }
     }
   },
