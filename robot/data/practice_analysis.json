@@ -73,8 +73,8 @@
         "analysis_time": "2025-08-28T08:02:47.807Z",
         "type": "text_analysis",
         "feedback": {
-          "rating": 4,
-          "rating_time": "2025-08-28T09:36:36.757Z"
+          "rating": 2,
+          "rating_time": "2025-08-28T09:54:33.481Z"
         }
       },
       "1114227010_1790308237_1756368516566": {
@@ -219,6 +219,18 @@
         "analysis_message_id": 2539,
         "original_practice_message_id": 2532,
         "analysis_time": "2025-08-28T09:36:09.229Z",
+        "type": "text_analysis"
+      },
+      "1114227010_1790308237_1756374777634": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2548,
+        "original_practice_message_id": 2545,
+        "analysis_time": "2025-08-28T09:52:57.634Z",
         "type": "text_analysis"
       }
     }

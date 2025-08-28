@@ -814,9 +814,11 @@ ${practiceList}
         return false;
       }
       
-      // حذف ارسال به گروه گزارش - نیازی نیست
-      // لیست اولیه فقط در گروه اصلی نمایش داده می‌شود
-      // لیست با نظرات به گروه گزارش ارسال می‌شود
+      // ارسال لیست تحلیل‌های امروز به گروه گزارش
+      const reportSent = await this.sendTodayAnalysisListToReportGroup(chatId);
+      if (!reportSent) {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to report group`);
+      }
       
       console.log(`✅ [PRACTICE_MANAGER] Practice analysis handled successfully`);
       return true;
@@ -924,7 +926,7 @@ ${practiceList}
     }
   }
 
-  // ارسال لیست تحلیل‌های امروز (بدون نمایش نظرات - برای گروه اصلی)
+  // ارسال لیست تحلیل‌های امروز
   async sendTodayAnalysisList(chatId) {
     try {
       const todayAnalyses = this.getTodayAnalyses();
@@ -1063,15 +1065,28 @@ ${practiceList}
     }
   }
 
-  // ارسال لیست تحلیل‌های امروز به گروه گزارش (با نمایش نظرات)
+  // ارسال لیست تحلیل‌های امروز به گروه گزارش
   async sendTodayAnalysisListToReportGroup(chatId) {
     try {
       const reportGroupId = 5668045453; // گروه گزارش
       const todayAnalyses = this.getTodayAnalyses();
-      const chatAnalyses = todayAnalyses.filter(analysis => analysis.chat_id === chatId);
+      
+      console.log(`🔍 [PRACTICE_MANAGER] sendTodayAnalysisListToReportGroup called with chatId: ${chatId}`);
+      console.log(`🔍 [PRACTICE_MANAGER] Total today analyses: ${todayAnalyses.length}`);
+      
+      // تبدیل chatId به string برای مقایسه دقیق
+      const chatIdStr = chatId.toString();
+      const chatAnalyses = todayAnalyses.filter(analysis => {
+        const analysisChatIdStr = analysis.chat_id.toString();
+        const match = analysisChatIdStr === chatIdStr;
+        console.log(`🔍 [PRACTICE_MANAGER] Comparing chat_id: ${analysisChatIdStr} vs ${chatIdStr} = ${match}`);
+        return match;
+      });
+      
+      console.log(`🔍 [PRACTICE_MANAGER] Filtered analyses for chat ${chatId}: ${chatAnalyses.length}`);
       
       if (chatAnalyses.length === 0) {
-        console.log('❌ [PRACTICE_MANAGER] No analyses found for today in this chat');
+        console.log(`❌ [PRACTICE_MANAGER] No analyses found for today in chat ${chatId}`);
         return false;
       }
       
