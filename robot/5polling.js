@@ -2628,6 +2628,38 @@ function startPolling() {
           // 🔄 جمع‌آوری خودکار اطلاعات کاربران از پیام‌های گروهی
           await autoCollectUserInfo(msg);
           
+          // 🎤 بررسی پیام تحلیل تمرین از مربی/کمک مربی (برای پیام‌های گروهی)
+          if ((msg.voice || msg.text) && msg.reply_to_message && msg.reply_to_message.voice) {
+            console.log('🎤 [POLLING] ===== PRACTICE ANALYSIS CHECK START (GROUP) =====');
+            console.log(`🎤 [POLLING] ${msg.voice ? 'Voice' : 'Text'} reply to voice from user: ${msg.from.id}`);
+            if (msg.text) {
+              console.log(`🎤 [POLLING] Text content: "${msg.text}"`);
+            }
+            
+            console.log('🎤 [POLLING] Calling practiceManager.isPracticeAnalysisMessage...');
+            const isAnalysis = practiceManager.isPracticeAnalysisMessage(msg);
+            console.log(`🎤 [POLLING] isPracticeAnalysisMessage result: ${isAnalysis ? '✅ YES' : '❌ NO'}`);
+            
+            if (isAnalysis) {
+              console.log('✅ [POLLING] Practice analysis message confirmed, calling handlePracticeAnalysis...');
+              try {
+                const handled = await practiceManager.handlePracticeAnalysis(msg);
+                console.log(`✅ [POLLING] handlePracticeAnalysis result: ${handled ? '✅ SUCCESS' : '❌ FAILED'}`);
+                if (handled) {
+                  console.log('✅ [POLLING] Practice analysis handled successfully, returning...');
+                  continue; // پایان پردازش، پیام توسط practiceManager مدیریت شد
+                } else {
+                  console.log('❌ [POLLING] handlePracticeAnalysis failed, continuing...');
+                }
+              } catch (error) {
+                console.error('❌ [POLLING] Error in handlePracticeAnalysis:', error);
+              }
+            } else {
+              console.log('❌ [POLLING] Not a practice analysis message, continuing...');
+            }
+            console.log('🎤 [POLLING] ===== PRACTICE ANALYSIS CHECK END (GROUP) =====');
+          }
+          
           // 📝 بررسی پیام "تلاوتم" (ریپلای به صوت خود کاربر) - برای پیام‌های گروهی
           if (msg.text && msg.reply_to_message && msg.reply_to_message.voice) {
             console.log('📝 [POLLING] ===== TALAWAT CHECK START (GROUP) =====');

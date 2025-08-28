@@ -722,13 +722,25 @@ ${practiceList}
         return false;
       }
       
-      // بررسی اینکه آیا کاربر ادمین است (مربی/کمک مربی)
+      // بررسی اینکه آیا کاربر ادمین است (هر نقش ادمین)
       const userId = message.from.id;
       const { USERS_BY_ROLE } = require('./3config');
-      const isSchoolAdmin = USERS_BY_ROLE.SCHOOL_ADMIN.some(admin => (typeof admin === 'object' ? admin.id : admin) === userId);
-      const isCoach = USERS_BY_ROLE.COACH.some(coach => (typeof coach === 'object' ? coach.id : coach) === userId);
-      const isAssistant = USERS_BY_ROLE.ASSISTANT.some(assistant => (typeof assistant === 'object' ? assistant.id : assistant) === userId);
-      const isAdmin = isSchoolAdmin || isCoach || isAssistant;
+      
+      // بررسی اینکه آیا کاربر در هر یک از نقش‌های ادمین قرار دارد
+      let isAdmin = false;
+      let userRole = null;
+      
+      // بررسی تمام نقش‌های موجود در USERS_BY_ROLE
+      Object.entries(USERS_BY_ROLE).forEach(([role, users]) => {
+        if (role !== 'STUDENT') { // فقط نقش‌های غیر دانش‌آموز
+          const hasRole = users.some(user => (typeof user === 'object' ? user.id : user) === userId);
+          if (hasRole) {
+            isAdmin = true;
+            userRole = role;
+            console.log(`✅ [PRACTICE_MANAGER] User ${userId} has admin role: ${role}`);
+          }
+        }
+      });
       
       if (!isAdmin) {
         console.log(`❌ [PRACTICE_MANAGER] User ${userId} is not admin/coach/assistant`);
@@ -743,7 +755,7 @@ ${practiceList}
       }
       
       const analysisType = isTextAnalysis ? "text_analysis" : "voice_analysis";
-      console.log(`✅ [PRACTICE_MANAGER] Practice analysis message detected from coach/assistant (type: ${analysisType})`);
+      console.log(`✅ [PRACTICE_MANAGER] Practice analysis message detected from admin with role ${userRole} (type: ${analysisType})`);
       return true;
     } catch (error) {
       console.error('❌ [PRACTICE_MANAGER] Error checking practice analysis message:', error);
@@ -799,8 +811,23 @@ ${practiceList}
       const coachName = message.from.first_name + (message.from.last_name ? ' ' + message.from.last_name : '');
       const originalMessage = message.reply_to_message;
       const studentId = originalMessage.from.id;
-      const studentName = originalMessage.from.first_name + (originalMessage.from.last_name ? ' ' + originalMessage.from.last_name : '');
+      const studentName = originalMessage.from.first_name + (originalMessage.last_name ? ' ' + originalMessage.last_name : '');
       const chatId = message.chat.id;
+      
+      // دریافت نقش کاربر
+      const { USERS_BY_ROLE } = require('./3config');
+      let userRole = 'UNKNOWN';
+      
+      // پیدا کردن نقش کاربر
+      Object.entries(USERS_BY_ROLE).forEach(([role, users]) => {
+        if (role !== 'STUDENT') {
+          const hasRole = users.some(user => (typeof user === 'object' ? user.id : user) === coachId);
+          if (hasRole) {
+            userRole = role;
+            console.log(`✅ [PRACTICE_MANAGER] User ${coachId} has role: ${role}`);
+          }
+        }
+      });
       
       if (!analysisData.analyses[today]) {
         analysisData.analyses[today] = {};
@@ -828,6 +855,7 @@ ${practiceList}
       analysisData.analyses[today][analysisId] = {
         coach_id: coachId,
         coach_name: coachName,
+        coach_role: userRole,
         student_id: studentId,
         student_name: studentName,
         chat_id: chatId,
@@ -838,7 +866,7 @@ ${practiceList}
       };
       
       fs.writeFileSync(analysisDataPath, JSON.stringify(analysisData, null, 2));
-      console.log(`✅ [PRACTICE_MANAGER] Practice analysis registered for ${studentName} by ${coachName}`);
+      console.log(`✅ [PRACTICE_MANAGER] Practice analysis registered for ${studentName} by ${coachName} (role: ${userRole})`);
       return true;
       
     } catch (error) {
@@ -875,7 +903,23 @@ ${practiceList}
       
       // نمایش تحلیل‌ها گروه‌بندی شده
       Object.keys(analysesByCoach).forEach((coachName, coachIndex) => {
-        listText += `تحلیل با: ${coachName}\n`;
+        // دریافت نقش کاربر از داده‌های تحلیل
+        let userRole = 'ادمین'; // مقدار پیش‌فرض
+        
+        // پیدا کردن نقش کاربر از اولین تحلیل این مربی
+        const firstAnalysis = analysesByCoach[coachName][0];
+        if (firstAnalysis && firstAnalysis.coach_role) {
+          // تبدیل نام نقش به فارسی
+          const roleDisplayNames = {
+            'SCHOOL_ADMIN': 'مدیر',
+            'GROUP_ADMIN': 'ادمین گروه',
+            'COACH': 'مربی',
+            'ASSISTANT': 'کمک مربی'
+          };
+          userRole = roleDisplayNames[firstAnalysis.coach_role] || firstAnalysis.coach_role;
+        }
+        
+        listText += `تحلیل با: (${userRole}) ${coachName}\n`;
         analysesByCoach[coachName].forEach((analysis, index) => {
           const analysisTime = moment(analysis.analysis_time).format('HH:mm');
           listText += `${index + 1}- ${analysis.student_name} (${analysisTime})\n`;
