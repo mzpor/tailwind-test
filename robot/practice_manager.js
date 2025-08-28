@@ -693,7 +693,7 @@ ${practiceList}
   }
 
   // بررسی اینکه آیا پیام تحلیل تمرین است
-  isPracticeAnalysisMessage(message) {
+  async isPracticeAnalysisMessage(message) {
     try {
       // خواندن کلمات کلیدی تحلیل از کانفیگ
       const settingsPath = './data/settings.json';
@@ -722,11 +722,12 @@ ${practiceList}
         return false;
       }
       
-      // بررسی اینکه آیا کاربر ادمین است (هر نقش ادمین)
+      // بررسی اینکه آیا کاربر ادمین است (هر نقش ادمین یا ادمین گروه)
       const userId = message.from.id;
-      const { USERS_BY_ROLE } = require('./3config');
+      const chatId = message.chat.id;
       
-      // بررسی اینکه آیا کاربر در هر یک از نقش‌های ادمین قرار دارد
+      // بررسی نقش‌های تعریف شده در USERS_BY_ROLE
+      const { USERS_BY_ROLE } = require('./3config');
       let isAdmin = false;
       let userRole = null;
       
@@ -742,8 +743,26 @@ ${practiceList}
         }
       });
       
+      // اگر کاربر نقش ادمین ندارد، بررسی کن که آیا ادمین گروه است
       if (!isAdmin) {
-        console.log(`❌ [PRACTICE_MANAGER] User ${userId} is not admin/coach/assistant`);
+        try {
+          const { getChatMember } = require('./4bale');
+          const memberInfo = await getChatMember(chatId, userId);
+          
+          if (memberInfo && (memberInfo.status === 'administrator' || memberInfo.status === 'creator')) {
+            isAdmin = true;
+            userRole = memberInfo.status === 'creator' ? 'GROUP_CREATOR' : 'GROUP_ADMIN';
+            console.log(`✅ [PRACTICE_MANAGER] User ${userId} is group admin with status: ${memberInfo.status}`);
+          } else {
+            console.log(`❌ [PRACTICE_MANAGER] User ${userId} is not group admin, status: ${memberInfo?.status || 'unknown'}`);
+          }
+        } catch (error) {
+          console.error('❌ [PRACTICE_MANAGER] Error checking group admin status:', error);
+        }
+      }
+      
+      if (!isAdmin) {
+        console.log(`❌ [PRACTICE_MANAGER] User ${userId} is not admin/coach/assistant or group admin`);
         return false;
       }
       
@@ -769,7 +788,7 @@ ${practiceList}
       const chatId = message.chat.id;
       const coachName = message.from.first_name + (message.from.last_name ? ' ' + message.from.last_name : '');
       const originalMessage = message.reply_to_message;
-      const studentName = originalMessage.from.first_name + (originalMessage.from.last_name ? ' ' + originalMessage.from.last_name : '');
+      const studentName = originalMessage.from.first_name + (originalMessage.last_name ? ' ' + originalMessage.last_name : '');
       
       console.log(`🎤 [PRACTICE_MANAGER] Practice analysis from ${coachName} for ${studentName}`);
       
@@ -814,20 +833,38 @@ ${practiceList}
       const studentName = originalMessage.from.first_name + (originalMessage.last_name ? ' ' + originalMessage.last_name : '');
       const chatId = message.chat.id;
       
-      // دریافت نقش کاربر
-      const { USERS_BY_ROLE } = require('./3config');
+      // دریافت نقش کاربر (شامل نقش‌های تعریف شده و ادمین گروه)
       let userRole = 'UNKNOWN';
       
-      // پیدا کردن نقش کاربر
+      // ابتدا بررسی نقش‌های تعریف شده در USERS_BY_ROLE
+      const { USERS_BY_ROLE } = require('./3config');
+      let isAdmin = false;
+      
       Object.entries(USERS_BY_ROLE).forEach(([role, users]) => {
         if (role !== 'STUDENT') {
           const hasRole = users.some(user => (typeof user === 'object' ? user.id : user) === coachId);
           if (hasRole) {
             userRole = role;
+            isAdmin = true;
             console.log(`✅ [PRACTICE_MANAGER] User ${coachId} has role: ${role}`);
           }
         }
       });
+      
+      // اگر نقش تعریف شده ندارد، بررسی ادمین گروه
+      if (!isAdmin) {
+        try {
+          const { getChatMember } = require('./4bale');
+          const memberInfo = await getChatMember(chatId, coachId);
+          
+          if (memberInfo && (memberInfo.status === 'administrator' || memberInfo.status === 'creator')) {
+            userRole = memberInfo.status === 'creator' ? 'GROUP_CREATOR' : 'GROUP_ADMIN';
+            console.log(`✅ [PRACTICE_MANAGER] User ${coachId} is group admin with status: ${memberInfo.status}`);
+          }
+        } catch (error) {
+          console.error('❌ [PRACTICE_MANAGER] Error checking group admin status in registerPracticeAnalysis:', error);
+        }
+      }
       
       if (!analysisData.analyses[today]) {
         analysisData.analyses[today] = {};
@@ -913,6 +950,7 @@ ${practiceList}
           const roleDisplayNames = {
             'SCHOOL_ADMIN': 'مدیر',
             'GROUP_ADMIN': 'ادمین گروه',
+            'GROUP_CREATOR': 'مالک گروه',
             'COACH': 'مربی',
             'ASSISTANT': 'کمک مربی'
           };

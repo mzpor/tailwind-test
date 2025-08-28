@@ -1,5 +1,20 @@
 {
-  "analyses": {},
+  "analyses": {
+    "2025-08-28": {
+      "1114227010_298484005_1756362800006": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2428,
+        "original_practice_message_id": 2415,
+        "analysis_time": "2025-08-28T06:33:20.007Z",
+        "type": "text_analysis"
+      }
+    }
+  },
   "settings": {
     "enabled": true,
     "auto_notify_student": true,
