@@ -1045,6 +1045,9 @@ ${practiceList}
         ],
         [
           { text: "📝 توضیح", callback_data: `feedback_explanation_${chatId}_${studentId}` }
+        ],
+        [
+          { text: "❌ لغو توضیح نظر", callback_data: `feedback_cancel_${chatId}_${studentId}` }
         ]
       ];
 

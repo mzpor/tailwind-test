@@ -721,83 +721,7 @@ async function handleRoleMessage(msg, role) {
     console.log('📝 [POLLING] ===== TALAWAT CHECK END =====');
   }
 
-  // 📝 بررسی پیام توضیح نظرسنجی از کاربر
-  if ((msg.text || msg.voice) && !msg.reply_to_message) {
-    console.log('📝 [POLLING] ===== FEEDBACK EXPLANATION CHECK START =====');
-    console.log(`📝 [POLLING] Message from user: ${msg.from.id}`);
-    console.log(`📝 [POLLING] Message type: ${msg.text ? 'text' : 'voice'}`);
-    if (msg.text) {
-      console.log(`📝 [POLLING] Text content: "${msg.text}"`);
-    }
-    
-    // بررسی اینکه آیا کاربر منتظر توضیح است
-    if (practiceManager.isUserWaitingForExplanation(msg.from.id)) {
-      console.log('✅ [POLLING] User is waiting for explanation, processing feedback...');
-      
-      try {
-        const explanationInfo = practiceManager.getUserExplanationInfo(msg.from.id);
-        const { chatId, studentId } = explanationInfo;
-        
-        console.log(`📝 [POLLING] Processing explanation for chat ${chatId}, student ${studentId}`);
-        
-        let explanationContent = '';
-        let explanationType = '';
-        
-        if (msg.text) {
-          explanationContent = msg.text;
-          explanationType = 'متنی';
-        } else if (msg.voice) {
-          explanationContent = 'پیام صوتی';
-          explanationType = 'صوتی';
-        }
-        
-        // ذخیره توضیح در سیستم
-        const explanationSaved = await practiceManager.saveFeedbackExplanation(chatId, studentId, explanationContent);
-        
-        if (explanationSaved) {
-          console.log('✅ [POLLING] Feedback explanation saved successfully');
-          
-          // ارسال پیام تشکر به کاربر
-          await sendMessage(msg.chat.id, '✅ توضیح شما ثبت شد');
-          
-          // ارسال توضیح به گروه گزارش
-          const reportGroupId = 5668045453;
-          const explanationReport = `📝 **توضیح نظرسنجی تحلیل تمرین**
 
-👤 دانش‌آموز: ${msg.from.first_name} ${msg.from.last_name || ''}
-🆔 شناسه: ${msg.from.id}
-💬 نوع توضیح: ${explanationType}
-💬 محتوا: ${explanationContent}
-📅 تاریخ: ${new Date().toLocaleString('fa-IR')}
-
-⏰ ${getTimeStamp()}`;
-          
-          await sendMessage(reportGroupId, explanationReport);
-          console.log('📤 [POLLING] Feedback explanation sent to report group');
-          
-          // پاک کردن وضعیت کاربر
-          practiceManager.clearUserExplanationStatus(msg.from.id);
-          
-          // حذف پیام توضیح از گروه اصلی
-          try {
-            await deleteMessage(msg.chat.id, msg.message_id);
-            console.log('🗑️ [POLLING] Explanation message deleted from main group');
-          } catch (error) {
-            console.log('⚠️ [POLLING] Could not delete explanation message:', error.message);
-          }
-          
-          return; // پایان پردازش، پیام توسط feedback handler مدیریت شد
-        } else {
-          console.log('❌ [POLLING] Failed to save feedback explanation');
-        }
-      } catch (error) {
-        console.error('❌ [POLLING] Error processing feedback explanation:', error);
-      }
-    } else {
-      console.log('❌ [POLLING] User is not waiting for explanation, continuing...');
-    }
-    console.log('📝 [POLLING] ===== FEEDBACK EXPLANATION CHECK END =====');
-  }
 
 
 
@@ -1235,6 +1159,8 @@ ${getAllUsersWithRoles().map(user => `• ${user.name} (${user.role})`).join('\n
     if (['ربات', 'bot', 'سلام', 'hi', 'hello', 'خداحافظ', 'bye'].includes(msg.text.toLowerCase())) {
       return;
     }
+    
+
     
     // 🔥 برای قرآن‌آموز، پیام مناسب‌تری نمایش بده
     if (role === ROLES.STUDENT) {
@@ -1815,12 +1741,42 @@ function startPolling() {
                 console.log(`✅ [POLLING] User ${callback_query.from.id} is the correct student for feedback`);
                 
                 if (feedbackType === 'explanation') {
-                  // درخواست توضیح
-                  await answerCallbackQuery(callback_query.id, '📝 لطفاً توضیح خود را وارد کنید:', false);
+                  // درخواست توضیح - ارسال پیام واضح در گروه
+                  const explanationPrompt = `📝 **درخواست توضیح نظرسنجی**
+
+👤 قرآن‌آموز عزیز: ${callback_query.from.first_name} ${callback_query.from.last_name || ''}
+💬 لطفاً نظر خود را برای تحلیل تمرین وارد کنید.
+
+💡 **نکات مهم:**
+• می‌توانید متن یا پیام صوتی ارسال کنید
+• توضیح شما به گروه مدیر ارسال می‌شود
+• پیام شما از این گروه حذف خواهد شد
+
+⏰ ${getTimeStamp()}`;
+                  
+                  // ارسال پیام واضح در گروه
+                  await sendMessage(callback_query.message.chat.id, explanationPrompt);
                   
                   // ذخیره وضعیت کاربر برای دریافت توضیح
                   const { practiceManager } = require('./practice_manager');
                   practiceManager.setUserWaitingForExplanation(callback_query.from.id, chatId, studentId);
+                  
+                  // پاسخ کوچک به callback
+                  await answerCallbackQuery(callback_query.id, '✅ پیام درخواست توضیح ارسال شد', false);
+                  
+                } else if (feedbackType === 'cancel') {
+                  // لغو درخواست توضیح
+                  console.log(`❌ [POLLING] User ${callback_query.from.id} cancelled explanation request`);
+                  
+                  // پاک کردن وضعیت کاربر
+                  const { practiceManager } = require('./practice_manager');
+                  practiceManager.clearUserExplanationStatus(callback_query.from.id);
+                  
+                  // ارسال پیام تأیید لغو
+                  await sendMessage(callback_query.message.chat.id, `✅ درخواست توضیح لغو شد`);
+                  
+                  // پاسخ کوچک به callback
+                  await answerCallbackQuery(callback_query.id, '✅ درخواست توضیح لغو شد', false);
                   
                 } else {
                   // ثبت امتیاز ستاره
@@ -2624,6 +2580,88 @@ function startPolling() {
         
         // اگر پیام text ندارد اما contact دارد، آن را پردازش کن
         if (!msg.text && !msg.contact) continue;
+
+        // 📝 بررسی پیام توضیح نظرسنجی از کاربر (قبل از پردازش گروهی)
+        if ((msg.text || msg.voice) && !msg.reply_to_message) {
+          console.log('📝 [POLLING] ===== FEEDBACK EXPLANATION CHECK START =====');
+          console.log(`📝 [POLLING] Message from user: ${msg.from.id}`);
+          console.log(`📝 [POLLING] Message type: ${msg.text ? 'text' : 'voice'}`);
+          if (msg.text) {
+            console.log(`📝 [POLLING] Text content: "${msg.text}"`);
+          }
+          
+          console.log(`📝 [POLLING] Checking if user ${msg.from.id} is waiting for explanation...`);
+          const isWaiting = practiceManager.isUserWaitingForExplanation(msg.from.id);
+          console.log(`📝 [POLLING] isUserWaitingForExplanation result: ${isWaiting ? '✅ YES' : '❌ NO'}`);
+          
+          // بررسی اینکه آیا کاربر منتظر توضیح است
+          if (isWaiting) {
+            console.log('✅ [POLLING] User is waiting for explanation, processing feedback...');
+            
+            try {
+              const explanationInfo = practiceManager.getUserExplanationInfo(msg.from.id);
+              const { chatId, studentId } = explanationInfo;
+              
+              console.log(`📝 [POLLING] Processing explanation for chat ${chatId}, student ${studentId}`);
+              
+              let explanationContent = '';
+              let explanationType = '';
+              
+              if (msg.text) {
+                explanationContent = msg.text;
+                explanationType = 'متنی';
+              } else if (msg.voice) {
+                explanationContent = 'پیام صوتی';
+                explanationType = 'صوتی';
+              }
+              
+              // ذخیره توضیح در سیستم
+              const explanationSaved = await practiceManager.saveFeedbackExplanation(chatId, studentId, explanationContent);
+              
+              if (explanationSaved) {
+                console.log('✅ [POLLING] Feedback explanation saved successfully');
+                
+                // ارسال پیام تشکر به کاربر
+                await sendMessage(msg.chat.id, '✅ توضیح شما ثبت شد');
+                
+                // ارسال توضیح به گروه گزارش
+                const reportGroupId = 5668045453;
+                const explanationReport = `📝 **توضیح نظرسنجی تحلیل تمرین**
+
+👤 دانش‌آموز: ${msg.from.first_name} ${msg.from.last_name || ''}
+🆔 شناسه: ${msg.from.id}
+💬 نوع توضیح: ${explanationType}
+💬 محتوا: ${explanationContent}
+📅 تاریخ: ${new Date().toLocaleString('fa-IR')}
+
+⏰ ${getTimeStamp()}`;
+                
+                await sendMessage(reportGroupId, explanationReport);
+                console.log('📤 [POLLING] Feedback explanation sent to report group');
+                
+                // پاک کردن وضعیت کاربر
+                practiceManager.clearUserExplanationStatus(msg.from.id);
+                
+                // حذف پیام توضیح از گروه اصلی
+                try {
+                  await deleteMessage(msg.chat.id, msg.message_id);
+                  console.log('🗑️ [POLLING] Explanation message deleted from main group');
+                } catch (error) {
+                  console.log('⚠️ [POLLING] Could not delete explanation message:', error.message);
+                }
+                
+                continue; // پایان پردازش، پیام توسط feedback handler مدیریت شد
+              } else {
+                console.log('❌ [POLLING] Failed to save feedback explanation');
+              }
+            } catch (error) {
+              console.error('❌ [POLLING] Error processing feedback explanation:', error);
+            }
+          } else {
+            console.log('❌ [POLLING] User is not waiting for explanation, continuing...');
+          }
+          console.log('📝 [POLLING] ===== FEEDBACK EXPLANATION CHECK END =====');
+        }
 
         // اگر گروه بود، دستورات گروه را پردازش کن
         if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
