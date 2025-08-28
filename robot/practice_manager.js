@@ -12,6 +12,7 @@ moment.loadPersian({ usePersianDigits: false });
 class PracticeManager {
   constructor() {
     console.log('✅ [PRACTICE_MANAGER] Practice Manager initialized successfully');
+    this.usersWaitingForExplanation = new Map(); // userId -> {chatId, studentId}
   }
 
   // بررسی اینکه آیا پیام "تلاوتم" است (ریپلای به صوت خود کاربر)
@@ -1133,6 +1134,120 @@ ${practiceList}
       console.error('❌ [PRACTICE_MANAGER] Error sending analysis list to report group:', error);
       return false;
     }
+  }
+
+  // ذخیره امتیاز نظرسنجی
+  async saveFeedbackRating(chatId, studentId, rating) {
+    try {
+      const analysisDataPath = './robot/data/practice_analysis.json';
+      let analysisData = { analyses: {} };
+      
+      if (fs.existsSync(analysisDataPath)) {
+        analysisData = JSON.parse(fs.readFileSync(analysisDataPath, 'utf8'));
+      }
+      
+      const today = moment().format('YYYY-MM-DD');
+      
+      // پیدا کردن تحلیل مربوط به این دانش‌آموز در این گروه
+      if (analysisData.analyses[today]) {
+        const analysisEntries = Object.entries(analysisData.analyses[today]);
+        const targetAnalysis = analysisEntries.find(([id, analysis]) => 
+          analysis.chat_id === chatId && analysis.student_id === studentId
+        );
+        
+        if (targetAnalysis) {
+          const [analysisId, analysis] = targetAnalysis;
+          
+          // اضافه کردن امتیاز به تحلیل
+          if (!analysis.feedback) {
+            analysis.feedback = {};
+          }
+          analysis.feedback.rating = rating;
+          analysis.feedback.rating_time = new Date().toISOString();
+          
+          // ذخیره تغییرات
+          fs.writeFileSync(analysisDataPath, JSON.stringify(analysisData, null, 2));
+          console.log(`✅ [PRACTICE_MANAGER] Feedback rating ${rating} saved for student ${studentId} in chat ${chatId}`);
+          return true;
+        }
+      }
+      
+      console.log(`❌ [PRACTICE_MANAGER] No analysis found for student ${studentId} in chat ${chatId}`);
+      return false;
+      
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error saving feedback rating:', error);
+      return false;
+    }
+  }
+
+  // ذخیره توضیح نظرسنجی
+  async saveFeedbackExplanation(chatId, studentId, explanation) {
+    try {
+      const analysisDataPath = './robot/data/practice_analysis.json';
+      let analysisData = { analyses: {} };
+      
+      if (fs.existsSync(analysisDataPath)) {
+        analysisData = JSON.parse(fs.readFileSync(analysisDataPath, 'utf8'));
+      }
+      
+      const today = moment().format('YYYY-MM-DD');
+      
+      // پیدا کردن تحلیل مربوط به این دانش‌آموز در این گروه
+      if (analysisData.analyses[today]) {
+        const analysisEntries = Object.entries(analysisData.analyses[today]);
+        const targetAnalysis = analysisEntries.find(([id, analysis]) => 
+          analysis.chat_id === chatId && analysis.student_id === studentId
+        );
+        
+        if (targetAnalysis) {
+          const [analysisId, analysis] = targetAnalysis;
+          
+          // اضافه کردن توضیح به تحلیل
+          if (!analysis.feedback) {
+            analysis.feedback = {};
+          }
+          analysis.feedback.explanation = explanation;
+          analysis.feedback.explanation_time = new Date().toISOString();
+          
+          // ذخیره تغییرات
+          fs.writeFileSync(analysisDataPath, JSON.stringify(analysisData, null, 2));
+          console.log(`✅ [PRACTICE_MANAGER] Feedback explanation saved for student ${studentId} in chat ${chatId}`);
+          return true;
+        }
+      }
+      
+      console.log(`❌ [PRACTICE_MANAGER] No analysis found for student ${studentId} in chat ${chatId}`);
+      return false;
+      
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error saving feedback explanation:', error);
+      return false;
+    }
+  }
+
+  // مدیریت وضعیت کاربران منتظر توضیح
+
+  // تنظیم وضعیت کاربر منتظر توضیح
+  setUserWaitingForExplanation(userId, chatId, studentId) {
+    this.usersWaitingForExplanation.set(userId, { chatId, studentId });
+    console.log(`📝 [PRACTICE_MANAGER] User ${userId} is now waiting for explanation for chat ${chatId}, student ${studentId}`);
+  }
+
+  // بررسی اینکه آیا کاربر منتظر توضیح است
+  isUserWaitingForExplanation(userId) {
+    return this.usersWaitingForExplanation.has(userId);
+  }
+
+  // دریافت اطلاعات توضیح کاربر
+  getUserExplanationInfo(userId) {
+    return this.usersWaitingForExplanation.get(userId);
+  }
+
+  // پاک کردن وضعیت کاربر بعد از دریافت توضیح
+  clearUserExplanationStatus(userId) {
+    this.usersWaitingForExplanation.delete(userId);
+    console.log(`✅ [PRACTICE_MANAGER] User ${userId} explanation status cleared`);
   }
 
   // دریافت وضعیت سیستم

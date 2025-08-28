@@ -144,6 +144,54 @@
         "original_practice_message_id": 2182,
         "analysis_time": "2025-08-28T08:40:03.869Z",
         "type": "text_analysis"
+      },
+      "574330749_574330749_1756370939147": {
+        "coach_id": 574330749,
+        "coach_name": "محمد همراه ۲",
+        "coach_role": "GROUP_ADMIN",
+        "student_id": 574330749,
+        "student_name": "محمد همراه ۲",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2518,
+        "original_practice_message_id": 2517,
+        "analysis_time": "2025-08-28T08:48:59.148Z",
+        "type": "voice_analysis"
+      },
+      "1790308237_1790308237_1756370992533": {
+        "coach_id": 1790308237,
+        "coach_name": "محمدایرانسل",
+        "coach_role": "UNKNOWN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2522,
+        "original_practice_message_id": 2521,
+        "analysis_time": "2025-08-28T08:49:52.533Z",
+        "type": "voice_analysis"
+      },
+      "1114227010_1790308237_1756371025528": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2525,
+        "original_practice_message_id": 2521,
+        "analysis_time": "2025-08-28T08:50:25.529Z",
+        "type": "text_analysis"
+      },
+      "1114227010_1790308237_1756371100796": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2528,
+        "original_practice_message_id": 2521,
+        "analysis_time": "2025-08-28T08:51:40.796Z",
+        "type": "text_analysis"
       }
     }
   },
