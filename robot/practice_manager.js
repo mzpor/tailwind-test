@@ -1,6 +1,7 @@
 // 🎯 مدیریت تمرین‌ها - نسخه 1.2.0
 // تشکر از ارسال تمرین صوتی و مدیریت ریپلای به صوتی
 // اضافه شده: مدیریت "تلاوتم" و لیست تمرین‌ها
+// اضافه شده: مدیریت تحلیل تمرین از مربی/کمک مربی
 
 const { sendMessage } = require('./4bale');
 const { getTimeStamp } = require('./1time');
@@ -688,6 +689,185 @@ ${practiceList}
     } catch (error) {
       console.error('❌ [PRACTICE_MANAGER] Error handling practice message:', error);
       return false;
+    }
+  }
+
+  // بررسی اینکه آیا پیام تحلیل تمرین است
+  isPracticeAnalysisMessage(message) {
+    try {
+      // بررسی اینکه آیا پیام صوتی است
+      if (!message.voice) {
+        return false;
+      }
+      // بررسی اینکه آیا ریپلای به پیام دیگری است
+      if (!message.reply_to_message) {
+        return false;
+      }
+      // بررسی اینکه آیا کاربر ادمین است (مربی/کمک مربی)
+      const userId = message.from.id;
+      const { USERS_BY_ROLE } = require('./3config');
+      const isSchoolAdmin = USERS_BY_ROLE.SCHOOL_ADMIN.some(admin => (typeof admin === 'object' ? admin.id : admin) === userId);
+      const isCoach = USERS_BY_ROLE.COACH.some(coach => (typeof coach === 'object' ? coach.id : coach) === userId);
+      const isAssistant = USERS_BY_ROLE.ASSISTANT.some(assistant => (typeof assistant === 'object' ? assistant.id : assistant) === userId);
+      const isAdmin = isSchoolAdmin || isCoach || isAssistant;
+      if (!isAdmin) {
+        return false;
+      }
+      // بررسی اینکه آیا پیام اصلی تمرین است (صوتی)
+      const originalMessage = message.reply_to_message;
+      if (!originalMessage.voice) {
+        return false;
+      }
+      console.log('✅ [PRACTICE_MANAGER] Practice analysis message detected from coach/assistant');
+      return true;
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error checking practice analysis message:', error);
+      return false;
+    }
+  }
+
+  // مدیریت پیام تحلیل تمرین
+  async handlePracticeAnalysis(message) {
+    try {
+      const chatId = message.chat.id;
+      const coachName = message.from.first_name + (message.from.last_name ? ' ' + message.from.last_name : '');
+      const originalMessage = message.reply_to_message;
+      const studentName = originalMessage.from.first_name + (originalMessage.from.last_name ? ' ' + originalMessage.from.last_name : '');
+      
+      console.log(`🎤 [PRACTICE_MANAGER] Practice analysis from ${coachName} for ${studentName}`);
+      
+      // ثبت تحلیل تمرین
+      const analysisRegistered = await this.registerPracticeAnalysis(message);
+      if (!analysisRegistered) {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to register practice analysis`);
+        return false;
+      }
+      
+      // ارسال لیست تحلیل‌های امروز
+      const listSent = await this.sendTodayAnalysisList(chatId);
+      if (!listSent) {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list`);
+        return false;
+      }
+      
+      console.log(`✅ [PRACTICE_MANAGER] Practice analysis handled successfully`);
+      return true;
+      
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error handling practice analysis:', error);
+      return false;
+    }
+  }
+
+  // ثبت تحلیل تمرین در فایل
+  async registerPracticeAnalysis(message) {
+    try {
+      const analysisDataPath = './robot/data/practice_analysis.json';
+      let analysisData = { analyses: {} };
+      
+      if (fs.existsSync(analysisDataPath)) {
+        analysisData = JSON.parse(fs.readFileSync(analysisDataPath, 'utf8'));
+      }
+      
+      const today = moment().format('YYYY-MM-DD');
+      const coachId = message.from.id;
+      const coachName = message.from.first_name + (message.from.last_name ? ' ' + message.from.last_name : '');
+      const originalMessage = message.reply_to_message;
+      const studentId = originalMessage.from.id;
+      const studentName = originalMessage.from.first_name + (originalMessage.from.last_name ? ' ' + originalMessage.from.last_name : '');
+      const chatId = message.chat.id;
+      
+      if (!analysisData.analyses[today]) {
+        analysisData.analyses[today] = {};
+      }
+      
+      const analysisId = `${coachId}_${studentId}_${Date.now()}`;
+      analysisData.analyses[today][analysisId] = {
+        coach_id: coachId,
+        coach_name: coachName,
+        student_id: studentId,
+        student_name: studentName,
+        chat_id: chatId,
+        analysis_message_id: message.message_id,
+        original_practice_message_id: originalMessage.message_id,
+        analysis_time: new Date().toISOString(),
+        type: "voice_analysis"
+      };
+      
+      fs.writeFileSync(analysisDataPath, JSON.stringify(analysisData, null, 2));
+      console.log(`✅ [PRACTICE_MANAGER] Practice analysis registered for ${studentName} by ${coachName}`);
+      return true;
+      
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error registering practice analysis:', error);
+      return false;
+    }
+  }
+
+  // ارسال لیست تحلیل‌های امروز
+  async sendTodayAnalysisList(chatId) {
+    try {
+      const todayAnalyses = this.getTodayAnalyses();
+      const chatAnalyses = todayAnalyses.filter(analysis => analysis.chat_id === chatId);
+      
+      if (chatAnalyses.length === 0) {
+        console.log('❌ [PRACTICE_MANAGER] No analyses found for today in this chat');
+        return false;
+      }
+      
+      // ایجاد متن لیست
+      const today = moment().format('jYYYY/jMM/jDD');
+      const dayName = this.getPersianDayName(moment().day());
+      
+      let listText = `📋 لیست تحلیل تمرین ${dayName} ${today}\n\n`;
+      
+      // تحلیل‌های انجام شده
+      chatAnalyses.forEach((analysis, index) => {
+        const analysisTime = moment(analysis.analysis_time).format('HH:mm');
+        listText += `${index + 1}- ${analysis.student_name} (${analysisTime})\n`;
+      });
+      
+      listText += `\n⏰ ${getTimeStamp()}`;
+      
+      const result = await sendMessage(chatId, listText);
+      
+      if (result) {
+        console.log(`✅ [PRACTICE_MANAGER] Analysis list sent successfully to ${chatId}`);
+        return true;
+      } else {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to ${chatId}`);
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error sending analysis list:', error);
+      return false;
+    }
+  }
+
+  // دریافت لیست تحلیل‌های امروز
+  getTodayAnalyses() {
+    try {
+      const analysisDataPath = './robot/data/practice_analysis.json';
+      if (!fs.existsSync(analysisDataPath)) {
+        return [];
+      }
+      
+      const analysisData = JSON.parse(fs.readFileSync(analysisDataPath, 'utf8'));
+      const today = moment().format('YYYY-MM-DD');
+      
+      if (!analysisData.analyses[today]) {
+        return [];
+      }
+      
+      const analyses = Object.values(analysisData.analyses[today]);
+      console.log(`📊 [PRACTICE_MANAGER] Found ${analyses.length} analyses for today`);
+      
+      return analyses;
+      
+    } catch (error) {
+      console.error('❌ [PRACTICE_MANAGER] Error getting today analyses:', error);
+      return [];
     }
   }
 
