@@ -1296,6 +1296,7 @@ function startPolling() {
             !callback_query.data.startsWith('back_to_workshops') &&
             !callback_query.data.startsWith('back_to_students_') &&
             !callback_query.data.startsWith('sabt_') &&
+            !callback_query.data.startsWith('feedback_') &&
             callback_query.data !== 'back_to_groups' &&
             callback_query.data !== 'back_to_main' &&
             callback_query.data !== 'kargah_management') {
@@ -1821,7 +1822,7 @@ function startPolling() {
                 }
               } else {
                 console.log(`❌ [POLLING] User ${callback_query.from.id} is not the correct student (${studentId})`);
-                await answerCallbackQuery(callback_query.id, '⚠️ فقط دانش‌آموز مورد نظر می‌تواند نظر دهد', true);
+                await answerCallbackQuery(callback_query.id, '', false);
               }
             } else {
               console.log(`❌ [POLLING] Invalid feedback callback data: ${callback_query.data}`);

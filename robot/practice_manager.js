@@ -814,7 +814,11 @@ ${practiceList}
         return false;
       }
       
-      // حذف ارسال به گروه گزارش - نیازی نیست
+      // ارسال لیست تحلیل‌های امروز به گروه گزارش
+      const reportSent = await this.sendTodayAnalysisListToReportGroup(chatId);
+      if (!reportSent) {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to report group`);
+      }
       
       console.log(`✅ [PRACTICE_MANAGER] Practice analysis handled successfully`);
       return true;
@@ -1149,11 +1153,21 @@ ${practiceList}
       const today = moment().format('YYYY-MM-DD');
       
       // پیدا کردن تحلیل مربوط به این دانش‌آموز در این گروه
+      console.log(`🔍 [PRACTICE_MANAGER] Looking for analysis - Chat ID: ${chatId}, Student ID: ${studentId}`);
+      console.log(`🔍 [PRACTICE_MANAGER] Today: ${today}`);
+      console.log(`🔍 [PRACTICE_MANAGER] Available analyses:`, analysisData.analyses[today]);
+      
       if (analysisData.analyses[today]) {
         const analysisEntries = Object.entries(analysisData.analyses[today]);
-        const targetAnalysis = analysisEntries.find(([id, analysis]) => 
-          analysis.chat_id === chatId && analysis.student_id === studentId
-        );
+        console.log(`🔍 [PRACTICE_MANAGER] Analysis entries:`, analysisEntries);
+        
+        const targetAnalysis = analysisEntries.find(([id, analysis]) => {
+          const chatMatch = analysis.chat_id.toString() === chatId.toString();
+          const studentMatch = analysis.student_id.toString() === studentId.toString();
+          console.log(`🔍 [PRACTICE_MANAGER] Checking analysis ${id}: chat_id=${analysis.chat_id}(${typeof analysis.chat_id}) vs ${chatId}(${typeof chatId}) = ${chatMatch}`);
+          console.log(`🔍 [PRACTICE_MANAGER] Checking analysis ${id}: student_id=${analysis.student_id}(${typeof analysis.student_id}) vs ${studentId}(${typeof studentId}) = ${studentMatch}`);
+          return chatMatch && studentMatch;
+        });
         
         if (targetAnalysis) {
           const [analysisId, analysis] = targetAnalysis;
@@ -1194,11 +1208,21 @@ ${practiceList}
       const today = moment().format('YYYY-MM-DD');
       
       // پیدا کردن تحلیل مربوط به این دانش‌آموز در این گروه
+      console.log(`🔍 [PRACTICE_MANAGER] Looking for analysis explanation - Chat ID: ${chatId}, Student ID: ${studentId}`);
+      console.log(`🔍 [PRACTICE_MANAGER] Today: ${today}`);
+      console.log(`🔍 [PRACTICE_MANAGER] Available analyses:`, analysisData.analyses[today]);
+      
       if (analysisData.analyses[today]) {
         const analysisEntries = Object.entries(analysisData.analyses[today]);
-        const targetAnalysis = analysisEntries.find(([id, analysis]) => 
-          analysis.chat_id === chatId && analysis.student_id === studentId
-        );
+        console.log(`🔍 [PRACTICE_MANAGER] Analysis entries for explanation:`, analysisEntries);
+        
+        const targetAnalysis = analysisEntries.find(([id, analysis]) => {
+          const chatMatch = analysis.chat_id.toString() === chatId.toString();
+          const studentMatch = analysis.student_id.toString() === studentId.toString();
+          console.log(`🔍 [PRACTICE_MANAGER] Checking analysis explanation ${id}: chat_id=${analysis.chat_id}(${typeof analysis.chat_id}) vs ${chatId}(${typeof chatId}) = ${chatMatch}`);
+          console.log(`🔍 [PRACTICE_MANAGER] Checking analysis explanation ${id}: student_id=${analysis.student_id}(${typeof analysis.student_id}) vs ${studentId}(${typeof studentId}) = ${studentMatch}`);
+          return chatMatch && studentMatch;
+        });
         
         if (targetAnalysis) {
           const [analysisId, analysis] = targetAnalysis;
