@@ -814,11 +814,9 @@ ${practiceList}
         return false;
       }
       
-      // ارسال لیست تحلیل‌های امروز به گروه گزارش
-      const reportSent = await this.sendTodayAnalysisListToReportGroup(chatId);
-      if (!reportSent) {
-        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to report group`);
-      }
+      // حذف ارسال به گروه گزارش - نیازی نیست
+      // لیست اولیه فقط در گروه اصلی نمایش داده می‌شود
+      // لیست با نظرات به گروه گزارش ارسال می‌شود
       
       console.log(`✅ [PRACTICE_MANAGER] Practice analysis handled successfully`);
       return true;
@@ -926,7 +924,7 @@ ${practiceList}
     }
   }
 
-  // ارسال لیست تحلیل‌های امروز
+  // ارسال لیست تحلیل‌های امروز (بدون نمایش نظرات - برای گروه اصلی)
   async sendTodayAnalysisList(chatId) {
     try {
       const todayAnalyses = this.getTodayAnalyses();
@@ -1065,7 +1063,7 @@ ${practiceList}
     }
   }
 
-  // ارسال لیست تحلیل‌های امروز به گروه گزارش
+  // ارسال لیست تحلیل‌های امروز به گروه گزارش (با نمایش نظرات)
   async sendTodayAnalysisListToReportGroup(chatId) {
     try {
       const reportGroupId = 5668045453; // گروه گزارش
@@ -1114,7 +1112,19 @@ ${practiceList}
         listText += `تحلیل با: (${userRole}) ${coachName}\n`;
         analysesByCoach[coachName].forEach((analysis, index) => {
           const analysisTime = moment(analysis.analysis_time).format('HH:mm');
-          listText += `${index + 1}- ${analysis.student_name} (${analysisTime})\n`;
+          let feedbackInfo = '';
+          
+          // نمایش اطلاعات نظرات در گروه گزارش
+          if (analysis.feedback) {
+            if (analysis.feedback.rating) {
+              feedbackInfo += ` ⭐${'⭐'.repeat(analysis.feedback.rating - 1)}`;
+            }
+            if (analysis.feedback.explanation) {
+              feedbackInfo += ` (ثبت نظر قرآن‌آموز)`;
+            }
+          }
+          
+          listText += `${index + 1}- ${analysis.student_name} (${analysisTime})${feedbackInfo}\n`;
         });
         if (coachIndex < Object.keys(analysesByCoach).length - 1) {
           listText += '\n';
@@ -1182,6 +1192,15 @@ ${practiceList}
           // ذخیره تغییرات
           fs.writeFileSync(analysisDataPath, JSON.stringify(analysisData, null, 2));
           console.log(`✅ [PRACTICE_MANAGER] Feedback rating ${rating} saved for student ${studentId} in chat ${chatId}`);
+          
+          // ارسال لیست به‌روز شده به گروه گزارش
+          try {
+            await this.sendTodayAnalysisListToReportGroup(chatId);
+            console.log(`✅ [PRACTICE_MANAGER] Updated analysis list sent to report group after rating`);
+          } catch (error) {
+            console.error(`❌ [PRACTICE_MANAGER] Failed to send updated analysis list to report group:`, error);
+          }
+          
           return true;
         }
       }
@@ -1237,6 +1256,15 @@ ${practiceList}
           // ذخیره تغییرات
           fs.writeFileSync(analysisDataPath, JSON.stringify(analysisData, null, 2));
           console.log(`✅ [PRACTICE_MANAGER] Feedback explanation saved for student ${studentId} in chat ${chatId}`);
+          
+          // ارسال لیست به‌روز شده به گروه گزارش
+          try {
+            await this.sendTodayAnalysisListToReportGroup(chatId);
+            console.log(`✅ [PRACTICE_MANAGER] Updated analysis list sent to report group after explanation`);
+          } catch (error) {
+            console.error(`❌ [PRACTICE_MANAGER] Failed to send updated analysis list to report group:`, error);
+          }
+          
           return true;
         }
       }
