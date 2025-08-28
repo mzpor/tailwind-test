@@ -1741,7 +1741,7 @@ function startPolling() {
                 console.log(`✅ [POLLING] User ${callback_query.from.id} is the correct student for feedback`);
                 
                 if (feedbackType === 'explanation') {
-                  // درخواست توضیح - ارسال پیام واضح در گروه
+                  // درخواست توضیح - ارسال پیام واضح در گروه با کیبورد لغو
                   const explanationPrompt = `📝 **درخواست توضیح نظرسنجی**
 
 👤 قرآن‌آموز عزیز: ${callback_query.from.first_name} ${callback_query.from.last_name || ''}
@@ -1754,8 +1754,13 @@ function startPolling() {
 
 ⏰ ${getTimeStamp()}`;
                   
-                  // ارسال پیام واضح در گروه
-                  await sendMessage(callback_query.message.chat.id, explanationPrompt);
+                  // ایجاد کیبورد لغو توضیح
+                  const cancelKeyboard = [
+                    [{ text: "❌ لغو توضیح نظر", callback_data: `feedback_cancel_${chatId}_${studentId}` }]
+                  ];
+                  
+                  // ارسال پیام واضح در گروه با کیبورد لغو
+                  await sendMessageWithInlineKeyboard(callback_query.message.chat.id, explanationPrompt, cancelKeyboard);
                   
                   // ذخیره وضعیت کاربر برای دریافت توضیح
                   const { practiceManager } = require('./practice_manager');
@@ -2589,6 +2594,9 @@ function startPolling() {
           if (msg.text) {
             console.log(`📝 [POLLING] Text content: "${msg.text}"`);
           }
+          if (msg.voice) {
+            console.log(`📝 [POLLING] Voice message detected, duration: ${msg.voice.duration}s`);
+          }
           
           console.log(`📝 [POLLING] Checking if user ${msg.from.id} is waiting for explanation...`);
           const isWaiting = practiceManager.isUserWaitingForExplanation(msg.from.id);
@@ -2621,8 +2629,9 @@ function startPolling() {
               if (explanationSaved) {
                 console.log('✅ [POLLING] Feedback explanation saved successfully');
                 
-                // ارسال پیام تشکر به کاربر
-                await sendMessage(msg.chat.id, '✅ توضیح شما ثبت شد');
+                // ارسال پیام تشکر به کاربر با نام
+                const userName = msg.from.first_name + (msg.from.last_name ? ' ' + msg.from.last_name : '');
+                await sendMessage(msg.chat.id, `✅ توضیح ${userName} ثبت شد`);
                 
                 // ارسال توضیح به گروه گزارش
                 const reportGroupId = 5668045453;
@@ -2644,10 +2653,20 @@ function startPolling() {
                 
                 // حذف پیام توضیح از گروه اصلی
                 try {
-                  await deleteMessage(msg.chat.id, msg.message_id);
-                  console.log('🗑️ [POLLING] Explanation message deleted from main group');
+                  console.log(`🗑️ [POLLING] Attempting to delete message ${msg.message_id} from chat ${msg.chat.id}`);
+                  console.log(`🗑️ [POLLING] Message object:`, JSON.stringify(msg, null, 2));
+                  
+                  // بررسی اینکه آیا پیام قابل حذف است
+                  if (msg.message_id && msg.chat && msg.chat.id) {
+                    const deleteResult = await deleteMessage(msg.chat.id, msg.message_id);
+                    console.log('🗑️ [POLLING] Delete message result:', deleteResult);
+                    console.log('🗑️ [POLLING] Explanation message deleted from main group');
+                  } else {
+                    console.log('⚠️ [POLLING] Message object is missing required properties for deletion');
+                  }
                 } catch (error) {
                   console.log('⚠️ [POLLING] Could not delete explanation message:', error.message);
+                  console.log('⚠️ [POLLING] Error details:', error);
                 }
                 
                 continue; // پایان پردازش، پیام توسط feedback handler مدیریت شد
