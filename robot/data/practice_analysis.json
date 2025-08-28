@@ -132,6 +132,18 @@
         "original_practice_message_id": 2182,
         "analysis_time": "2025-08-28T08:33:07.008Z",
         "type": "text_analysis"
+      },
+      "1114227010_1790308237_1756370403869": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2483,
+        "original_practice_message_id": 2182,
+        "analysis_time": "2025-08-28T08:40:03.869Z",
+        "type": "text_analysis"
       }
     }
   },

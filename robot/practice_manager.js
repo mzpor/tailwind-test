@@ -813,11 +813,7 @@ ${practiceList}
         return false;
       }
       
-      // ارسال لیست تحلیل‌های امروز به گروه گزارش (برای مدیر)
-      const reportSent = await this.sendTodayAnalysisListToReportGroup(chatId);
-      if (!reportSent) {
-        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to report group`);
-      }
+      // حذف ارسال به گروه گزارش - نیازی نیست
       
       console.log(`✅ [PRACTICE_MANAGER] Practice analysis handled successfully`);
       return true;
@@ -1034,20 +1030,18 @@ ${practiceList}
 👤 تحلیل‌کننده: ${coachName}
 📝 ${studentName} عزیز، لطفاً نظر خود را برای این تحلیل بیان کنید:`;
 
-      const keyboard = {
-        inline_keyboard: [
-          [
-            { text: "1 ⭐", callback_data: `feedback_1_${chatId}_${studentId}` },
-            { text: "2 ⭐⭐", callback_data: `feedback_2_${chatId}_${studentId}` },
-            { text: "3 ⭐⭐⭐", callback_data: `feedback_3_${chatId}_${studentId}` },
-            { text: "4 ⭐⭐⭐⭐", callback_data: `feedback_4_${chatId}_${studentId}` },
-            { text: "5 ⭐⭐⭐⭐⭐", callback_data: `feedback_5_${chatId}_${studentId}` }
-          ],
-          [
-            { text: "📝 توضیح", callback_data: `feedback_explanation_${chatId}_${studentId}` }
-          ]
+      const keyboard = [
+        [
+          { text: "1 ⭐", callback_data: `feedback_1_${chatId}_${studentId}` },
+          { text: "2 ⭐⭐", callback_data: `feedback_2_${chatId}_${studentId}` },
+          { text: "3 ⭐⭐⭐", callback_data: `feedback_3_${chatId}_${studentId}` },
+          { text: "4 ⭐⭐⭐⭐", callback_data: `feedback_4_${chatId}_${studentId}` },
+          { text: "5 ⭐⭐⭐⭐⭐", callback_data: `feedback_5_${chatId}_${studentId}` }
+        ],
+        [
+          { text: "📝 توضیح", callback_data: `feedback_explanation_${chatId}_${studentId}` }
         ]
-      };
+      ];
 
       // ارسال کیبورد به گروه
       const result = await sendMessageWithInlineKeyboard(chatId, message, keyboard);
