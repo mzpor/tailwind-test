@@ -722,10 +722,13 @@ async function handleRoleMessage(msg, role) {
   }
 
   // 📝 بررسی پیام توضیح نظرسنجی از کاربر
-  if (msg.text && !msg.reply_to_message) {
+  if ((msg.text || msg.voice) && !msg.reply_to_message) {
     console.log('📝 [POLLING] ===== FEEDBACK EXPLANATION CHECK START =====');
-    console.log(`📝 [POLLING] Text message from user: ${msg.from.id}`);
-    console.log(`📝 [POLLING] Text content: "${msg.text}"`);
+    console.log(`📝 [POLLING] Message from user: ${msg.from.id}`);
+    console.log(`📝 [POLLING] Message type: ${msg.text ? 'text' : 'voice'}`);
+    if (msg.text) {
+      console.log(`📝 [POLLING] Text content: "${msg.text}"`);
+    }
     
     // بررسی اینکه آیا کاربر منتظر توضیح است
     if (practiceManager.isUserWaitingForExplanation(msg.from.id)) {
@@ -737,8 +740,19 @@ async function handleRoleMessage(msg, role) {
         
         console.log(`📝 [POLLING] Processing explanation for chat ${chatId}, student ${studentId}`);
         
+        let explanationContent = '';
+        let explanationType = '';
+        
+        if (msg.text) {
+          explanationContent = msg.text;
+          explanationType = 'متنی';
+        } else if (msg.voice) {
+          explanationContent = 'پیام صوتی';
+          explanationType = 'صوتی';
+        }
+        
         // ذخیره توضیح در سیستم
-        const explanationSaved = await practiceManager.saveFeedbackExplanation(chatId, studentId, msg.text);
+        const explanationSaved = await practiceManager.saveFeedbackExplanation(chatId, studentId, explanationContent);
         
         if (explanationSaved) {
           console.log('✅ [POLLING] Feedback explanation saved successfully');
@@ -752,7 +766,8 @@ async function handleRoleMessage(msg, role) {
 
 👤 دانش‌آموز: ${msg.from.first_name} ${msg.from.last_name || ''}
 🆔 شناسه: ${msg.from.id}
-💬 توضیح: ${msg.text}
+💬 نوع توضیح: ${explanationType}
+💬 محتوا: ${explanationContent}
 📅 تاریخ: ${new Date().toLocaleString('fa-IR')}
 
 ⏰ ${getTimeStamp()}`;
@@ -783,6 +798,8 @@ async function handleRoleMessage(msg, role) {
     }
     console.log('📝 [POLLING] ===== FEEDBACK EXPLANATION CHECK END =====');
   }
+
+
 
   const config = roleConfig[role];
   if (!config) {
@@ -2741,41 +2758,7 @@ function startPolling() {
           // 🔄 جمع‌آوری خودکار اطلاعات کاربران از پیام‌های گروهی
           await autoCollectUserInfo(msg);
           
-          // 📝 بررسی پیام "تلاوتم" (ریپلای به صوت خود کاربر) - برای پیام‌های گروهی
-          // این باید قبل از تحلیل بررسی شود تا اولویت داشته باشد
-          if (msg.text && msg.reply_to_message && msg.reply_to_message.voice) {
-            console.log('📝 [POLLING] ===== TALAWAT CHECK START (GROUP) =====');
-            console.log(`📝 [POLLING] Text: "${msg.text}"`);
-            console.log(`📝 [POLLING] Reply to voice: ${msg.reply_to_message.voice ? '✅ YES' : '❌ NO'}`);
-            console.log(`📝 [POLLING] User ID: ${msg.from.id}, Reply User ID: ${msg.reply_to_message.from.id}`);
-            console.log(`📝 [POLLING] Same user: ${msg.from.id === msg.reply_to_message.from.id ? '✅ YES' : '❌ NO'}`);
-            
-            console.log('📝 [POLLING] Calling practiceManager.isTalawatMessage...');
-            const isTalawat = practiceManager.isTalawatMessage(msg);
-            console.log(`📝 [POLLING] isTalawatMessage result: ${isTalawat ? '✅ YES' : '❌ NO'}`);
-            
-            if (isTalawat) {
-              console.log('✅ [POLLING] Talawat message confirmed, calling handleTalawatMessage...');
-              try {
-                const handled = await practiceManager.handleTalawatMessage(msg);
-                console.log(`✅ [POLLING] handleTalawatMessage result: ${handled ? '✅ SUCCESS' : '❌ FAILED'}`);
-                if (handled) {
-                  console.log('✅ [POLLING] Talawat message handled successfully, returning...');
-                  continue; // پایان پردازش، پیام توسط practiceManager مدیریت شد
-                } else {
-                  console.log('❌ [POLLING] handleTalawatMessage failed, continuing...');
-                }
-              } catch (error) {
-                console.error('❌ [POLLING] Error in handleTalawatMessage:', error);
-              }
-            } else {
-              console.log('❌ [POLLING] Not a talawat message, continuing...');
-            }
-            console.log('📝 [POLLING] ===== TALAWAT CHECK END (GROUP) =====');
-          }
-          
           // 🎤 بررسی پیام تحلیل تمرین از مربی/کمک مربی (برای پیام‌های گروهی)
-          // این باید بعد از تلاوتم بررسی شود
           if ((msg.voice || msg.text) && msg.reply_to_message && msg.reply_to_message.voice) {
             console.log('🎤 [POLLING] ===== PRACTICE ANALYSIS CHECK START (GROUP) =====');
             console.log(`🎤 [POLLING] ${msg.voice ? 'Voice' : 'Text'} reply to voice from user: ${msg.from.id}`);
@@ -2805,6 +2788,38 @@ function startPolling() {
               console.log('❌ [POLLING] Not a practice analysis message, continuing...');
             }
             console.log('🎤 [POLLING] ===== PRACTICE ANALYSIS CHECK END (GROUP) =====');
+          }
+          
+          // 📝 بررسی پیام "تلاوتم" (ریپلای به صوت خود کاربر) - برای پیام‌های گروهی
+          if (msg.text && msg.reply_to_message && msg.reply_to_message.voice) {
+            console.log('📝 [POLLING] ===== TALAWAT CHECK START (GROUP) =====');
+            console.log(`📝 [POLLING] Text: "${msg.text}"`);
+            console.log(`📝 [POLLING] Reply to voice: ${msg.reply_to_message.voice ? '✅ YES' : '❌ NO'}`);
+            console.log(`📝 [POLLING] User ID: ${msg.from.id}, Reply User ID: ${msg.reply_to_message.from.id}`);
+            console.log(`📝 [POLLING] Same user: ${msg.from.id === msg.reply_to_message.from.id ? '✅ YES' : '❌ NO'}`);
+            
+            console.log('📝 [POLLING] Calling practiceManager.isTalawatMessage...');
+            const isTalawat = practiceManager.isTalawatMessage(msg);
+            console.log(`📝 [POLLING] isTalawatMessage result: ${isTalawat ? '✅ YES' : '❌ NO'}`);
+            
+            if (isTalawat) {
+              console.log('✅ [POLLING] Talawat message confirmed, calling handleTalawatMessage...');
+              try {
+                const handled = await practiceManager.handleTalawatMessage(msg);
+                console.log(`✅ [POLLING] handleTalawatMessage result: ${handled ? '✅ SUCCESS' : '❌ FAILED'}`);
+                if (handled) {
+                  console.log('✅ [POLLING] Talawat message handled successfully, returning...');
+                  continue; // پایان پردازش، پیام توسط practiceManager مدیریت شد
+                } else {
+                  console.log('❌ [POLLING] handleTalawatMessage failed, continuing...');
+                }
+              } catch (error) {
+                console.error('❌ [POLLING] Error in handleTalawatMessage:', error);
+              }
+            } else {
+              console.log('❌ [POLLING] Not a talawat message, continuing...');
+            }
+            console.log('📝 [POLLING] ===== TALAWAT CHECK END (GROUP) =====');
           }
           
           // دستورات غیرمجاز برای اعضا
