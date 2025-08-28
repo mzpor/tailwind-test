@@ -36,6 +36,42 @@
         "original_practice_message_id": 2403,
         "analysis_time": "2025-08-28T07:17:52.439Z",
         "type": "text_analysis"
+      },
+      "1114227010_298484005_1756367325269": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2439,
+        "original_practice_message_id": 2403,
+        "analysis_time": "2025-08-28T07:48:45.269Z",
+        "type": "text_analysis"
+      },
+      "574330749_298484005_1756367436257": {
+        "coach_id": 574330749,
+        "coach_name": "محمد همراه ۲",
+        "coach_role": "GROUP_ADMIN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2441,
+        "original_practice_message_id": 2403,
+        "analysis_time": "2025-08-28T07:50:36.258Z",
+        "type": "text_analysis"
+      },
+      "1114227010_1790308237_1756368167807": {
+        "coach_id": 1114227010,
+        "coach_name": "محمد همراه ۱",
+        "coach_role": "SCHOOL_ADMIN",
+        "student_id": 1790308237,
+        "student_name": "محمدایرانسل",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2443,
+        "original_practice_message_id": 2182,
+        "analysis_time": "2025-08-28T08:02:47.807Z",
+        "type": "text_analysis"
       }
     }
   },

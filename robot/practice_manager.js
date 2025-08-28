@@ -789,6 +789,7 @@ ${practiceList}
       const coachName = message.from.first_name + (message.from.last_name ? ' ' + message.from.last_name : '');
       const originalMessage = message.reply_to_message;
       const studentName = originalMessage.from.first_name + (originalMessage.last_name ? ' ' + originalMessage.last_name : '');
+      const studentId = originalMessage.from.id;
       
       console.log(`🎤 [PRACTICE_MANAGER] Practice analysis from ${coachName} for ${studentName}`);
       
@@ -799,10 +800,16 @@ ${practiceList}
         return false;
       }
       
-      // ارسال لیست تحلیل‌های امروز
-      const listSent = await this.sendTodayAnalysisList(chatId);
+      // ارسال کیبورد نظرسنجی به گروه
+      const feedbackSent = await this.sendFeedbackKeyboardToStudent(studentId, chatId, studentName, coachName);
+      if (!feedbackSent) {
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send feedback keyboard to group`);
+      }
+      
+      // ارسال لیست تحلیل‌های امروز به گروه گزارش
+      const listSent = await this.sendTodayAnalysisListToReportGroup(chatId);
       if (!listSent) {
-        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list`);
+        console.error(`❌ [PRACTICE_MANAGER] Failed to send analysis list to report group`);
         return false;
       }
       
