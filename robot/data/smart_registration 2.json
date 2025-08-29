@@ -1,0 +1,91 @@
+{
+  "userStates": {
+    "12345": {
+      "step": "welcome",
+      "data": {},
+      "timestamp": 1755404894948
+    },
+    "95519970": {
+      "step": "phone",
+      "data": {},
+      "timestamp": 1755442783406
+    },
+    "275722632": {
+      "step": "completed",
+      "data": {
+        "phone": "989027040993",
+        "userRole": "quran_student",
+        "fullName": "مهدی رشتبری",
+        "firstName": "مهدی",
+        "lastName": "رشتبری"
+      },
+      "timestamp": 1755442939958
+    },
+    "574330749": {
+      "step": "completed",
+      "data": {
+        "phone": "989942878984",
+        "userRole": "quran_student",
+        "fullName": "قرآن‌آموز",
+        "firstName": "قرآن",
+        "lastName": "آموز"
+      },
+      "timestamp": 1755404996762
+    },
+    "888888888": {
+      "step": "welcome",
+      "data": {},
+      "timestamp": 1755404389049
+    },
+    "999999999": {
+      "step": "welcome",
+      "data": {},
+      "timestamp": 1755404389041
+    },
+    "1790308237": {
+      "step": "completed",
+      "data": {
+        "phone": "989339253803",
+        "fullName": "ایرانسل",
+        "firstName": "ایرانسل",
+        "lastName": "",
+        "userRole": "assistant"
+      },
+      "timestamp": 1755401519869
+    },
+    "1914261376": {
+      "step": "completed",
+      "data": {
+        "phone": "989305412814",
+        "userRole": "quran_student",
+        "fullName": "علی محرابی",
+        "firstName": "علی",
+        "lastName": "محرابی",
+        "workshopId": "w-1404-03",
+        "month": "1404/05",
+        "paymentStatus": "paid",
+        "coachId": "7",
+        "registrationDate": "2025-08-16"
+      },
+      "timestamp": 1755359957501
+    },
+    "2045777722": {
+      "step": "completed",
+      "data": {
+        "phone": "989222507759",
+        "userRole": "quran_student",
+        "fullName": "رایتل زارع",
+        "firstName": "رایتل",
+        "lastName": "زارع",
+        "workshopId": "w-1404-04",
+        "month": "1404/05",
+        "paymentStatus": "paid",
+        "coachId": "7",
+        "registrationDate": "2025-08-16"
+      },
+      "timestamp": 1755364947725
+    },
+    "1755170093362": {}
+  },
+  "lastUpdated": "2025-08-17T15:02:52.823Z"
+}
