@@ -466,7 +466,7 @@ class PracticeManager {
   // ثبت تمرین در فایل داده‌ها
   async registerPractice(message) {
     try {
-      const practiceDataPath = '../data/practice_data.json';
+      const practiceDataPath = './data/practice_data.json';
       let practiceData = {
         daily_practices: {},
         practice_schedule: { enabled: 1, hours: [], days: [] }
@@ -515,7 +515,7 @@ class PracticeManager {
   // دریافت لیست تمرین‌های امروز
   getTodayPractices() {
     try {
-      const practiceDataPath = '../data/practice_data.json';
+      const practiceDataPath = './data/practice_data.json';
       if (!fs.existsSync(practiceDataPath)) {
         return [];
       }

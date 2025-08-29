@@ -254,6 +254,54 @@
           "explanation": "تقتثمف",
           "explanation_time": "2025-08-29T10:03:13.474Z"
         }
+      },
+      "298484005_298484005_1756464113087": {
+        "coach_id": 298484005,
+        "coach_name": "مهدی رشتبری",
+        "coach_role": "UNKNOWN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2756,
+        "original_practice_message_id": 2755,
+        "analysis_time": "2025-08-29T10:41:53.087Z",
+        "type": "voice_analysis"
+      },
+      "298484005_298484005_1756464288953": {
+        "coach_id": 298484005,
+        "coach_name": "مهدی رشتبری",
+        "coach_role": "UNKNOWN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2770,
+        "original_practice_message_id": 2766,
+        "analysis_time": "2025-08-29T10:44:48.953Z",
+        "type": "text_analysis"
+      },
+      "298484005_298484005_1756464297009": {
+        "coach_id": 298484005,
+        "coach_name": "مهدی رشتبری",
+        "coach_role": "UNKNOWN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2774,
+        "original_practice_message_id": 2766,
+        "analysis_time": "2025-08-29T10:44:57.009Z",
+        "type": "voice_analysis"
+      },
+      "298484005_298484005_1756464886290": {
+        "coach_id": 298484005,
+        "coach_name": "مهدی رشتبری",
+        "coach_role": "UNKNOWN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2780,
+        "original_practice_message_id": 2779,
+        "analysis_time": "2025-08-29T10:54:46.291Z",
+        "type": "voice_analysis"
       }
     }
   },
