@@ -13,5 +13,13 @@
   ],
   "attendance_days": [],
   "enable_satisfaction_survey": true,
-  "enable_bot_reports": true
+  "enable_bot_reports": true,.
+  "practice_keywords": [
+    "تلاوتم",
+    "اصلاحیه"
+   
+  ],
+  "analysis_keywords": [
+    "تحلیل"
+  ]
 }

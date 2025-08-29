@@ -302,6 +302,18 @@
         "original_practice_message_id": 2779,
         "analysis_time": "2025-08-29T10:54:46.291Z",
         "type": "voice_analysis"
+      },
+      "298484005_298484005_1756464936765": {
+        "coach_id": 298484005,
+        "coach_name": "مهدی رشتبری",
+        "coach_role": "UNKNOWN",
+        "student_id": 298484005,
+        "student_name": "مهدی رشتبری",
+        "chat_id": 4594690153,
+        "analysis_message_id": 2786,
+        "original_practice_message_id": 2779,
+        "analysis_time": "2025-08-29T10:55:36.766Z",
+        "type": "voice_analysis"
       }
     }
   },
